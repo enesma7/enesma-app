@@ -6,10 +6,10 @@
 <meta name="apple-mobile-web-app-title" content="AGENT HUB">
 <meta name="application-name" content="AGENT HUB">
 <meta name="theme-color" content="#000007">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
-<link rel="icon" href="/favicon.ico">
-<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
+<link rel="icon" href="./favicon.ico">
+<link rel="manifest" href="./manifest.json">
 <script>
 (function(){
   var HUB="https://agent.enesmarealty.com/";
@@ -18,8 +18,8 @@
   if(standalone){location.replace(HUB);return;}
   window.__save=save;
   if(save){
-    // Strip ?save so iOS stores /hub/ (the redirecting launcher) as the home-screen start URL
-    try{history.replaceState(null,"","/");}catch(e){}
+    // Strip ?save so iOS stores the launcher URL (the redirecting launcher) as the home-screen start URL
+    try{history.replaceState(null,"",location.pathname);}catch(e){}
   }else{
     setTimeout(function(){location.replace(HUB);},1500);
   }
@@ -37,7 +37,7 @@ a.btn{display:inline-block;margin-top:24px;padding:14px 28px;border-radius:999px
 </style>
 </head><body>
 <main>
-<img src="/icon-192.png" alt="ENESMA Realty">
+<img src="./icon-192.png" alt="ENESMA Realty">
 <h1>AGENT HUB</h1>
 <div class="go"><p>Opening Agent Hub…</p></div>
 <div class="save">
