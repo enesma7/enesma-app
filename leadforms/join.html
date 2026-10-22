@@ -1,0 +1,73 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Join Our Team</title><meta name="robots" content="noindex"><link rel="icon" href="../favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--k:#000007;--w:#FBFBFB;--g:linear-gradient(135deg,#EAD59E 0%,#D5BE87 100%);--gd:linear-gradient(135deg,#EAD59E 0%,#D5BE87 50%,#B89A5E 100%)}
+*{box-sizing:border-box}html,body{margin:0;background:transparent;color:var(--k);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+body.bg{background:var(--w)}
+.wrap{max-width:680px;margin:0 auto;padding:20px 16px 28px}
+.card{position:relative;background:#fff;border-radius:18px;padding:28px 24px;border:1.5px solid transparent;background:linear-gradient(#fff,#fff) padding-box,var(--g) border-box;box-shadow:0 10px 30px rgba(0,0,7,.06)}
+h1{margin:0 0 6px;font-size:26px;font-weight:700;letter-spacing:-.01em}
+.bar{height:3px;width:56px;border-radius:3px;background:var(--gd);margin:10px 0 14px}
+.sub{margin:0 0 22px;color:#4a4a52;font-size:15px;line-height:1.5}
+.q{margin:0 0 18px;border:0;padding:0;min-width:0}
+.q>label,.q>legend{display:block;font-weight:600;font-size:14.5px;margin:0 0 8px;padding:0}
+.req{background:var(--gd);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:800;margin-left:3px}
+.fx{border-radius:11px;padding:1.5px;background:var(--g);transition:padding .12s,box-shadow .12s}
+.fx:focus-within{padding:3px;margin:-1.5px;box-shadow:0 0 0 4px rgba(213,190,135,.22)}
+.fx input,.fx select,.fx textarea{display:block;width:100%;border:0;border-radius:9.5px;background:#fff;padding:12px 14px;font:inherit;font-size:16px;color:var(--k);outline:none;appearance:none;-webkit-appearance:none}
+.fx:focus-within input,.fx:focus-within select,.fx:focus-within textarea{border-radius:8px}
+.fx textarea{min-height:120px;resize:vertical}
+.sel{position:relative}.sel::after{content:"";position:absolute;right:16px;top:50%;width:8px;height:8px;border-right:2px solid var(--k);border-bottom:2px solid var(--k);transform:translateY(-70%) rotate(45deg);pointer-events:none}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;width:1px;height:1px}
+.opt span{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;font-size:14.5px;cursor:pointer;border:1.5px solid transparent;background:linear-gradient(#fff,#fff) padding-box,var(--g) border-box;transition:background .12s,transform .05s}
+.opt span::before{content:"";width:14px;height:14px;flex:none;border-radius:50%;border:1.5px solid transparent;background:linear-gradient(#fff,#fff) padding-box,var(--gd) border-box}
+.opt.cb span::before{border-radius:4px}
+.opt input:checked+span{background:var(--g) padding-box,var(--gd) border-box;font-weight:600}
+.opt input:checked+span::before{background:radial-gradient(circle,var(--k) 0 3.5px,transparent 4px) padding-box,linear-gradient(#fff,#fff) padding-box,var(--gd) border-box}
+.opt.cb input:checked+span::before{background:linear-gradient(#000007,#000007) padding-box,var(--gd) border-box}
+.opt input:focus-visible+span{box-shadow:0 0 0 3px #fff,0 0 0 5px #D5BE87,0 0 0 7px rgba(234,213,158,.5)}
+.opt.long span{border-radius:12px;align-items:flex-start;line-height:1.4}
+.err{display:none;color:#B3261E;font-size:13px;margin-top:6px}
+.q.bad .err{display:block}
+.q.bad .fx{background:linear-gradient(135deg,#E06A5F,#B3261E)}
+button{width:100%;margin-top:6px;border:1.5px solid transparent;border-radius:12px;padding:15px 18px;font:inherit;font-size:16px;font-weight:700;letter-spacing:.02em;color:var(--k);cursor:pointer;background:var(--gd) padding-box,linear-gradient(135deg,#D5BE87,#EAD59E) border-box;box-shadow:0 6px 18px rgba(213,190,135,.35);transition:filter .12s,transform .05s}
+button:hover{filter:brightness(1.04)}button:active{transform:translateY(1px)}
+button:focus-visible{outline:none;box-shadow:0 0 0 3px #fff,0 0 0 6px #D5BE87,0 6px 18px rgba(213,190,135,.35)}
+button[disabled]{opacity:.65;cursor:wait}
+.fine{font-size:12px;color:#6b6b73;margin-top:12px;text-align:center}
+.thanks{display:none;text-align:center;padding:24px 6px}
+.check{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;background:var(--gd);display:flex;align-items:center;justify-content:center}
+.check svg{width:30px;height:30px}
+.done form{display:none}.done .thanks{display:block}
+.fail{display:none;color:#B3261E;font-size:14px;margin-top:10px;text-align:center}
+@media(max-width:480px){.card{padding:22px 16px}h1{font-size:22px}}
+</style></head><body data-slug="join"><div class="wrap"><div class="card" id="card">
+<form id="f" action="https://docs.google.com/forms/d/e/1FAIpQLScmf0Djv8uI7XHYc0P5DaSTaMFQz93kRFAy5eniGsLJKKfKtg/formResponse" method="POST" target="sink" novalidate accept-charset="UTF-8">
+<h1>Join Our Team</h1><div class="bar"></div><p class="sub">Interested in joining? Share your details and Enrique will reach out.</p>
+<div class="q" data-t="short" data-req="1"><label for="q0">Full name<span class="req" aria-hidden="true">*</span></label><div class="fx"><input id="q0" name="entry.731248009" type="text" autocomplete="name" required aria-required="true"></div><div class="err" role="alert">This field is required.</div></div><div class="q" data-t="short" data-req="1"><label for="q1">Phone<span class="req" aria-hidden="true">*</span></label><div class="fx"><input id="q1" name="entry.787131616" type="tel" autocomplete="tel" required aria-required="true"></div><div class="err" role="alert">Please enter a valid phone number.</div></div><div class="q" data-t="short" data-req="1"><label for="q2">Email<span class="req" aria-hidden="true">*</span></label><div class="fx"><input id="q2" name="entry.136141450" type="email" autocomplete="email" required aria-required="true"></div><div class="err" role="alert">Please enter a valid email address.</div></div><div class="q" data-t="short" data-req="1"><label for="q3">California DRE license #<span class="req" aria-hidden="true">*</span></label><div class="fx"><input id="q3" name="entry.1091095867" type="text" autocomplete="off" required aria-required="true"></div><div class="err" role="alert">This field is required.</div></div><div class="q" data-t="short" data-req="0"><label for="q4">Current brokerage</label><div class="fx"><input id="q4" name="entry.1868141665" type="text" autocomplete="off"></div><div class="err" role="alert">This field is required.</div></div><fieldset class="q" data-t="radio" data-req="0"><legend>Transactions closed in the last 12 months</legend><div class="opts"><label class="opt"><input type="radio" name="entry.809279664" value="0–5"><span>0–5</span></label><label class="opt"><input type="radio" name="entry.809279664" value="6–12"><span>6–12</span></label><label class="opt"><input type="radio" name="entry.809279664" value="13–24"><span>13–24</span></label><label class="opt"><input type="radio" name="entry.809279664" value="25+"><span>25+</span></label></div><div class="err" role="alert">Please choose an option.</div></fieldset><fieldset class="q" data-t="checkbox" data-req="0"><legend>Interested in</legend><div class="opts"><label class="opt cb"><input type="checkbox" name="entry.1467092581" value="Individual agent"><span>Individual agent</span></label><label class="opt cb"><input type="checkbox" name="entry.1467092581" value="Team program"><span>Team program</span></label><label class="opt cb"><input type="checkbox" name="entry.1467092581" value="Just learning more"><span>Just learning more</span></label></div><div class="err" role="alert">Please choose an option.</div></fieldset><fieldset class="q" data-t="radio" data-req="0"><legend>Best way to reach you</legend><div class="opts"><label class="opt"><input type="radio" name="entry.1491082432" value="Call"><span>Call</span></label><label class="opt"><input type="radio" name="entry.1491082432" value="Text"><span>Text</span></label><label class="opt"><input type="radio" name="entry.1491082432" value="Email"><span>Email</span></label></div><div class="err" role="alert">Please choose an option.</div></fieldset><fieldset class="q" data-t="checkbox" data-req="1"><legend>Consent<span class="req" aria-hidden="true">*</span></legend><div class="opts"><label class="opt cb long"><input type="checkbox" name="entry.2075274657" value="I agree to be contacted by ENESMA Realty about my inquiry."><span>I agree to be contacted by ENESMA Realty about my inquiry.</span></label></div><div class="err" role="alert">Please check this box to continue.</div></fieldset>
+<input type="hidden" name="fvv" value="1"><input type="hidden" name="pageHistory" value="0">
+<button type="submit">Submit</button><div class="fail" id="fail">We couldn't confirm your submission. Please try again or call us directly.</div>
+<p class="fine"><span class="req" style="margin:0">*</span> Required</p></form>
+<div class="thanks" role="status"><div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#000007" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+<h1>Thank you!</h1><div class="bar" style="margin:10px auto 14px"></div><p class="sub" style="margin:0">We received your information and will be in touch shortly.</p></div>
+</div></div><iframe name="sink" id="sink" title="" aria-hidden="true" style="display:none"></iframe><script>
+(function(){var p=new URLSearchParams(location.search);if(p.get('bg')!=='transparent')document.body.classList.add('bg');
+var f=document.getElementById('f'),fr=document.getElementById('sink'),card=document.getElementById('card'),sent=false;
+function val(q){var t=q.dataset.t,r=q.dataset.req==='1',ok=true,v;
+ if(t==='radio'||t==='checkbox'){ok=!r||q.querySelector('input:checked')}
+ else{var el=q.querySelector('input,select,textarea');v=el.value.trim();if(r&&!v)ok=false;else if(v&&el.type==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))ok=false;else if(v&&el.type==='tel'&&v.replace(/\D/g,'').length<10)ok=false}
+ q.classList.toggle('bad',!ok);return !!ok}
+f.addEventListener('input',function(e){var q=e.target.closest('.q');if(q&&q.classList.contains('bad'))val(q)});
+f.addEventListener('change',function(e){var q=e.target.closest('.q');if(q&&q.classList.contains('bad'))val(q)});
+f.addEventListener('submit',function(e){var qs=[].slice.call(f.querySelectorAll('.q')),bad=qs.filter(function(q){return !val(q)});
+ if(bad.length){e.preventDefault();var el=bad[0].querySelector('input,select,textarea');el&&el.focus();bad[0].scrollIntoView({behavior:'smooth',block:'center'});return}
+ [].forEach.call(f.querySelectorAll('input[type=text],input[type=email],input[type=tel],textarea'),function(i){i.value=i.value.trim()});
+ sent=true;f.querySelector('button').disabled=true;f.querySelector('button').textContent='Sending…';
+ setTimeout(function(){if(!card.classList.contains('done')){document.getElementById('fail').style.display='block';f.querySelector('button').disabled=false;f.querySelector('button').textContent='Submit';sent=false}},15000)});
+fr.addEventListener('load',function(){if(!sent)return;card.classList.add('done');try{parent.postMessage({enesmaLeadForm:document.body.dataset.slug,status:'submitted'},'*')}catch(e){}window.scrollTo(0,0)});
+})();
+</script></body></html>
