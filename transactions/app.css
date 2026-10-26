@@ -206,3 +206,15 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:24px}
   .udrop a,.udrop button{min-height:44px;display:flex;align-items:center}
   .modal .close{min-width:44px;min-height:44px}
 }
+
+/* Users: stacked cards on phones; name on top, every other field (email once) on its own labelled line */
+@media(max-width:600px){
+  .tbl .utbl,.utbl tbody,.utbl tr,.utbl td{display:block;width:100%}
+  .utbl thead{display:none}
+  .utbl tr{padding:14px 16px;border-bottom:1px solid var(--line)}
+  .utbl td{border:0;padding:3px 0;font-size:14px;overflow-wrap:anywhere}
+  .utbl td.unm{font-size:16px;padding-bottom:6px}
+  .utbl td[data-l]:before{content:attr(data-l);display:inline-block;min-width:92px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.6}
+  .utbl td[data-l]:empty{display:none}
+  .utbl td.uact{white-space:normal!important;padding-top:6px}
+}

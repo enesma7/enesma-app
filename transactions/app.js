@@ -18,6 +18,7 @@ function initials(n) { return String(n || '?').split(/\s+/).filter(Boolean).slic
 function toast(msg, bad) { var t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = msg; document.body.appendChild(t); setTimeout(function () { t.remove(); }, bad ? 6000 : 3500); }
 function debounce(fn, ms) { var t; return function () { var a = arguments, s = this; clearTimeout(t); t = setTimeout(function () { fn.apply(s, a); }, ms); }; }
 /* Display name: First Last (v1.2.1+), else the legacy name, else the email (older backends). */
+function hasName(u) { return !!(u && (String(u.firstName || '').trim() || String(u.lastName || '').trim() || String(u.name || '').trim())); }
 function uName(u) { if (!u) return ''; var fl = [u.firstName, u.lastName].map(function (x) { return String(x || '').trim(); }).filter(Boolean).join(' '); return fl || String(u.name || '').trim() || u.email || u.username || ''; }
 function splitNm(u) { if (u.firstName || u.lastName) return { f: u.firstName || '', l: u.lastName || '' }; var p = String(u.name || '').trim().split(/\s+/); return { f: p[0] || '', l: p.slice(1).join(' ') }; }
 var NAME_MAX = 50;
@@ -214,7 +215,7 @@ function shell(active, inner) {
     '<a class="brand" href="#/" aria-label="Transaction Center home">' + titleMark('tc-sm') + '</a>' +
     '<nav class="main" id="mnav" aria-label="Main">' + nav + '</nav><div class="hspace"></div>' +
     '<div class="search"><span>' + SEARCH_ICON + '</span><input id="q" type="search" placeholder="Search address, client, escrow #" autocomplete="off" aria-label="Search transactions"><div class="sres hidden" id="sres"></div></div>' +
-    '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + h(S.user.username) + ' · ' + (isAdmin() ? 'Admin' : 'Agent') + '</div><a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
+    '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + (isAdmin() ? 'Admin' : 'Agent') + '</div><a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
     '<main>' + inner + '</main>';
 }
 var docClickBound = false;
@@ -313,7 +314,7 @@ function codeView(email, step, msg, okMsg) {
 }
 function passwordView(forced) {
   var inner = '<div style="max-width:520px"><h1>' + (forced ? 'Set your password' : 'Change password') + '</h1><p class="sub">' + (forced ? 'Choose your own password before continuing. ' : '') + 'At least 10 characters with letters and numbers.</p>' +
-    (forced ? '' : '<div class="card gb" id="acct" style="margin-bottom:14px"><h3>' + h(uName(S.user)) + '</h3><small>' + h(S.user.email || S.user.username) + ' · ' + (isAdmin() ? 'Admin' : 'Agent') + '</small></div>') +
+    (forced ? '' : '<div class="card gb" id="acct" style="margin-bottom:14px"><h3>' + h(uName(S.user)) + '</h3><small>' + (isAdmin() ? 'Admin' : 'Agent') + '</small></div>') +
     '<form class="card gb" id="pf"><div id="pe"></div><div class="f" style="margin-bottom:12px"><label>Current password</label><input type="password" id="p0" autocomplete="current-password" required></div>' +
     '<div class="f" style="margin-bottom:12px"><label>New password</label><input type="password" id="p1" autocomplete="new-password" minlength="10" required></div>' +
     '<div class="f"><label>Repeat new password</label><input type="password" id="p2" autocomplete="new-password" required></div><div class="actions">' + (forced ? '<button type="button" class="ub" id="pout">Sign out</button>' : '') + '<button class="btn">Save password</button></div></form></div>';
@@ -729,11 +730,11 @@ function usersView() {
   loading('users');
   api('listUsers').then(function (users) {
     var inner = '<div class="top"><div><h1>Users</h1><p class="sub">Agents sign in with their email and see only their own files. Enrique is the only admin. New agents set their own password with a code emailed to them (“First time or forgot password?” on the sign-in page).</p></div><button class="btn" id="nu">+ Add agent</button></div>' +
-      '<div class="gb tbl"><table><thead><tr><th>Name (First Last)</th><th>Email login</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>' +
+      '<div class="gb tbl"><table class="utbl"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>' +
       users.map(function (u) {
-        return '<tr><td><b class="un">' + h(uName(u)) + '</b><br><small>' + h(u.email) + ' ' + h(u.phone) + '</small></td><td>' + h(u.username) + '</td><td>' + (u.role === 'admin' ? '<span class="pill p-ok">Admin</span>' : '<span class="pill p-pend">Agent</span>') + (u.owner ? ' <small>owner</small>' : '') + '</td>' +
-          '<td>' + (u.active ? (u.locked ? '<span class="pill p-rej">Locked</span>' : u.mustChange ? '<span class="pill p-miss">Password not set</span>' : '<span class="pill p-ok">Active</span>') : '<span class="pill p-miss">Disabled</span>') + '</td><td><small>' + h(fmtTs(u.lastLogin)) + '</small></td>' +
-          '<td style="white-space:nowrap">' + (u.owner && !S.user.owner ? '' : '<button class="link eu" data-id="' + h(u.id) + '">Edit</button> <button class="link rp" data-id="' + h(u.id) + '" data-n="' + h(uName(u)) + '">Reset password</button> ') + (u.owner || u.id === S.user.id ? '' : '<button class="link act" data-id="' + h(u.id) + '" data-a="' + (u.active ? '' : '1') + '">' + (u.active ? 'Disable' : 'Enable') + '</button>') + '</td></tr>';
+        return '<tr><td class="unm"><b class="un">' + h(uName(u)) + '</b></td><td class="uem" data-l="Email">' + (hasName(u) ? h(u.email || u.username) : '') + '</td><td data-l="Phone">' + h(u.phone || '') + '</td><td data-l="Role">' + (u.role === 'admin' ? '<span class="pill p-ok">Admin</span>' : '<span class="pill p-pend">Agent</span>') + (u.owner ? ' <small>owner</small>' : '') + '</td>' +
+          '<td data-l="Status">' + (u.active ? (u.locked ? '<span class="pill p-rej">Locked</span>' : u.mustChange ? '<span class="pill p-miss">Password not set</span>' : '<span class="pill p-ok">Active</span>') : '<span class="pill p-miss">Disabled</span>') + '</td><td data-l="Last sign-in"><small>' + h(fmtTs(u.lastLogin)) + '</small></td>' +
+          '<td class="uact" style="white-space:nowrap">' + (u.owner && !S.user.owner ? '' : '<button class="link eu" data-id="' + h(u.id) + '">Edit</button> <button class="link rp" data-id="' + h(u.id) + '" data-n="' + h(uName(u)) + '">Reset password</button> ') + (u.owner || u.id === S.user.id ? '' : '<button class="link act" data-id="' + h(u.id) + '" data-a="' + (u.active ? '' : '1') + '">' + (u.active ? 'Disable' : 'Enable') + '</button>') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
     page('users', inner, function () {
       qs('#nu').onclick = function () {
