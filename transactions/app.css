@@ -1,5 +1,6 @@
 /* ENESMA REALTY · Transaction Center — styles (based on the approved compliance mockup look) */
 @font-face{font-family:'Inter';src:url(assets/Inter.ttf) format('truetype');font-weight:100 900;font-display:swap}
+@font-face{font-family:'Michroma';src:url(assets/Michroma.ttf) format('truetype');font-weight:400;font-display:swap}
 :root{--k:#000007;--w:#FBFBFB;--gold:linear-gradient(135deg,#EAD59E,#D5BE87);--red:linear-gradient(135deg,#EF0207,#9A0007);--line:rgba(0,0,7,.12);--soft:rgba(0,0,7,.6)}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--w);color:var(--k);font-family:Inter,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.45;padding-bottom:env(safe-area-inset-bottom)}
@@ -11,8 +12,14 @@ a{color:inherit}button,input,select,textarea{font:inherit;color:var(--k)}
 header{display:flex;align-items:center;gap:16px;padding:14px 28px;position:sticky;top:0;z-index:20;background:var(--w);padding-top:calc(14px + env(safe-area-inset-top))}
 header:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--gold)}
 .brand{display:flex;align-items:center;gap:14px;text-decoration:none;min-width:0}
-.brand img{height:44px;display:block}
-.brand .app{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;white-space:nowrap;padding-left:14px;border-left:2px solid transparent;border-image:var(--gold) 1}
+.brand{padding:4px 0}
+/* title lockup (live text; font-size on .tc-title sets the whole lockup) */
+.tc-title{display:inline-flex;flex-direction:column;align-items:center;font-family:Michroma,'Eurostile Extended',Helvetica,Arial,sans-serif;font-weight:400;line-height:1;text-transform:uppercase;white-space:nowrap}
+.tc-t1{color:var(--k);letter-spacing:.5em;margin-right:-.5em;-webkit-text-stroke:.032em var(--k)}
+.tc-t2{font-size:.71em;letter-spacing:1em;margin-right:-1em;margin-top:.52em;background:linear-gradient(90deg,#EAD59E,#D5BE87);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.tc-dark .tc-t1{color:var(--w);-webkit-text-stroke-color:var(--w)}
+.tc-sm{font-size:15px}
+.tc-lg{font-size:21px}
 nav.main{display:flex;gap:4px;margin-left:8px}
 nav.main a{text-decoration:none;font-size:14px;padding:8px 12px;border-radius:8px;opacity:.72;white-space:nowrap;position:relative}
 nav.main a.on{opacity:1;font-weight:600}nav.main a.on:after{content:"";position:absolute;left:12px;right:12px;bottom:2px;height:2px;background:var(--gold)}
@@ -138,16 +145,16 @@ td{padding:12px 10px;border-top:1px solid var(--line);vertical-align:top}
 .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--k)}
 .login .box{width:min(420px,100%);background:var(--w);border-radius:18px;padding:34px 30px;position:relative;overflow:hidden}
 .login .box:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--gold)}
-.login img{height:58px;display:block;margin:4px auto 6px}
-.login .app{text-align:center;font-size:13px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;margin-bottom:24px}
+.login .app{text-align:center;margin:8px 0 28px;font-size:inherit;letter-spacing:0}
 .login .f{margin-bottom:14px}
 .login .btn{width:100%;justify-content:center;padding:13px}
 .login .fine{font-size:12px;color:var(--soft);text-align:center;margin-top:16px}
 footer{text-align:center;font-size:11px;color:var(--soft);padding:24px}
+@media(max-width:460px){.tc-lg{font-size:calc((100vw - 110px) / 16.4)}}
 @media(max-width:1000px){.stats{grid-template-columns:repeat(3,1fr)}.types{grid-template-columns:repeat(3,1fr)}nav.main a{padding:8px}}
 @media(max-width:760px){
   header{flex-wrap:wrap;padding:10px 14px;gap:10px;padding-top:calc(10px + env(safe-area-inset-top))}
-  .brand img{height:34px}.brand .app{font-size:11px;padding-left:10px;letter-spacing:.12em}
+  .tc-sm{font-size:13px}
   nav.main{order:4;width:100%;margin:0;overflow-x:auto}
   .search{order:3;width:100%}.umenu{margin-left:auto}.hspace{display:none}
   main{padding:18px 14px 120px}h1{font-size:23px}

@@ -169,11 +169,13 @@ function readForm(root) {
 }
 
 /* ---------------- shell ---------------- */
+/* Title lockup: TRANSACTION (Michroma, wide tracking) over CENTER (smaller, wider tracking, Aztec Gold gradient). Live text, no image. */
+function titleMark(size) { return '<span class="tc-title ' + size + '"><span class="tc-t1">Transaction</span> <span class="tc-t2">Center</span></span>'; }
 function shell(active, inner) {
   var nav = '<a href="#/" class="' + (active === 'dash' ? 'on' : '') + '">Transactions</a><a href="#/new" class="' + (active === 'new' ? 'on' : '') + '">+ New</a>';
   if (isAdmin()) nav += '<a href="#/review" class="' + (active === 'review' ? 'on' : '') + '">Review' + (S.badges.review ? '<span class="cnt">' + S.badges.review + '</span>' : '') + '</a><a href="#/users" class="' + (active === 'users' ? 'on' : '') + '">Users</a><a href="#/archive" class="' + (active === 'archive' ? 'on' : '') + '">Archive</a>';
   return (DEMO ? '<div class="demo"><b>DEMO PREVIEW</b> · sample data only, nothing is saved · <a href="#" id="exitDemo" style="color:#FBFBFB">exit demo</a></div>' : '') +
-    '<header><a class="brand" href="#/"><img src="assets/enesma-realty-logo.png" alt="Logo"><span class="app">Transaction Center</span></a>' +
+    '<header><a class="brand" href="#/" aria-label="Transaction Center home">' + titleMark('tc-sm') + '</a>' +
     '<nav class="main">' + nav + '</nav><div class="hspace"></div>' +
     '<div class="search"><span>' + SEARCH_ICON + '</span><input id="q" type="search" placeholder="Search address, client, escrow #" autocomplete="off" aria-label="Search transactions"><div class="sres hidden" id="sres"></div></div>' +
     '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(S.user.name)) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(S.user.name) + '</b>' + h(S.user.username) + ' · ' + (isAdmin() ? 'Admin' : 'Agent') + '</div><a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
@@ -211,7 +213,7 @@ function failView(active, e) { page(active, '<div class="err">' + h(e.message) +
 /* ---------------- login / password ---------------- */
 function loginView(msg) {
   var noApi = !CFG.API_URL && !DEMO;
-  $app.innerHTML = '<div class="login"><form class="box" id="lf" autocomplete="on"><img src="assets/enesma-realty-logo.png" alt="Logo"><div class="app">Transaction Center</div>' +
+  $app.innerHTML = '<div class="login"><form class="box" id="lf" autocomplete="on"><h1 class="app">' + titleMark('tc-lg') + '</h1>' +
     (msg ? '<div class="err">' + h(msg) + '</div>' : '') +
     (noApi ? '<div class="ok">The secure backend is being connected. Sign-in opens as soon as setup is finished.<br><a href="?demo=1">Preview with sample data</a></div>' : '') +
     (DEMO ? '<div class="ok">Demo preview. Sign in as <b>admin</b> or <b>agent</b> with password <b>demo</b>.</div>' : '') +
@@ -232,7 +234,7 @@ function passwordView(forced) {
     '<div class="f" style="margin-bottom:12px"><label>New password</label><input type="password" id="p1" autocomplete="new-password" minlength="10" required></div>' +
     '<div class="f"><label>Repeat new password</label><input type="password" id="p2" autocomplete="new-password" required></div><div class="actions">' + (forced ? '<button type="button" class="ub" id="pout">Sign out</button>' : '') + '<button class="btn">Save password</button></div></form></div>';
   if (forced) {
-    $app.innerHTML = '<header><a class="brand"><img src="assets/enesma-realty-logo.png" alt="Logo"><span class="app">Transaction Center</span></a></header><main>' + inner + '</main>';
+    $app.innerHTML = '<header><a class="brand">' + titleMark('tc-sm') + '</a></header><main>' + inner + '</main>';
     qs('#pout').onclick = function () { api('logout').catch(function () { }); signOutLocal(); render(); };
   } else page('', inner);
   qs('#pf').onsubmit = function (e) {
