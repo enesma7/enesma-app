@@ -22,6 +22,8 @@ function uName(u) { if (!u) return ''; var fl = [u.firstName, u.lastName].map(fu
 function splitNm(u) { if (u.firstName || u.lastName) return { f: u.firstName || '', l: u.lastName || '' }; var p = String(u.name || '').trim().split(/\s+/); return { f: p[0] || '', l: p.slice(1).join(' ') }; }
 var NAME_MAX = 50;
 function nameErr(f, l) { if (!f) return 'First name is required.'; if (!l) return 'Last name is required.'; if (f.length > NAME_MAX || l.length > NAME_MAX) return 'Names must be ' + NAME_MAX + ' characters or fewer.'; return ''; }
+/* Activity labels. 'converted' from a listing (older backends) and 'accepted_contract' both read as Accepted Contract. */
+function actLabel(a, t) { var x = String(a.action || ''); if (x === 'accepted_contract' || (x === 'converted' && t && t.convertedFrom === 'listing')) return 'Accepted Contract'; return x.replace(/_/g, ' '); }
 function isAdmin() { return S.user && S.user.role === 'admin'; }
 var SEARCH_ICON = '<svg viewBox="0 0 24 24"><defs><linearGradient id="sgr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EAD59E"/><stop offset="1" stop-color="#D5BE87"/></linearGradient></defs><g fill="none" stroke="url(#sgr)" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M16 16l5 5"/></g></svg>';
 
@@ -408,7 +410,7 @@ function drawTxn() {
   var cr = t.cancelRequest, crPending = cr && cr.state === 'pending';
   var acts = '';
   if (canEdit()) acts += '<button class="btn" id="aSplit">Upload &amp; Split Packet</button>';
-  if (open && (t.type === 'listing' || t.type === 'lease_listing') && !crPending) acts += '<button class="ub" id="aConv">' + (t.type === 'listing' ? 'Convert to Purchase' : 'Convert to Lease') + '</button>';
+  if (open && (t.type === 'listing' || t.type === 'lease_listing') && !crPending) acts += '<button class="ub" id="aConv">' + (t.type === 'listing' ? 'Accepted Contract' : 'Convert to Lease') + '</button>';
   if (open && !crPending) acts += '<button class="ub red" id="aCancel">Request cancellation</button>';
   if (isAdmin()) acts += '<button class="ub" id="aStatus">Set status</button>';
   var banner = '';
@@ -417,7 +419,7 @@ function drawTxn() {
   if (t.childId) banner += '<div class="ok">Relisted as a new file: <a href="#/t/' + h(t.childId) + '">open the new listing</a>.</div>';
   if (t.parentId) banner += '<div class="ok">Relisted from a cancelled file: <a href="#/t/' + h(t.parentId) + '">open the previous file</a>.</div>';
   var docCount = d.documents.filter(function (x) { return !x.removed; }).length;
-  var inner = '<div class="top"><div><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + statusPill(t.status) + '<span class="pill p-pend">' + h(t.typeLabel) + '</span>' + (t.convertedFrom ? '<span class="pill p-miss">Converted from ' + h(TYPE_LABEL[t.convertedFrom] || t.convertedFrom) + '</span>' : '') + '</div><h1>' + h(t.title) + (t.zip ? ' ' + h(t.zip) : '') + '</h1>' +
+  var inner = '<div class="top"><div><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + statusPill(t.status) + '<span class="pill p-pend">' + h(t.typeLabel) + '</span>' + (t.convertedFrom ? '<span class="pill p-miss">' + (t.convertedFrom === 'listing' ? 'Accepted Contract · from Listing' : 'Converted from ' + h(TYPE_LABEL[t.convertedFrom] || t.convertedFrom)) + '</span>' : '') + '</div><h1>' + h(t.title) + (t.zip ? ' ' + h(t.zip) : '') + '</h1>' +
     '<p class="sub">' + h([sideTxt].concat(who).filter(Boolean).join(' · ')) + (isAdmin() ? ' · Agent: ' + h(t.agentName) : '') + '</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">' + acts + '</div></div>' + banner +
     '<div class="tabs">' + [['checklist', 'Checklist'], ['storage', 'Document Storage (' + docCount + ')'], ['details', 'Details'], ['activity', 'Notes & Activity']].map(function (x) { return '<button data-tab="' + x[0] + '" class="' + (S.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div><div id="tabc"></div>' +
     '<div class="pbar"><div class="in"><b>' + p.approved + ' of ' + p.required + ' required approved</b><div class="bar"><i style="width:' + pct + '%"></i></div><b class="gt">' + pct + '%</b></div></div>';
@@ -495,7 +497,7 @@ function drawTab() {
   } else {
     c.innerHTML = '<div class="split" style="grid-template-columns:1fr 1fr"><div class="card gb"><h3>Notes</h3><textarea id="nt" placeholder="Add a note for this file"></textarea><div class="actions" style="margin-top:8px"><button class="btn sm" id="ntb">Add note</button></div><div class="feed">' +
       d.notes.slice().reverse().map(function (n) { var it = d.items.filter(function (x) { return x.id === n.itemId; })[0]; return '<div class="ev"><b>' + h(n.by) + '</b> ' + (n.kind === 'rejection' ? '<span class="rt">rejected</span> ' : n.kind === 'resubmit' ? '<span class="gt">resubmitted</span> ' : '') + (it ? '· ' + h(it.title) : '') + '<br>' + h(n.text) + '<small>' + h(fmtTs(n.createdAt)) + '</small></div>'; }).join('') + '</div></div>' +
-      '<div class="card gb"><h3>Activity</h3><div class="feed">' + d.activity.map(function (a) { return '<div class="ev">' + h(String(a.action).replace(/_/g, ' ')) + '<small>' + h(a.by) + ' · ' + h(fmtTs(a.ts)) + '</small></div>'; }).join('') + '</div></div></div>';
+      '<div class="card gb"><h3>Activity</h3><div class="feed">' + d.activity.map(function (a) { return '<div class="ev">' + h(actLabel(a, d.txn)) + '<small>' + h(a.by) + ' · ' + h(fmtTs(a.ts)) + '</small></div>'; }).join('') + '</div></div></div>';
     qs('#ntb').onclick = function () { var v = qs('#nt').value.trim(); if (!v) return; api('addNote', { txnId: t.id, text: v }).then(function () { toast('Note added.'); refresh(); }).catch(function (e) { toast(e.message, 1); }); };
   }
   qsa('.dl', c).forEach(function (b) { b.onclick = function () { openDoc(b.getAttribute('data-doc'), b); }; });
@@ -623,15 +625,15 @@ function convertModal() {
   var t = S.txn.txn, to = t.type === 'listing' ? 'purchase' : 'lease';
   var pre = Object.assign({}, t.intake); pre.side = to === 'purchase' ? 'seller' : 'landlord';
   var sideField = { k: 'side', l: 'We represent', r: 1, w: 3, radio: to === 'purchase' ? [['seller', 'Seller only'], ['both', 'Both sides (we also have the buyer)']] : [['landlord', 'Landlord only'], ['both', 'Both sides (we also have the tenant)']] };
-  var m = modal('<h2>Convert to ' + (to === 'purchase' ? 'Purchase' : 'Lease') + '</h2><p class="sub">' + (to === 'purchase' ? 'Offer accepted? Add the escrow details. The listing information is already filled in, and the purchase checklist items are added to this file.' : 'Tenant found? Add the lease details. The listing information is already filled in, and the lease checklist items are added to this file.') + '</p><div id="ce"></div><form id="cf" novalidate>' +
+  var m = modal('<h2>' + (to === 'purchase' ? 'Accepted Contract' : 'Convert to Lease') + '</h2><p class="sub">' + (to === 'purchase' ? 'Offer accepted? Add the escrow details. The listing information is already filled in, and the purchase checklist items are added to this file.' : 'Tenant found? Add the lease details. The listing information is already filled in, and the lease checklist items are added to this file.') + '</p><div id="ce"></div><form id="cf" novalidate>' +
     '<div class="card gb"><h3>Who we represent</h3><div class="fgrid">' + fieldHtml(sideField, pre.side, 'c') + '</div></div>' +
-    formHtml(to, pre, 'c', { side: 1 }) + '<div class="actions"><button class="btn" id="cb">Convert</button></div></form>', true);
+    formHtml(to, pre, 'c', { side: 1 }) + '<div class="actions"><button class="btn" id="cb">' + (to === 'purchase' ? 'Save Accepted Contract' : 'Convert') + '</button></div></form>', true);
   var f = qs('#cf', m); wireForm(f);
   f.onsubmit = function (e) {
     e.preventDefault(); var r = readForm(f);
     if (r.missing.length) { qs('#ce', m).innerHTML = '<div class="err">Please complete: ' + h(r.missing.join(', ')) + '</div>'; m.scrollTop = 0; return; }
     qs('#cb', m).disabled = true;
-    api('convert', { id: t.id, intake: r.intake, side: r.intake.side }).then(function (d) { m.close(); toast('Converted. ' + d.added + ' checklist items unlocked.'); txnView(t.id); })
+    api('convert', { id: t.id, intake: r.intake, side: r.intake.side }).then(function (d) { m.close(); toast((to === 'purchase' ? 'Accepted Contract saved. ' + d.added + ' purchase checklist items added.' : 'Converted. ' + d.added + ' checklist items unlocked.')); txnView(t.id); })
       .catch(function (err) { qs('#cb', m).disabled = false; qs('#ce', m).innerHTML = '<div class="err">' + h(err.message) + '</div>'; m.scrollTop = 0; });
   };
 }

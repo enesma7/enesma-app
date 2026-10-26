@@ -453,7 +453,7 @@ A.convert = function (b, u) {
   var intake = Object.assign({}, t.intake, b.intake || {}), side = b.side || intake.side;
   side = to === 'purchase' ? (side === 'both' ? 'both' : 'seller') : (side === 'both' ? 'both' : 'landlord'); intake.side = side; requireIntake(to, intake);
   var from = t.type; Object.assign(t, { type: to, side: side, status: 'In Escrow', intake: intake, convertedFrom: from, address: intake.address, city: intake.city, zip: intake.zip }); touch(t);
-  var added = addItems(t); audit(t.id, u.username, 'converted'); return { id: t.id, added: added };
+  var added = addItems(t); audit(t.id, u.username, to === 'purchase' ? 'accepted_contract' : 'converted'); return { id: t.id, added: added };
 };
 A.dashboard = function (b, u) {
   var scope = u.role === 'admin' && b.scope === 'company' ? 'company' : 'personal';
