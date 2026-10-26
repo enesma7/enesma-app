@@ -122,7 +122,6 @@ function viewLocation(L) {
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
     b.onclick = function () { S.tab = b.getAttribute('data-tab'); Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (x) { x.classList.toggle('on', x === b); }); renderCal(); };
   });
-  qs('#jump').onclick = function (e) { e.preventDefault(); qs('#book').scrollIntoView({ behavior: 'smooth' }); };
   var f = qs('#f');
   f.space.onchange = function () { if (f.space.value) { S.tab = f.space.value; Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (x) { x.classList.toggle('on', x.getAttribute('data-tab') === S.tab); }); renderCal(); } loadBusy(); };
   f.date.onchange = loadBusy;
