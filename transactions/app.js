@@ -217,7 +217,8 @@ function titleMark(size) {
 }
 document.title = APP_NAME;
 function shell(active, inner) {
-  var nav = '<a href="#/" class="' + (active === 'dash' ? 'on' : '') + '">Transactions</a><a href="#/new" class="' + (active === 'new' ? 'on' : '') + '">+ New</a>';
+  // No '+ New' tab: My Transactions has the '+ New Transaction' button; the new-transaction screen lights up Transactions.
+  var nav = '<a href="#/" class="' + (active === 'dash' || active === 'new' ? 'on' : '') + '">Transactions</a>';
   if (isAdmin()) nav += '<a href="#/review" class="' + (active === 'review' ? 'on' : '') + '">Review' + (S.badges.review ? '<span class="cnt">' + S.badges.review + '</span>' : '') + '</a><a href="#/users" class="' + (active === 'users' ? 'on' : '') + '">Users</a><a href="#/archive" class="' + (active === 'archive' ? 'on' : '') + '">Archive</a>';
   // CRM sits last, set apart from the transaction tabs (gold tab, divider before it).
   if (canCrm()) nav += '<a href="#/crm" class="crmtab' + (active === 'crm' ? ' on' : '') + '"' + (active === 'crm' ? ' aria-current="page"' : '') + '>CRM</a>';
@@ -487,7 +488,7 @@ function drawTab() {
         notes.map(function (n) { return '<div class="note">' + h(n.by) + ': ' + h(n.text) + '</div>'; }).join('') +
         (docs.length ? '<div class="docs">' + docs.map(function (x) { return '<button class="dl" data-doc="' + h(x.id) + '">' + h(x.name) + (x.pageRange ? ' (pages ' + h(x.pageRange) + ')' : '') + '</button>'; }).join('') + '</div>' : '') + '</div>' +
         itemPill(it.status) + '<div class="acts">' +
-        (canEdit() ? '<label class="ub">' + (it.status === 'Rejected' ? 'Re-upload' : 'Upload') + '<input type="file" class="hidden up" data-item="' + h(it.id) + '" accept="application/pdf,image/*,.heic,.doc,.docx,.xls,.xlsx,.txt"></label>' : '') +
+        (canEdit() ? '<label class="ub">' + (it.status === 'Rejected' ? 'Re-upload' : 'Upload') + '<input type="file" class="hidden up" data-item="' + h(it.id) + '" accept="' + UP_ACCEPT + '"></label>' : '') +
         (it.status === 'Rejected' && canEdit() ? '<button class="ub red resub" data-item="' + h(it.id) + '">Add note &amp; resubmit</button>' : '') +
         (it.misc && canEdit() ? '<button class="link ren" data-item="' + h(it.id) + '" data-t="' + h(it.title) + '">Rename</button>' : '') +
         '<button class="link addn" data-item="' + h(it.id) + '">Note</button></div></div>';
@@ -502,7 +503,7 @@ function drawTab() {
     var items = d.items.filter(function (x) { return x.active; });
     var opts = function (sel) { return '<option value="">Document Storage (unassigned)</option>' + items.map(function (x) { return '<option value="' + h(x.id) + '"' + (x.id === sel ? ' selected' : '') + '>' + h(x.title) + '</option>'; }).join(''); };
     var docs = d.documents.slice().sort(function (a, b) { return String(b.uploadedAt).localeCompare(String(a.uploadedAt)); });
-    c.innerHTML = '<div class="top"><p class="sub" style="margin:0;max-width:640px">Every file uploaded to this transaction. Store files here, then assign each one to a checklist item, or split a PDF packet into items.</p>' + (canEdit() ? '<label class="btn">Upload to storage<input type="file" class="hidden" id="stUp" multiple accept="application/pdf,image/*,.heic,.doc,.docx,.xls,.xlsx,.txt"></label>' : '') + '</div>' +
+    c.innerHTML = '<div class="top"><p class="sub" style="margin:0;max-width:640px">Every file uploaded to this transaction. Store files here, then assign each one to a checklist item, or split a PDF packet into items.</p>' + (canEdit() ? '<label class="btn">Upload to storage<input type="file" class="hidden" id="stUp" multiple accept="' + UP_ACCEPT + '"></label>' : '') + '</div>' +
       '<div class="gb tbl" style="margin-top:14px"><table><thead><tr><th>File</th><th>Checklist item</th><th>Status</th><th>Uploaded</th><th></th></tr></thead><tbody>' +
       (docs.length ? docs.map(function (x) {
         var it = items.filter(function (y) { return y.id === x.itemId; })[0];
@@ -559,20 +560,187 @@ function tcModal() {
 
 /* ---------------- files ---------------- */
 var MAX = 20 * 1024 * 1024;
-function fileToB64(file) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(String(r.result).split(',')[1]); }; r.onerror = function () { rej(new Error('Could not read the file.')); }; r.readAsDataURL(file); }); }
 function bytesToB64(bytes) { var s = '', ch = 0x8000; for (var i = 0; i < bytes.length; i += ch) s += String.fromCharCode.apply(null, bytes.subarray(i, i + ch)); return btoa(s); }
-function mimeOf(file) {
-  var ext = (file.name.split('.').pop() || '').toLowerCase();
-  var m = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', heic: 'image/heic', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', txt: 'text/plain' }[ext];
-  return file.type || m || 'application/octet-stream';
-}
 function uploadFile(file, itemId, quiet) {
-  if (file.size > MAX) { toast(file.name + ' is larger than 20 MB.', 1); return Promise.resolve(); }
-  toast('Uploading ' + file.name + '…');
-  return fileToB64(file).then(function (b64) { return api('upload', { txnId: S.txn.txn.id, itemId: itemId || '', name: file.name, mime: mimeOf(file), base64: b64, kind: 'file' }); })
-    .then(function () { toast('Uploaded ' + file.name + (itemId ? '. Sent for review.' : ' to Document Storage.')); if (!quiet) refresh(); })
-    .catch(function (e) { toast(e.message, 1); });
+  var bad = upCheck(file); if (bad) { toast(bad, 1); return Promise.resolve(); }
+  toast('Preparing ' + file.name + '…');
+  return prepUpload(file).then(function (p) {
+    toast('Uploading ' + p.name + ' (' + fmtSize(p.bytes.length) + ')…');
+    return api('upload', { txnId: S.txn.txn.id, itemId: itemId || '', name: p.name, mime: 'application/pdf', base64: bytesToB64(p.bytes), kind: 'file', pages: p.pages || '' })
+      .then(function () { toast('Uploaded ' + p.name + ' (' + fmtSize(p.bytes.length) + ')' + (itemId ? '. Sent for review.' : ' to Document Storage.')); if (!quiet) refresh(); });
+  }).catch(function (e) { toast(e.message, 1); });
 }
+/* ---- 1.4.3 uploads: PDF, JPG or PNG only. JPG/PNG become a one-page PDF in the browser, so every stored transaction file is a PDF.
+   Everything is shrunk only losslessly or visually losslessly, and the smaller of original vs optimized always wins:
+   - images: never upscaled; long edge capped at UP_CAP px (~300 DPI on Letter); the original JPEG/PNG data is embedded as-is when it
+     can be; JPEG re-encoding (q UP_JPEG_Q) is tried only for photo-like pictures and kept only when smaller; text/line art stays lossless PNG.
+   - PDFs: pdf-lib re-save with object streams + unreachable objects dropped, kept only when smaller with the same page count.
+     Never rasterized or downsampled. Encrypted PDFs and PDFs with form/signature fields (AcroForm) are uploaded untouched. ---- */
+var UP_ACCEPT = 'application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png';
+var UP_ERR = 'Only PDF, JPG or PNG files can be uploaded.';
+var UP_CAP = 3300, UP_JPEG_Q = 0.88, UP_IN_MAX = 60 * 1024 * 1024;
+function fmtSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+function upCheck(file) {
+  var ext = (String(file.name || '').split('.').pop() || '').toLowerCase(), ty = String(file.type || '').toLowerCase();
+  var hasExt = /\.[a-z0-9]{1,5}$/i.test(String(file.name || ''));
+  if (hasExt ? ['pdf', 'jpg', 'jpeg', 'png'].indexOf(ext) < 0 : ['application/pdf', 'image/jpeg', 'image/png'].indexOf(ty) < 0) return UP_ERR;
+  if (file.size > UP_IN_MAX) return file.name + ' is too large to upload.';
+  return '';
+}
+function sniffKind(b) {
+  if (b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF) return 'jpg';
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47) return 'png';
+  for (var i = 0; i < Math.min(1024, b.length - 4); i++) if (b[i] === 0x25 && b[i + 1] === 0x50 && b[i + 2] === 0x44 && b[i + 3] === 0x46) return i ? 'pdf+junk' : 'pdf';
+  return '';
+}
+function jpegOrientation(b) {   // EXIF Orientation tag (1-8), 1 if none
+  var i = 2;
+  while (i + 10 < b.length && b[i] === 0xFF) {
+    var mk = b[i + 1], len = (b[i + 2] << 8) | b[i + 3];
+    if (mk === 0xDA || mk === 0xD9) break;
+    if (mk === 0xE1 && b[i + 4] === 0x45 && b[i + 5] === 0x78 && b[i + 6] === 0x69 && b[i + 7] === 0x66) {
+      var t = i + 10, le = b[t] === 0x49;
+      var r16 = function (o) { return le ? b[o] | (b[o + 1] << 8) : (b[o] << 8) | b[o + 1]; };
+      var r32 = function (o) { return le ? (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0 : ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0; };
+      var ifd = t + r32(t + 4); if (ifd + 2 > b.length) return 1;
+      for (var k = 0, n = r16(ifd); k < n && ifd + 14 + k * 12 <= b.length; k++) { var e = ifd + 2 + k * 12; if (r16(e) === 0x0112) { var v = r16(e + 8); return v >= 1 && v <= 8 ? v : 1; } }
+      return 1;
+    }
+    i += 2 + len;
+  }
+  return 1;
+}
+function loadImg(bytes, mime) {
+  return new Promise(function (res, rej) {
+    var url = URL.createObjectURL(new Blob([bytes], { type: mime })), im = new Image();
+    im.onload = function () { URL.revokeObjectURL(url); res(im); };   // browsers apply EXIF orientation (image-orientation: from-image)
+    im.onerror = function () { URL.revokeObjectURL(url); rej(new Error('Could not read that image. ' + UP_ERR)); };
+    im.src = url;
+  });
+}
+function drawScaled(im, w, h, bg) {   // high-quality downscale (halving steps), optional white background for JPEG
+  var src = im, sw = im.naturalWidth || im.width, sh = im.naturalHeight || im.height;
+  while (sw / 2 >= w * 1.0001 && sh / 2 >= h) {
+    var c0 = document.createElement('canvas'); c0.width = Math.round(sw / 2); c0.height = Math.round(sh / 2);
+    var x0 = c0.getContext('2d'); x0.imageSmoothingEnabled = true; x0.imageSmoothingQuality = 'high'; x0.drawImage(src, 0, 0, c0.width, c0.height);
+    src = c0; sw = c0.width; sh = c0.height;
+  }
+  var c = document.createElement('canvas'); c.width = w; c.height = h;
+  var x = c.getContext('2d'); if (bg) { x.fillStyle = '#FFFFFF'; x.fillRect(0, 0, w, h); }
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, w, h);
+  return c;
+}
+function canvasBytes(c, type, q) {
+  return new Promise(function (res) { c.toBlob(function (b) { if (!b) return res(null); b.arrayBuffer().then(function (ab) { res(new Uint8Array(ab)); }); }, type, q); });
+}
+function photoLike(c) {   // text, scans and line art reuse a handful of exact colors; photos don't. Only photo-like pictures may become JPEG.
+  var x = c.getContext('2d'), w = c.width, rows = Math.min(64, c.height), seen = {}, n = 0, tot = 0, top = 0, cnt = {};
+  for (var r = 0; r < rows; r++) {
+    var d = x.getImageData(0, Math.floor((r + 0.5) * c.height / rows), w, 1).data;
+    for (var i = 0; i < d.length; i += 4 * Math.max(1, Math.floor(w / 512))) {
+      var k = ((d[i] >> 2) << 12) | ((d[i + 1] >> 2) << 6) | (d[i + 2] >> 2); tot++;
+      if (!seen[k]) { seen[k] = 1; n++; } cnt[k] = (cnt[k] || 0) + 1;
+    }
+  }
+  Object.keys(cnt).map(function (k) { return cnt[k]; }).sort(function (a, b) { return b - a; }).slice(0, 8).forEach(function (v) { top += v; });
+  return n > 4096 && top / tot < 0.5;
+}
+function imageDoc(L, w, h, title, draw) {   // one page sized to the image (px at 72 DPI), shrunk to fit Letter when bigger
+  return L.PDFDocument.create().then(function (doc) {
+    var fit = w <= h ? Math.min(1, 612 / w, 792 / h) : Math.min(1, 792 / w, 612 / h), pw = w * fit, ph = h * fit, pg = doc.addPage([pw, ph]);
+    doc.setTitle(title); doc.setProducer('ENESMA REALTY Transaction Center'); doc.setCreator('ENESMA REALTY Transaction Center');
+    return Promise.resolve(draw(doc, pg, pw, ph)).then(function () { return doc.save({ useObjectStreams: true }); });
+  });
+}
+function imagePdf(L, data, kind, w, h, title) {   // embeds the JPEG/PNG data (JPEG bytes go in untouched)
+  return imageDoc(L, w, h, title, function (doc, pg, pw, ph) {
+    return (kind === 'png' ? doc.embedPng(data) : doc.embedJpg(data)).then(function (img) { pg.drawImage(img, { x: 0, y: 0, width: pw, height: ph }); });
+  });
+}
+function rawImagePdf(L, c, title) {   // lossless: the exact pixels, DeviceGray when there is no color, Flate + PNG 'Up' predictor. Opaque images only.
+  var w = c.width, h = c.height, d = c.getContext('2d').getImageData(0, 0, w, h).data, gray = true, i;
+  for (i = 0; i < d.length; i += 4) { if (d[i + 3] !== 255) return Promise.resolve(null); if (gray && (d[i] !== d[i + 1] || d[i] !== d[i + 2])) gray = false; }
+  var nc = gray ? 1 : 3, row = w * nc, buf = new Uint8Array((row + 1) * h), prev = new Uint8Array(row), cur = new Uint8Array(row);
+  for (var y = 0; y < h; y++) {
+    for (var x = 0, q = y * w * 4; x < w; x++, q += 4) { if (gray) cur[x] = d[q]; else { cur[x * 3] = d[q]; cur[x * 3 + 1] = d[q + 1]; cur[x * 3 + 2] = d[q + 2]; } }
+    var o = y * (row + 1); buf[o] = 2; for (var k = 0; k < row; k++) buf[o + 1 + k] = (cur[k] - prev[k]) & 255;
+    var t = prev; prev = cur; cur = t;
+  }
+  return imageDoc(L, w, h, title, function (doc, pg, pw, ph) {
+    var ref = doc.context.register(doc.context.flateStream(buf, { Type: 'XObject', Subtype: 'Image', Width: w, Height: h, ColorSpace: gray ? 'DeviceGray' : 'DeviceRGB', BitsPerComponent: 8, DecodeParms: { Predictor: 15, Colors: nc, BitsPerComponent: 8, Columns: w } }));
+    var nm = pg.node.newXObject('Im', ref);
+    pg.pushOperators(L.pushGraphicsState(), L.concatTransformationMatrix(pw, 0, 0, ph, 0, 0), L.drawObject(nm), L.popGraphicsState());
+  });
+}
+function imageToPdf(L, bytes, kind, name) {
+  var orient = kind === 'jpg' ? jpegOrientation(bytes) : 1;
+  return loadImg(bytes, kind === 'png' ? 'image/png' : 'image/jpeg').then(function (im) {
+    var W = im.naturalWidth, H = im.naturalHeight; if (!W || !H) throw new Error('Could not read that image. ' + UP_ERR);
+    var sc = Math.min(1, UP_CAP / Math.max(W, H)), w = Math.max(1, Math.round(W * sc)), h = Math.max(1, Math.round(H * sc));
+    var asIs = sc === 1 && orient === 1, tries = [], info = { w: w, h: h, srcW: W, srcH: H, orient: orient, tried: [] };
+    var c = drawScaled(im, w, h, false), photo = photoLike(c), sfx = sc < 1 ? ' (scaled)' : '';
+    if (asIs) tries.push({ how: kind + ' (original data)', pdf: function () { return imagePdf(L, bytes, kind, w, h, name); } });
+    if (kind === 'png') {   // lossless candidates
+      tries.push({ how: 'lossless flate' + sfx, pdf: function () { return rawImagePdf(L, c, name); } });
+      if (!asIs) tries.push({ how: 'png' + sfx, pdf: function () { return canvasBytes(c, 'image/png').then(function (d) { return d && imagePdf(L, d, 'png', w, h, name); }); } });
+    }
+    if (kind === 'jpg' || photo) {   // JPEG re-encode: photos only; text/line-art PNGs stay lossless. Re-encoding an untouched JPEG must save >= 10%.
+      var cj = kind === 'png' ? drawScaled(im, w, h, true) : c;   // PNG transparency goes on white for JPEG
+      tries.push({ how: 'jpeg q' + UP_JPEG_Q + sfx, gain: asIs && kind === 'jpg' ? 0.9 : 1, pdf: function () { return canvasBytes(cj, 'image/jpeg', UP_JPEG_Q).then(function (d) { return d && imagePdf(L, d, 'jpg', w, h, name); }); } });
+    }
+    info.photo = photo;
+    return tries.reduce(function (pr, t) {
+      return pr.then(function (best) {
+        return Promise.resolve().then(t.pdf).catch(function () { return null; }).then(function (pdf) {
+          if (!pdf) return best; info.tried.push({ how: t.how, size: pdf.length });
+          return !best || pdf.length < best.bytes.length * (t.gain || 1) ? { bytes: pdf, how: t.how } : best;
+        });
+      });
+    }, Promise.resolve(null)).then(function (best) { if (!best) throw new Error('Could not convert that image to PDF.'); info.how = best.how; return { bytes: best.bytes, pages: 1, info: info }; });
+  });
+}
+function pruneUnreachable(L, ctx) {
+  var seen = {}, st = [ctx.trailerInfo.Root, ctx.trailerInfo.Info];
+  while (st.length) {
+    var o = st.pop(); if (!o) continue;
+    if (o instanceof L.PDFRef) { if (!seen[o.tag]) { seen[o.tag] = 1; st.push(ctx.lookup(o)); } }
+    else if (o instanceof L.PDFArray) st.push.apply(st, o.asArray());
+    else if (o instanceof L.PDFDict) o.entries().forEach(function (e) { st.push(e[1]); });
+    else if (o && o.dict instanceof L.PDFDict) st.push(o.dict);
+  }
+  var gone = 0; ctx.enumerateIndirectObjects().forEach(function (e) { if (!seen[e[0].tag]) { ctx.delete(e[0]); gone++; } });
+  return gone;
+}
+function optimizePdf(L, bytes, junk) {
+  var info = { how: 'original' };
+  return L.PDFDocument.load(bytes, { updateMetadata: false }).then(function (doc) {   // encrypted PDFs throw here: kept as-is
+    var cat = doc.catalog;
+    if (doc.isEncrypted || cat.get(L.PDFName.of('AcroForm')) || cat.get(L.PDFName.of('Perms'))) { info.how = 'original (forms/signatures or encryption kept untouched)'; return { bytes: bytes, pages: doc.getPageCount(), info: info }; }
+    var n = doc.getPageCount(); info.dropped = pruneUnreachable(L, doc.context);
+    return doc.save({ useObjectStreams: true, addDefaultPage: false, updateFieldAppearances: false }).then(function (out) {
+      info.tried = [{ how: 'object streams', size: out.length }];
+      if (out.length >= bytes.length && !junk) return { bytes: bytes, pages: n, info: info };
+      return L.PDFDocument.load(out, { updateMetadata: false }).then(function (chk) {
+        if (chk.getPageCount() !== n) return { bytes: bytes, pages: n, info: info };
+        info.how = 'object streams'; return { bytes: out, pages: n, info: info };
+      });
+    });
+  }).catch(function () { info.how = 'original (not re-saved)'; return { bytes: bytes, pages: '', info: info }; });
+}
+function prepUpload(file) {   // -> { name, bytes (PDF), pages, before, info }
+  var bad = upCheck(file); if (bad) return Promise.reject(new Error(bad));
+  return file.arrayBuffer().then(function (ab) {
+    var bytes = new Uint8Array(ab), kind = sniffKind(bytes);
+    if (!kind) throw new Error(UP_ERR);
+    return loadPdfLib().then(function (L) { return kind === 'jpg' || kind === 'png' ? imageToPdf(L, bytes, kind, file.name) : optimizePdf(L, bytes, kind === 'pdf+junk'); }).then(function (r) {
+      if (sniffKind(r.bytes) !== 'pdf') throw new Error('That file is not a valid PDF. ' + UP_ERR);
+      var base = String(file.name || 'upload').replace(/\.(pdf|jpe?g|png)$/i, '') || 'upload';
+      if (r.bytes.length > MAX) throw new Error(base + '.pdf is larger than 20 MB.');
+      return { name: base + '.pdf', bytes: r.bytes, pages: r.pages, before: bytes.length, info: r.info };
+    });
+  });
+}
+window.TCUpload = { prep: prepUpload, accept: UP_ACCEPT, cap: UP_CAP };   // used by the upload tests
 var fileCache = {};
 function getFileBytes(docId) {
   if (fileCache[docId]) return Promise.resolve(fileCache[docId]);
@@ -619,7 +787,7 @@ function splitModal(existingDocId) {
   var items = S.txn.items.filter(function (x) { return x.active; });
   var opt = '<option value="">Document Storage</option>' + items.map(function (x) { return '<option value="' + h(x.id) + '">' + h(x.title) + '</option>'; }).join('');
   var m = modal('<h2>Upload &amp; Split Packet</h2><p class="sub">Upload one signed PDF packet, then assign page ranges to checklist items. The full packet stays in Document Storage; nothing is deleted.</p><div id="se"></div>' +
-    (existingDocId ? '' : '<label class="btn" id="spick">Choose PDF packet<input type="file" class="hidden" id="sfile" accept="application/pdf"></label>') + '<div id="sbody"></div>', true);
+    (existingDocId ? '' : '<label class="btn" id="spick">Choose PDF packet<input type="file" class="hidden" id="sfile" accept="' + UP_ACCEPT + '"></label>') + '<div id="sbody"></div>', true);
   var state = { bytes: null, name: '', pages: 0, srcId: existingDocId || '' };
   function showErr(msg) { qs('#se', m).innerHTML = msg ? '<div class="err">' + h(msg) + '</div>' : ''; }
   function addRange(a, b) { qs('#rngs', m).insertAdjacentHTML('beforeend', '<div class="rng"><input type="number" min="1" max="' + state.pages + '" value="' + a + '" aria-label="From page"><input type="number" min="1" max="' + state.pages + '" value="' + b + '" aria-label="To page"><select aria-label="Checklist item">' + opt + '</select><button class="rx link" title="Remove" style="text-decoration:none;font-size:20px">×</button></div>'); }
@@ -627,7 +795,7 @@ function splitModal(existingDocId) {
     return loadPdfLib().then(function (L) { return L.PDFDocument.load(bytes, { ignoreEncryption: true }); }).then(function (doc) {
       state.bytes = bytes; state.name = name; state.pages = doc.getPageCount();
       var url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-      qs('#sbody', m).innerHTML = '<div class="split" style="margin-top:14px"><div><iframe src="' + url + '" title="Packet preview"></iframe><p class="sub" style="margin-top:6px">' + h(name) + ' · ' + state.pages + ' pages</p></div><div><b class="gt">Assign pages</b><p class="sub" style="margin:8px 0 12px">From page · to page · checklist item</p><div id="rngs"></div><button class="link" id="addr">+ Add range</button>' +
+      qs('#sbody', m).innerHTML = '<div class="split" style="margin-top:14px"><div><iframe src="' + url + '" title="Packet preview"></iframe><p class="sub" style="margin-top:6px">' + h(name) + ' · ' + state.pages + (state.pages === 1 ? ' page' : ' pages') + '</p></div><div><b class="gt">Assign pages</b><p class="sub" style="margin:8px 0 12px">From page · to page · checklist item</p><div id="rngs"></div><button class="link" id="addr">+ Add range</button>' +
         '<div class="actions"><button class="btn" id="sgo">Split &amp; upload</button></div></div></div>';
       addRange(1, state.pages);
       qs('#addr', m).onclick = function () { var last = qsa('.rng', m).pop(); var s = last ? Math.min(state.pages, Number(qsa('input', last)[1].value) + 1) : 1; addRange(s, state.pages); };
@@ -669,9 +837,9 @@ function splitModal(existingDocId) {
   } else {
     qs('#sfile', m).onchange = function () {
       var f = this.files[0]; if (!f) return;
-      if (f.size > MAX) return showErr('That PDF is larger than 20 MB.');
+      var bad = upCheck(f); if (bad) return showErr(bad);
       showErr(''); qs('#spick', m).classList.add('hidden');
-      f.arrayBuffer().then(function (ab) { return setup(new Uint8Array(ab), f.name); }).catch(function (e) { showErr('Could not open that PDF: ' + e.message); qs('#spick', m).classList.remove('hidden'); });
+      prepUpload(f).then(function (p) { return setup(p.bytes, p.name); }).catch(function (e) { showErr(/Only PDF|larger than/.test(e.message) ? e.message : 'Could not open that PDF: ' + e.message); qs('#spick', m).classList.remove('hidden'); });
     };
   }
 }
@@ -696,7 +864,7 @@ function cancelModal() {
   var ci = d.items.filter(function (x) { return x.cancel && x.active; })[0];
   var has = ci && docsOf(ci.id).length;
   if (!has) {
-    var m0 = modal('<h2>Request cancellation</h2><p class="sub">First upload the signed <b>' + h(ci ? ci.title : 'cancellation document') + '</b>' + (ci && ci.forms ? ' (' + h(ci.forms) + ')' : '') + '. Then you can send the request. An admin approves every cancellation.</p>' + (ci && canEdit() ? '<label class="btn">Upload ' + h(ci.title) + '<input type="file" class="hidden" id="xup" accept="application/pdf,image/*,.heic"></label>' : ''));
+    var m0 = modal('<h2>Request cancellation</h2><p class="sub">First upload the signed <b>' + h(ci ? ci.title : 'cancellation document') + '</b>' + (ci && ci.forms ? ' (' + h(ci.forms) + ')' : '') + '. Then you can send the request. An admin approves every cancellation.</p>' + (ci && canEdit() ? '<label class="btn">Upload ' + h(ci.title) + '<input type="file" class="hidden" id="xup" accept="' + UP_ACCEPT + '"></label>' : ''));
     var xu = qs('#xup', m0);
     if (xu) xu.onchange = function () { var f = xu.files[0]; if (!f) return; uploadFile(f, ci.id, true).then(function () { m0.close(); return api('getTransaction', { id: t.id }); }).then(function (dd) { if (dd) { S.txn = dd; page.keepScroll = true; drawTxn(); if (docsOf(ci.id).length) cancelModal(); } }); };
     return;
@@ -870,6 +1038,9 @@ var CRM_UI = { q: '', status: '', type: '', tag: '', group: '', agentId: '', rem
 function dayPT(d) { return new Date(d).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); }
 function remBucket(r) { var now = Date.now(), t = new Date(r.dueAt).getTime(); if (t < now) return 'overdue'; return dayPT(t) === dayPT(now) ? 'due' : 'upcoming'; }
 function cName(c) { return [c.firstName, c.lastName].filter(Boolean).join(' ') || '(no name)'; }
+/* 1.4.3 (feature crm_lender): each agent's own Lender Roster. Shown only when the backend has it AND migrateV143 ran. */
+function lendOn(d) { return !!S.crmLender && !!d && d.lendersReady === true && Array.isArray(d.lenders); }
+function lenderLabel(name, company) { return h(name || '') + (company && company !== name ? ' <small class="lco">' + h(company) + '</small>' : ''); }
 function crmStatusPill(s) { var c = { 'New Lead': 'p-pend', 'Active': 'p-ok', 'Under Contract': 'p-ok', 'Closed': 'p-dark', 'Past Client': 'p-dark', 'Inactive': 'p-miss' }[s] || 'p-miss'; return '<span class="pill ' + c + '">' + h(s) + '</span>'; }
 function crmDownload(name, text, mime) {
   var url = URL.createObjectURL(new Blob([text], { type: mime }));
@@ -917,7 +1088,8 @@ function crmHome() {
   loading('crm');
   api('crmBoot', isAdmin() ? { agentId: CRM_UI.agentId } : {}).then(function (d) {
     S.crm = d;
-    var byId = {}; d.clients.forEach(function (c) { byId[c.id] = c; c._s = [cName(c), c.phone, String(c.phone || '').replace(/\D/g, ''), c.email, c.address, c.source, (c.tags || []).join(' '), c.ownerName || ''].join(' ').toLowerCase(); });
+    var byId = {}; d.clients.forEach(function (c) { byId[c.id] = c; c._s = [cName(c), c.phone, String(c.phone || '').replace(/\D/g, ''), c.email, c.address, c.source, (c.tags || []).join(' '), c.ownerName || '', c.lenderName || '', c.lenderCompany || ''].join(' ').toLowerCase(); });
+    var LO = lendOn(d);
     var gName = {}; d.groups.forEach(function (g) { gName[g.id] = g.name; });
     var tags = {}; d.clients.forEach(function (c) { (c.tags || []).forEach(function (t) { tags[t.toLowerCase()] = tags[t.toLowerCase()] || t; }); });
     var tagList = Object.keys(tags).sort().map(function (k) { return tags[k]; });
@@ -927,7 +1099,7 @@ function crmHome() {
     CRM_UI.remTab = CRM_UI.remPick || (buckets.overdue.length ? 'overdue' : buckets.due.length ? 'due' : 'upcoming');
     var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(l) + '</option>'; };
     var inner = '<div class="top"><div><h1>CRM</h1><p class="sub">' + (d.admin ? 'Every agent’s clients. Pick an agent to narrow the list.' : 'Your clients, notes and follow-ups. Only you (and the admin) can see them.') + '</p></div>' +
-      '<div class="cact"><button class="btn" id="cAdd">+ Add client</button><button class="ub" id="cImp">Import</button><button class="ub" id="cExp">Export</button><button class="ub" id="cGrp">Groups</button><button class="ub" id="cFeed">Calendar feed</button></div></div>' +
+      '<div class="cact"><button class="btn" id="cAdd">+ Add client</button><button class="ub" id="cImp">Import</button><button class="ub" id="cExp">Export</button><button class="ub" id="cGrp">Groups</button>' + (LO ? '<a class="ub" id="cLen" href="#/crm/lenders">' + (d.admin ? 'Lender rosters' : 'My Lenders') + '</a>' : '') + '<button class="ub" id="cFeed">Calendar feed</button></div></div>' +
       (d.admin ? '<div class="cagent f"><label for="cAg">Agent</label><select id="cAg">' + opt('', 'All agents', CRM_UI.agentId) + (d.agents || []).map(function (a) { return opt(a.id, a.name, CRM_UI.agentId); }).join('') + '</select></div>' : '') +
       '<div class="card gb crems"><div class="ush"><h2>Follow-ups</h2></div><div class="seg" role="group" aria-label="Follow-ups">' +
       [['overdue', 'Overdue'], ['due', 'Due today'], ['upcoming', 'Upcoming']].map(function (x) { return '<button type="button" data-rt="' + x[0] + '" class="' + (CRM_UI.remTab === x[0] ? 'on' : '') + '" aria-pressed="' + (CRM_UI.remTab === x[0]) + '">' + x[1] + ' <span class="ucount' + (x[0] === 'overdue' && buckets.overdue.length ? ' red' : '') + '">' + buckets[x[0]].length + '</span></button>'; }).join('') + '</div>' +
@@ -937,7 +1109,7 @@ function crmHome() {
       '<div class="f"><label for="cTy">Type</label><select id="cTy">' + opt('', 'All', CRM_UI.type) + Object.keys(d.types).map(function (k) { return opt(k, d.types[k], CRM_UI.type); }).join('') + '</select></div>' +
       '<div class="f"><label for="cTg">Tag</label><select id="cTg">' + opt('', 'All', CRM_UI.tag) + tagList.map(function (t) { return opt(t.toLowerCase(), t, CRM_UI.tag); }).join('') + '</select></div>' +
       '<div class="f"><label for="cGr">Group</label><select id="cGr">' + opt('', 'All', CRM_UI.group) + d.groups.map(function (g) { return opt(g.id, g.name + (d.admin && !CRM_UI.agentId ? ' · ' + (g.ownerName || '') : '') + ' (' + g.count + ')', CRM_UI.group); }).join('') + '</select></div></div>' +
-      '<div class="card gb clist"><div id="cRows"></div></div>';
+      '<div class="card gb clist' + (LO ? ' wl' : '') + (d.admin ? ' wa' : '') + '"><div id="cRows"></div></div>';
     page('crm', inner, function () {
       var draw = function () {
         var q = CRM_UI.q.toLowerCase().trim(), qd = q.replace(/\D/g, '');
@@ -949,10 +1121,11 @@ function crmHome() {
           return !q || q.split(/\s+/).every(function (w) { return c._s.indexOf(w) >= 0; }) || (qd.length >= 3 && c._s.indexOf(qd) >= 0);
         }).sort(function (a, b) { return cName(a).localeCompare(cName(b)); });
         var shown = list.slice(0, CRM_UI.shown);
-        qs('#cRows').innerHTML = (list.length ? '<div class="tbl"><table class="ctbl"><thead><tr><th>Name</th><th>Status</th><th>Type</th><th>Phone</th><th>Email</th>' + (d.admin ? '<th>Agent</th>' : '') + '<th>Tags</th><th>Next follow-up</th></tr></thead><tbody>' +
+        qs('#cRows').innerHTML = (list.length ? '<div class="tbl"><table class="ctbl"><thead><tr><th>Name</th><th>Status</th><th>Type</th><th>Phone</th><th>Email</th>' + (d.admin ? '<th>Agent</th>' : '') + (LO ? '<th>Lender</th>' : '') + '<th>Tags</th><th>Next follow-up</th></tr></thead><tbody>' +
           shown.map(function (c) {
             return '<tr><td class="cnm"><a href="#/crm/c/' + h(c.id) + '"><b>' + h(cName(c)) + '</b></a></td><td data-l="Status">' + crmStatusPill(c.status) + '</td><td data-l="Type">' + h(d.types[c.type] || c.type) + '</td>' +
               '<td data-l="Phone">' + h(c.phone) + '</td><td data-l="Email">' + h(c.email) + '</td>' + (d.admin ? '<td data-l="Agent">' + h(c.ownerName) + '</td>' : '') +
+              (LO ? '<td data-l="Lender">' + (c.lenderId ? lenderLabel(c.lenderName, c.lenderCompany) : '') + '</td>' : '') +
               '<td data-l="Tags">' + (c.tags || []).map(function (t) { return '<span class="ctag">' + h(t) + '</span>'; }).join('') + '</td><td data-l="Follow-up">' + (c.nextDue ? '<span class="' + (new Date(c.nextDue).getTime() < Date.now() ? 'rt' : '') + '">' + h(fmtTs(c.nextDue)) + '</span>' : '') + '</td></tr>';
           }).join('') + '</tbody></table></div>' : '<div class="uempty">' + (d.clients.length ? 'No clients match these filters.' : 'No clients yet. Use <b>+ Add client</b> or <b>Import</b>.') + '</div>') +
           '<div class="cfoot">' + h(list.length) + ' of ' + h(d.clients.length) + ' clients' + (list.length > shown.length ? ' · <button class="link" id="cMore">Show more</button>' : '') + '</div>';
@@ -985,7 +1158,9 @@ function clientView(id) {
       '<div class="cact"><button class="btn" id="cEdit">Edit</button><button class="ub red" id="cDel">Delete</button></div></div>' +
       '<div class="card gb"><div class="kv">' + kv('Phone', h(c.phone)) + kv('Email', h(c.email)) + kv('Address', h(c.address)) + kv('Source', h(c.source)) +
       kv('Tags', (c.tags || []).map(function (t) { return '<span class="ctag">' + h(t) + '</span>'; }).join('')) + kv('Groups', (c.groups || []).map(function (x) { return h(gName[x] || ''); }).filter(Boolean).join(', ')) +
-      (c.ownerName !== undefined ? kv('Agent', h(c.ownerName)) : '') + kv('Added', h(fmtTs(c.createdAt))) + kv('Updated', h(fmtTs(c.updatedAt))) + '</div>' +
+      (c.ownerName !== undefined ? kv('Agent', h(c.ownerName)) : '') +
+      (lendOn(d) ? kv('Lender', g.lender ? lenderLabel(g.lender.name, g.lender.company) + ([g.lender.phone, g.lender.email, g.lender.nmls ? 'NMLS #' + g.lender.nmls : ''].filter(Boolean).length ? '<small class="lco">' + h([g.lender.phone, g.lender.email, g.lender.nmls ? 'NMLS #' + g.lender.nmls : ''].filter(Boolean).join(' · ')) + '</small>' : '') : '') : '') +
+      kv('Added', h(fmtTs(c.createdAt))) + kv('Updated', h(fmtTs(c.updatedAt))) + '</div>' +
       (g.txns.length ? '<h3 class="csub">Linked transactions</h3><div class="clinks">' + g.txns.map(function (t) { return '<a class="ub" data-ownfile="1" href="#/t/' + h(t.id) + '">' + h(t.title) + ' · ' + h(t.typeLabel) + ' · ' + h(t.status) + '</a>'; }).join('') + '</div>' : '') + '</div>' +
       '<div class="cgrid"><div class="card gb"><h3>Follow-ups</h3><form id="rf" class="rform" novalidate><div class="f"><label for="rd">Date &amp; time</label><input type="datetime-local" id="rd" required></div><div class="f rnote"><label for="rn">Note</label><input type="text" id="rn" maxlength="300" placeholder="Call about…"></div><button class="btn" id="rb">Add follow-up</button></form><div id="re"></div>' +
       '<div id="rl">' + (g.reminders.length ? g.reminders.map(function (r) { return remRow(r, c, false); }).join('') : '<div class="uempty">No follow-ups yet.</div>') + '</div></div>' +
@@ -993,7 +1168,7 @@ function clientView(id) {
       '<div class="feed">' + (g.notes.length ? g.notes.map(function (n) { return '<div class="ev"><small>' + h(fmtTs(n.createdAt)) + (n.by ? ' · ' + h(n.by) : '') + '</small><div class="ntext">' + h(n.text) + '</div></div>'; }).join('') : '<div class="uempty">No notes yet.</div>') + '</div></div></div>';
     page('crm', inner, function () {
       var again = function () { page.keepScroll = true; clientView(id); };
-      qs('#cEdit').onclick = function () { clientForm(c, d, g.txns); };
+      qs('#cEdit').onclick = function () { clientForm(c, d, g.txns, g.lender); };
       qs('#cDel').onclick = function () { if (!confirm('Delete ' + cName(c) + ' from the CRM?')) return; api('crmDeleteClient', { id: c.id }).then(function () { toast('Client deleted.'); S.crm = null; location.hash = '#/crm'; }).catch(function (e) { toast(e.message, 1); }); };
       wireRems(qs('#rl'), g.reminders, by, function () { S.crm = null; again(); });
       qs('#rf').onsubmit = function (e) {
@@ -1039,7 +1214,7 @@ function wirePhone(el) {
   });
 }
 
-function clientForm(c, d, linked) {
+function clientForm(c, d, linked, curLender) {
   var isNew = !c; c = c || { type: '', status: 'New Lead', tags: [], groups: [], txnIds: [] };
   var ownerId = c.ownerId || (d.admin ? (CRM_UI.agentId || S.user.id) : S.user.id);
   var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(l) + '</option>'; };
@@ -1051,12 +1226,51 @@ function clientForm(c, d, linked) {
     '<div class="f"><label for="cfSo">Source</label><input type="text" id="cfSo" list="cfSoL" maxlength="60" value="' + h(c.source || '') + '"><datalist id="cfSoL">' + d.sources.map(function (s) { return '<option value="' + h(s) + '">'; }).join('') + '</datalist></div>' +
     '<div class="f w3"><label for="cfTg">Tags (comma separated)</label><input type="text" id="cfTg" value="' + h((c.tags || []).join(', ')) + '" placeholder="vip, first-time buyer"></div>' +
     (d.admin && isNew ? '<div class="f w3"><label for="cfO">Agent</label><select id="cfO">' + opt(S.user.id, uName(S.user) + ' (me)', ownerId) + (d.agents || []).filter(function (a) { return a.id !== S.user.id; }).map(function (a) { return opt(a.id, a.name, ownerId); }).join('') + '</select></div>' : '') +
+    (lendOn(d) ? '<div class="f w3"><label for="cfLq">Lender</label><div class="lpick" id="cfLp"><input type="search" id="cfLq" placeholder="Search this roster…" autocomplete="off" aria-label="Search lenders"><select id="cfLn" aria-label="Lender"></select>' +
+      '<div class="lbtns"><button type="button" class="ub" id="cfLa">+ Add new lender</button><button type="button" class="link" id="cfLx">Clear</button></div></div><div id="cfLnew"></div></div>' : '') +
     '<div class="f w3"><label>Groups</label><div class="chips" id="cfG"></div></div>' +
     '<div class="f w3"><label>Linked transactions</label><div class="clinkp" id="cfX"></div></div>' +
     (isNew ? '<div class="f w3"><label for="cfN">First note</label><textarea id="cfN" maxlength="5000"></textarea></div>' : '') +
     '</div><div class="actions"><button class="btn" id="cfB">' + (isNew ? 'Add client' : 'Save') + '</button></div></form>', true);
-  var sel = { g: (c.groups || []).slice(), x: (c.txnIds || []).slice() };
+  var sel = { g: (c.groups || []).slice(), x: (c.txnIds || []).slice(), l: c.lenderId || '' };
+  var LO = lendOn(d);
+  // The client's current lender is always pickable, even if this boot's roster view was narrowed to another agent.
+  if (LO && curLender && curLender.id && !d.lenders.some(function (l) { return l.id === curLender.id; })) d.lenders.push(curLender);
+  function drawLenders() {   // only the client owner's roster (an agent's d.lenders is already just their own)
+    if (!LO) return;
+    var o = qs('#cfO', m) ? qs('#cfO', m).value : ownerId, q = qs('#cfLq', m).value.toLowerCase().trim();
+    var ros = d.lenders.filter(function (l) { return l.ownerId === o; });
+    if (sel.l && d.lenders.some(function (l) { return l.id === sel.l && l.ownerId !== o; })) sel.l = '';   // owner changed: other roster
+    var shown = ros.filter(function (l) { return l.id === sel.l || !q || (l.name + ' ' + l.company + ' ' + l.phone + ' ' + l.email + ' ' + l.nmls).toLowerCase().indexOf(q) >= 0; });
+    qs('#cfLn', m).innerHTML = '<option value="">' + (ros.length ? '— No lender —' : '— No lenders in this roster yet —') + '</option>' +
+      shown.map(function (l) { return '<option value="' + h(l.id) + '"' + (l.id === sel.l ? ' selected' : '') + '>' + h(l.name + (l.company && l.company !== l.name ? ' · ' + l.company : '')) + '</option>'; }).join('') +
+      (q && shown.length === (sel.l ? 1 : 0) ? '<option value="" disabled>No match for “' + h(q) + '”</option>' : '');
+    qs('#cfLx', m).classList.toggle('hidden', !sel.l);
+  }
+  function newLenderForm() {
+    var box = qs('#cfLnew', m), o = qs('#cfO', m) ? qs('#cfO', m).value : ownerId;
+    box.innerHTML = '<div class="lnew"><div class="lnh"><b>New lender</b><small class="cmuted">' + (o === S.user.id ? 'Added to your roster.' : 'Added to this agent’s roster.') + '</small></div><div id="lne"></div><div class="fgrid">' +
+      '<div class="f"><label for="lnN">Name <span class="req">*</span></label><input type="text" id="lnN" maxlength="80"></div><div class="f"><label for="lnC">Company</label><input type="text" id="lnC" maxlength="100"></div>' +
+      '<div class="f"><label for="lnP">Phone</label><input type="tel" id="lnP" inputmode="tel" placeholder="000-000-0000" maxlength="12"></div><div class="f w2"><label for="lnE">Email</label><input type="email" id="lnE" maxlength="120" autocapitalize="none" spellcheck="false"></div>' +
+      '<div class="f"><label for="lnM">NMLS #</label><input type="text" id="lnM" inputmode="numeric" maxlength="12"></div></div>' +
+      '<div class="actions"><button type="button" class="link" id="lnX">Cancel</button><button type="button" class="btn" id="lnB">Add lender</button></div></div>';
+    wirePhone(qs('#lnP', box)); qs('#lnN', box).focus();
+    qs('#lnX', box).onclick = function () { box.innerHTML = ''; };
+    qs('#lnB', box).onclick = function () {
+      var v = function (id) { return qs(id, box).value.trim(); }, L = { name: v('#lnN'), company: v('#lnC'), phone: v('#lnP'), email: v('#lnE'), nmls: v('#lnM') };
+      var er = lenderErr(L); if (er) { qs('#lne', box).innerHTML = '<div class="err">' + h(er) + '</div>'; return; }
+      var b = this; b.disabled = true;
+      api('crmSaveLender', { lender: L, ownerId: o }).then(function (r) { d.lenders.push(r.lender); sel.l = r.lender.id; qs('#cfLq', m).value = ''; box.innerHTML = ''; drawLenders(); toast('Lender added.'); })
+        .catch(function (e) {
+          b.disabled = false;
+          var ex = e.code === 'DUPLICATE' ? d.lenders.filter(function (l) { return l.ownerId === o && (l.name + '|' + l.company).toLowerCase() === (L.name + '|' + L.company).toLowerCase(); })[0] : null;
+          if (ex) { sel.l = ex.id; box.innerHTML = ''; drawLenders(); toast('Already in the roster: selected.'); return; }
+          qs('#lne', box).innerHTML = '<div class="err">' + h(e.message) + '</div>';
+        });
+    };
+  }
   function drawPicks() {
+    drawLenders();
     var o = qs('#cfO', m) ? qs('#cfO', m).value : ownerId;
     var gs = d.groups.filter(function (g) { return g.ownerId === o; });
     sel.g = sel.g.filter(function (id) { return gs.some(function (g) { return g.id === id; }); });
@@ -1070,10 +1284,18 @@ function clientForm(c, d, linked) {
   }
   drawPicks();
   wirePhone(qs('#cfP', m));
-  if (qs('#cfO', m)) qs('#cfO', m).onchange = drawPicks;
+  if (qs('#cfO', m)) qs('#cfO', m).onchange = function () { if (qs('#cfLnew', m)) qs('#cfLnew', m).innerHTML = ''; drawPicks(); };
+  if (LO) {
+    qs('#cfLq', m).addEventListener('input', drawLenders);
+    qs('#cfLq', m).addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); var o = qsa('#cfLn option', m).filter(function (x) { return x.value && !x.disabled; }); if (o.length === 1) { sel.l = o[0].value; drawLenders(); } } });
+    qs('#cfLn', m).onchange = function () { sel.l = this.value; drawLenders(); };
+    qs('#cfLx', m).onclick = function () { sel.l = ''; qs('#cfLq', m).value = ''; drawLenders(); };
+    qs('#cfLa', m).onclick = newLenderForm;
+  }
   function save(allowDup) {
     var v = function (id) { return qs(id, m) ? qs(id, m).value.trim() : ''; };
     var client = { firstName: v('#cfF'), lastName: v('#cfL'), phone: v('#cfP'), email: v('#cfE'), address: v('#cfA'), type: v('#cfT'), status: v('#cfS'), source: v('#cfSo'), tags: v('#cfTg'), groups: sel.g, txnIds: sel.x };
+    if (LO) client.lenderId = sel.l;   // only sent when lenders are on, so older backends never see it
     var err = !client.firstName && !client.lastName ? 'Enter a first or last name.' : !client.type ? 'Choose a client type.' : !phoneOk(client.phone) ? PHONE_ERR : (client.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(client.email)) ? 'Email address is not valid.' : '';
     if (err) { qs('#ce', m).innerHTML = '<div class="err">' + h(err) + '</div>'; return; }
     if (isNew) client.note = v('#cfN');
@@ -1100,6 +1322,7 @@ function exportModal(d) {
   };
 }
 
+var CRM_TEMPLATE_L = 'First Name,Last Name,Phone,Email,Address,City,State,Zip,Client Type,Source,Status,Tags,Groups,Note,Lender,Lender Company,Lender Phone,Lender Email,Lender NMLS #\r\nJane,Sample,(951) 555-0100,jane@example.com,123 Main St,Riverside,CA,92501,Buyer,Referral,New Lead,"first-time, vip",Open House Oct,Pre-approved up to 600k,Lisa Lender,Sample Mortgage Co,951-555-0199,lisa@example.com,123456\r\n';
 var CRM_TEMPLATE = 'First Name,Last Name,Phone,Email,Address,City,State,Zip,Client Type,Source,Status,Tags,Groups,Note\r\nJane,Sample,(951) 555-0100,jane@example.com,123 Main St,Riverside,CA,92501,Buyer,Referral,New Lead,"first-time, vip",Open House Oct,Pre-approved up to 600k\r\n';
 function importModal(d) {
   var st = { csv: '', name: '', mapping: null, owner: d.admin ? (CRM_UI.agentId || S.user.id) : '' };
@@ -1109,7 +1332,7 @@ function importModal(d) {
     (d.admin ? '<div class="f cagent"><label for="iown">Import into</label><select id="iown">' + opt(S.user.id, uName(S.user) + ' (me)', st.owner) + (d.agents || []).filter(function (a) { return a.id !== S.user.id; }).map(function (a) { return opt(a.id, a.name, st.owner); }).join('') + '</select></div>' : '') +
     '<div id="ibody"></div>', true);
   var err = function (msg) { qs('#ie', m).innerHTML = msg ? '<div class="err">' + h(msg) + '</div>' : ''; };
-  qs('#itpl', m).onclick = function () { crmDownload('crm-import-template.csv', '\uFEFF' + CRM_TEMPLATE, 'text/csv;charset=utf-8'); };
+  qs('#itpl', m).onclick = function () { crmDownload('crm-import-template.csv', '\uFEFF' + (lendOn(d) ? CRM_TEMPLATE_L : CRM_TEMPLATE), 'text/csv;charset=utf-8'); };
   if (qs('#iown', m)) qs('#iown', m).onchange = function () { st.owner = this.value; if (st.csv) preview(); };
   qs('#ifile', m).onchange = function () {
     var f = this.files[0]; if (!f) return; err('');
@@ -1132,7 +1355,8 @@ function importModal(d) {
         '<h3 class="csub">2 · Check the rows</h3><div class="icounts"><span class="pill p-ok">' + p.counts['new'] + ' new</span><span class="pill p-pend">' + p.counts.duplicate + ' duplicates</span><span class="pill p-rej">' + p.counts.invalid + ' invalid (skipped)</span></div>' +
         '<div class="tbl iprev"><table class="ctbl"><thead><tr><th>Row</th><th>Name</th><th>Result</th><th>Phone</th><th>Email</th><th>Status</th><th>Notes</th></tr></thead><tbody>' +
         p.rows.slice(0, 200).map(function (r) {
-          var msg = (r.errors || []).concat(r.warnings || []).concat(r.dupOf ? [r.dupOf.name ? 'Matches ' + r.dupOf.name : 'Same as row ' + r.dupOf.row] : []);
+          var msg = (r.errors || []).concat(r.warnings || []).concat(r.dupOf ? [r.dupOf.name ? 'Matches ' + r.dupOf.name : 'Same as row ' + r.dupOf.row] : [])
+            .concat(r.lender && r.state !== 'invalid' ? ['Lender: ' + r.lender.name + (r.lender.company && r.lender.company !== r.lender.name ? ' · ' + r.lender.company : '') + (r.lender.isNew ? ' (new: will be added to the roster)' : ' (in the roster)')] : []);
           return '<tr><td data-l="Row">' + r.n + '</td><td class="cnm"><b>' + h(r.name || '—') + '</b></td><td data-l="Result">' + stPill[r.state] + '</td><td data-l="Phone">' + h(r.phone) + '</td><td data-l="Email">' + h(r.email) + '</td><td data-l="Status">' + h(r.status) + '</td><td data-l="Notes">' + h(msg.join(' · ')) + '</td></tr>';
         }).join('') + '</tbody></table></div>' + (p.rows.length > 200 ? '<p class="cmuted">Showing the first 200 rows.</p>' : '') +
         '<h3 class="csub">3 · Duplicates</h3><div class="radios" id="idm"><label class="on"><input type="radio" name="idm" value="skip" checked>Skip them</label><label><input type="radio" name="idm" value="merge">Fill empty fields of the existing client (never overwrites)</label></div>' +
@@ -1142,7 +1366,7 @@ function importModal(d) {
       qs('#igo', m).onclick = function () {
         var b = this; b.disabled = true; b.innerHTML = '<span class="spin"></span>Importing…';
         var q = body(); q.dupMode = qs('#idm input:checked', m).value; q.fileName = st.name; q.mapping = st.mapping;
-        api('crmImportCommit', q).then(function (r) { m.close(); toast(r.created + ' added' + (r.merged ? ', ' + r.merged + ' updated' : '') + (r.skipped ? ', ' + r.skipped + ' skipped' : '') + (r.invalid ? ', ' + r.invalid + ' invalid' : '') + '.'); S.crm = null; crmHome(); })
+        api('crmImportCommit', q).then(function (r) { m.close(); toast(r.created + ' added' + (r.merged ? ', ' + r.merged + ' updated' : '') + (r.skipped ? ', ' + r.skipped + ' skipped' : '') + (r.invalid ? ', ' + r.invalid + ' invalid' : '') + (r.lendersAdded ? ', ' + r.lendersAdded + ' lender' + (r.lendersAdded === 1 ? '' : 's') + ' added to the roster' : '') + '.'); S.crm = null; crmHome(); })
           .catch(function (e) { b.disabled = false; b.textContent = 'Try again'; err(e.message); });
       };
     }).catch(function (e) { qs('#ibody', m).innerHTML = ''; err(e.message); });
@@ -1163,6 +1387,71 @@ function groupsModal(d) {
     qs('[data-a=ren]', row).onclick = function () { var v = prompt('Rename group', g.name); if (v && v.trim() && v.trim() !== g.name) api('crmSaveGroup', { id: id, name: v.trim() }).then(function () { done('Renamed.'); }).catch(err); };
     qs('[data-a=del]', row).onclick = function () { if (confirm('Delete the group “' + g.name + '”? Clients stay; they just leave the group.')) api('crmDeleteGroup', { id: id }).then(function () { done('Group deleted.'); }).catch(err); };
   });
+}
+
+/* ---- 1.4.3 Lender Roster ("My Lenders"; admin: every agent's roster, grouped by agent). Directory only: no logins, nothing is sent. ---- */
+function lenderErr(L) {
+  return !L.name ? 'Enter the lender’s name.' : !phoneOk(L.phone) ? 'Lender phone must be a 10-digit number (000-000-0000).' : (L.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(L.email)) ? 'Lender email address is not valid.' : (L.nmls && !/^(nmls\s*(id|#|no\.?|number)?\s*[:#]?\s*)?[\d\s#-]{1,16}$/i.test(L.nmls)) ? 'NMLS # must be digits only.' : '';
+}
+function lendersView() {
+  loading('crm');
+  api('crmBoot', isAdmin() ? { agentId: CRM_UI.agentId } : {}).then(function (d) {
+    S.crm = d;
+    if (!lendOn(d)) { location.hash = '#/crm'; return; }
+    var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(l) + '</option>'; };
+    var row = function (l) {
+      return '<tr data-lid="' + h(l.id) + '"><td class="cnm"><b>' + h(l.name) + '</b></td><td data-l="Company">' + h(l.company) + '</td><td data-l="Phone">' + h(l.phone) + '</td><td data-l="Email">' + h(l.email) + '</td><td data-l="NMLS #">' + h(l.nmls) + '</td>' +
+        '<td data-l="Clients">' + h(l.count || 0) + '</td><td class="lact"><button class="ub sm" data-a="edit">Edit</button><button class="link" data-a="del">Remove</button></td></tr>';
+    };
+    var table = function (ls) { return '<div class="tbl"><table class="ctbl ltbl"><thead><tr><th>Name</th><th>Company</th><th>Phone</th><th>Email</th><th>NMLS #</th><th>Clients</th><th><span class="sr">Actions</span></th></tr></thead><tbody>' + ls.map(row).join('') + '</tbody></table></div>'; };
+    var groups = [];
+    if (d.admin) {
+      var by = {}; d.lenders.forEach(function (l) { var k = l.ownerId; if (!by[k]) { by[k] = { name: l.ownerName || 'Agent', ls: [] }; groups.push(by[k]); } by[k].ls.push(l); });
+      groups.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    }
+    var inner = '<a class="link cback" href="#/crm">← All clients</a><div class="top"><div><h1>' + (d.admin ? 'Lender rosters' : 'My Lenders') + '</h1><p class="sub">' +
+      (d.admin ? 'Each agent keeps their own roster. Pick an agent to narrow it.' : 'Your own lenders, to pick on your clients. Other agents don’t see this roster.') + '</p></div>' +
+      '<div class="cact"><button class="btn" id="lAdd">+ Add lender</button></div></div>' +
+      (d.admin ? '<div class="cagent f"><label for="lAg">Agent</label><select id="lAg">' + opt('', 'All agents', CRM_UI.agentId) + (d.agents || []).map(function (a) { return opt(a.id, a.name, CRM_UI.agentId); }).join('') + '</select></div>' : '') +
+      (!d.lenders.length ? '<div class="card gb"><div class="uempty">No lenders yet. Use <b>+ Add lender</b>, add one while editing a client, or import a CSV with lender columns.</div></div>'
+        : d.admin ? groups.map(function (g) { return '<div class="card gb clist lroster"><h2 class="lrh">' + h(g.name) + ' <small>' + g.ls.length + ' lender' + (g.ls.length === 1 ? '' : 's') + '</small></h2>' + table(g.ls) + '</div>'; }).join('')
+          : '<div class="card gb clist lroster">' + table(d.lenders) + '<div class="cfoot">' + d.lenders.length + ' lender' + (d.lenders.length === 1 ? '' : 's') + '</div></div>');
+    page('crm', inner, function () {
+      var ag = qs('#lAg'); if (ag) ag.onchange = function () { CRM_UI.agentId = this.value; CRM_UI.group = ''; lendersView(); };
+      qs('#lAdd').onclick = function () { lenderForm(null, d); };
+      qsa('tr[data-lid]').forEach(function (tr) {
+        var l = d.lenders.filter(function (x) { return x.id === tr.getAttribute('data-lid'); })[0];
+        qs('[data-a=edit]', tr).onclick = function () { lenderForm(l, d); };
+        qs('[data-a=del]', tr).onclick = function () {
+          if (!confirm('Remove ' + l.name + ' from the roster?' + (l.count ? ' ' + l.count + ' client' + (l.count === 1 ? '' : 's') + ' will show no lender.' : ''))) return;
+          api('crmDeleteLender', { id: l.id }).then(function () { toast('Lender removed.'); S.crm = null; page.keepScroll = true; lendersView(); }).catch(function (e) { toast(e.message, 1); });
+        };
+      });
+    });
+  }).catch(function (e) { failView('crm', e); });
+}
+function lenderForm(l, d) {
+  var isNew = !l; l = l || {};
+  var owner = l.ownerId || (d.admin ? (CRM_UI.agentId || S.user.id) : S.user.id);
+  var opt = function (v, t, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(t) + '</option>'; };
+  var inp = function (id, lab, v, extra, attrs) { return '<div class="f' + (extra || '') + '"><label for="' + id + '">' + lab + '</label><input id="' + id + '" value="' + h(v || '') + '" ' + (attrs || 'type="text"') + '></div>'; };
+  var m = modal('<h2>' + (isNew ? 'Add lender' : 'Edit lender') + '</h2><p class="sub">A contact card only: lenders don’t get a login and nothing is sent to them.</p><div id="le"></div><form id="lf" novalidate><div class="fgrid">' +
+    inp('lfN', 'Name <span class="req">*</span>', l.name, '', 'type="text" maxlength="80"') + inp('lfC', 'Company', l.company, '', 'type="text" maxlength="100"') +
+    inp('lfP', 'Phone', l.phone, '', 'type="tel" inputmode="tel" placeholder="000-000-0000" maxlength="12"') + inp('lfE', 'Email', l.email, ' w2', 'type="email" maxlength="120" autocapitalize="none" spellcheck="false"') +
+    inp('lfM', 'NMLS #', l.nmls, '', 'type="text" inputmode="numeric" maxlength="12"') +
+    (d.admin && isNew ? '<div class="f w2"><label for="lfO">Agent’s roster</label><select id="lfO">' + opt(S.user.id, uName(S.user) + ' (me)', owner) + (d.agents || []).filter(function (a) { return a.id !== S.user.id; }).map(function (a) { return opt(a.id, a.name, owner); }).join('') + '</select></div>' : '') +
+    '<div class="f w3"><label for="lfT">Notes</label><textarea id="lfT" maxlength="1000">' + h(l.notes || '') + '</textarea></div>' +
+    '</div><div class="actions"><button class="btn" id="lfB">' + (isNew ? 'Add lender' : 'Save') + '</button></div></form>', true);
+  wirePhone(qs('#lfP', m));
+  qs('#lf', m).onsubmit = function (e) {
+    e.preventDefault();
+    var v = function (id) { return qs(id, m).value.trim(); }, L = { name: v('#lfN'), company: v('#lfC'), phone: v('#lfP'), email: v('#lfE'), nmls: v('#lfM'), notes: v('#lfT') };
+    var er = lenderErr(L); if (er) { qs('#le', m).innerHTML = '<div class="err">' + h(er) + '</div>'; return; }
+    var b = qs('#lfB', m); b.disabled = true;
+    var p = { lender: L }; if (!isNew) p.id = l.id; else if (qs('#lfO', m)) p.ownerId = qs('#lfO', m).value;
+    api('crmSaveLender', p).then(function () { m.close(); toast(isNew ? 'Lender added.' : 'Saved.'); S.crm = null; page.keepScroll = true; lendersView(); })
+      .catch(function (x) { b.disabled = false; qs('#le', m).innerHTML = '<div class="err">' + h(x.message) + '</div>'; });
+  };
 }
 
 function feedModal(d) {
@@ -1191,6 +1480,7 @@ function route() {
   var mc = hs.match(/^\/crm\/c\/([A-Za-z0-9_-]+)$/);
   if (mc && canCrm()) return clientView(mc[1]);
   if (/^\/crm\/?$/.test(hs) && canCrm()) { CRM_UI.remPick = ''; return crmHome(); }
+  if (hs === '/crm/lenders' && canCrm() && S.crmLender) return lendersView();
   if (hs === '/review' && isAdmin()) return reviewView();
   if (hs === '/users' && isAdmin()) return usersView();
   if (hs === '/archive' && isAdmin()) return archiveView();
@@ -1199,7 +1489,7 @@ function route() {
 function render() {
   if (S.tcApi === undefined) {   // feature detection: TC (1.3.0+) and CRM (1.4.0+) only when the backend says it has them
     S.tcApi = false;
-    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); }, function () { }).then(render);
+    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); S.crmLender = !!(d && d.features && d.features.indexOf('crm_lender') >= 0); }, function () { }).then(render);
   }
   if (!S.token) return loginView();
   if (!S.user) {
