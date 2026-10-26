@@ -4,7 +4,7 @@
 var CFG = window.TC_CONFIG || {};
 var DEMO = /[?&]demo=1\b/.test(location.search) || sessionStorage.getItem('tc_demo') === '1';
 var $app = document.getElementById('app');
-var S = { token: null, user: null, scope: 'personal', filter: '', dash: null, txn: null, tab: 'checklist', badges: { review: 0 }, tcApi: undefined, asRole: sessionStorage.getItem('tc_role') || '' };
+var S = { token: null, user: null, scope: 'personal', filter: '', dash: null, txn: null, tab: 'checklist', badges: { review: 0 }, tcApi: undefined, crmApi: false, crm: null, asRole: sessionStorage.getItem('tc_role') || '' };
 
 /* ---------------- utilities ---------------- */
 function h(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -33,7 +33,7 @@ function activeRole() { var r = myRoles(); return r.indexOf(S.asRole) >= 0 ? S.a
 function isTC() { return !!S.tcApi && activeRole() === 'tc'; }
 function rolesOf(u) { if (!u) return []; if (u.role === 'admin') return ['admin']; return (u.roles && u.roles.length) ? u.roles : [u.role === 'tc' ? 'tc' : 'agent']; }
 function roleLabel(u) { var r = rolesOf(u); if (r[0] === 'admin') return 'Admin'; return r.map(function (x) { return x === 'tc' ? 'Transaction Coordinator' : 'Agent'; }).join(' · '); }
-function setRole(r) { S.asRole = r; sessionStorage.setItem('tc_role', r); S.scope = 'personal'; S.filter = ''; S.dash = null; S.txn = null; if (location.hash && location.hash !== '#/') location.hash = '#/'; else route(); }
+function setRole(r) { S.asRole = r; sessionStorage.setItem('tc_role', r); S.scope = 'personal'; S.filter = ''; S.dash = null; S.txn = null; S.crm = null; if (location.hash && location.hash !== '#/') location.hash = '#/'; else route(); }
 var SEARCH_ICON = '<svg viewBox="0 0 24 24"><defs><linearGradient id="sgr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EAD59E"/><stop offset="1" stop-color="#D5BE87"/></linearGradient></defs><g fill="none" stroke="url(#sgr)" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M16 16l5 5"/></g></svg>';
 
 /* ---------------- API ---------------- */
@@ -62,7 +62,7 @@ function storeToken(tok) {
   try { localStorage.removeItem('tc_t'); } catch (e) { /* clean up tokens saved by older versions */ }
   if (tok) sessionStorage.setItem('tc_t', tok);
 }
-function signOutLocal() { storeToken(null); S.user = null; S.dash = null; S.txn = null; S.asRole = ''; sessionStorage.removeItem('tc_role'); }
+function signOutLocal() { storeToken(null); S.user = null; S.crm = null; CRM_UI.agentId = ''; S.dash = null; S.txn = null; S.asRole = ''; sessionStorage.removeItem('tc_role'); }
 
 /* ---------------- intake definitions ---------------- */
 var TYPES = [
@@ -217,7 +217,7 @@ function titleMark(size) {
 }
 document.title = APP_NAME;
 function shell(active, inner) {
-  var nav = '<a href="#/" class="' + (active === 'dash' ? 'on' : '') + '">Transactions</a><a href="#/new" class="' + (active === 'new' ? 'on' : '') + '">+ New</a>';
+  var nav = '<a href="#/" class="' + (active === 'dash' ? 'on' : '') + '">Transactions</a>' + (canCrm() ? '<a href="#/crm" class="' + (active === 'crm' ? 'on' : '') + '">CRM</a>' : '') + '<a href="#/new" class="' + (active === 'new' ? 'on' : '') + '">+ New</a>';
   if (isAdmin()) nav += '<a href="#/review" class="' + (active === 'review' ? 'on' : '') + '">Review' + (S.badges.review ? '<span class="cnt">' + S.badges.review + '</span>' : '') + '</a><a href="#/users" class="' + (active === 'users' ? 'on' : '') + '">Users</a><a href="#/archive" class="' + (active === 'archive' ? 'on' : '') + '">Archive</a>';
   var tog = isDual() ? '<div class="rtog seg" role="group" aria-label="View as">' + [['agent', 'My Files'], ['tc', 'TC View']].map(function (x) { return '<button type="button" data-role="' + x[0] + '" class="' + (activeRole() === x[0] ? 'on' : '') + '" aria-pressed="' + (activeRole() === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' : '';
   return (DEMO ? '<div class="demo"><b>DEMO PREVIEW</b> · sample data only, nothing is saved · <a href="#" id="exitDemo" style="color:#FBFBFB">exit demo</a></div>' : '') +
@@ -267,6 +267,7 @@ function expectedPage() {
   var hs = location.hash.replace(/^#/, '') || '/';
   if (hs === '/new') return 'new';
   if (hs === '/account') return '';
+  if (/^\/crm(\/|$)/.test(hs) && canCrm()) return 'crm';
   if (/^\/(review|users|archive)$/.test(hs) && isAdmin()) return hs.slice(1);
   return 'dash';
 }
@@ -853,6 +854,295 @@ function archiveView() {
   }).catch(function (e) { failView('archive', e); });
 }
 
+/* ---------------- CRM (backend 1.4.0+, detected from ping 'crm') ----------------
+   Agents see their own clients; admins see everyone with an agent filter; TC view has no CRM (the server enforces all of it).
+   Phone and email are plain text only: no texting or emailing from here. */
+function canCrm() { return !!S.crmApi && !!S.user && (isAdmin() || activeRole() === 'agent'); }
+var CRM_UI = { q: '', status: '', type: '', tag: '', group: '', agentId: '', remTab: 'overdue', remPick: '', shown: 100 };
+function dayPT(d) { return new Date(d).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); }
+function remBucket(r) { var now = Date.now(), t = new Date(r.dueAt).getTime(); if (t < now) return 'overdue'; return dayPT(t) === dayPT(now) ? 'due' : 'upcoming'; }
+function cName(c) { return [c.firstName, c.lastName].filter(Boolean).join(' ') || '(no name)'; }
+function crmStatusPill(s) { var c = { 'New Lead': 'p-pend', 'Active': 'p-ok', 'Under Contract': 'p-ok', 'Closed': 'p-dark', 'Past Client': 'p-dark', 'Inactive': 'p-miss' }[s] || 'p-miss'; return '<span class="pill ' + c + '">' + h(s) + '</span>'; }
+function crmDownload(name, text, mime) {
+  var url = URL.createObjectURL(new Blob([text], { type: mime }));
+  var a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+}
+function icsStamp(d) { return new Date(d).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+function icsEsc(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+function remText(r, c) { return 'Follow up: ' + cName(c); }
+function remDetails(r, c) { return [r.note, c.phone ? 'Phone: ' + c.phone : '', 'Open in CRM: ' + location.origin + location.pathname + '#/crm/c/' + c.id].filter(Boolean).join('\n'); }
+function gcalUrl(r, c) {
+  var s = new Date(r.dueAt), e = new Date(s.getTime() + 30 * 60000);
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(remText(r, c)) + '&dates=' + icsStamp(s) + '/' + icsStamp(e) + '&details=' + encodeURIComponent(remDetails(r, c));
+}
+function downloadIcs(r, c) {
+  var s = new Date(r.dueAt), e = new Date(s.getTime() + 30 * 60000);
+  var L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ENESMA REALTY//Transaction Center CRM//EN', 'METHOD:PUBLISH', 'BEGIN:VEVENT', 'UID:' + r.id + '@app.enesmarealty.com', 'DTSTAMP:' + icsStamp(new Date()), 'DTSTART:' + icsStamp(s), 'DTEND:' + icsStamp(e),
+    'SUMMARY:' + icsEsc(remText(r, c)), 'DESCRIPTION:' + icsEsc(remDetails(r, c)), 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsEsc(remText(r, c)), 'TRIGGER:-PT10M', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'];
+  crmDownload('follow-up-' + cName(c).replace(/[^A-Za-z0-9]+/g, '-') + '.ics', L.join('\r\n') + '\r\n', 'text/calendar');
+}
+function remRow(r, c, withClient) {
+  var b = remBucket(r);
+  return '<div class="row crem" data-rid="' + h(r.id) + '"><div class="n">' + (withClient ? '<b><a href="#/crm/c/' + h(c.id) + '">' + h(cName(c)) + '</a></b>' : '') +
+    '<small class="' + (b === 'overdue' && !r.done ? 'rt' : '') + '">' + (r.done ? 'Done · ' : b === 'overdue' ? 'Overdue · ' : '') + h(fmtTs(r.dueAt)) + '</small>' + (r.note ? '<div class="note">' + h(r.note) + '</div>' : '') + '</div>' +
+    '<div class="acts">' + (r.done ? '<button class="ub" data-act="undone">Reopen</button>' : '<button class="btn sm" data-act="done">Mark done</button>') +
+    '<a class="ub" href="' + h(gcalUrl(r, c)) + '" target="_blank" rel="noopener noreferrer">Google Calendar</a><button class="ub" data-act="ics">.ics</button>' + (withClient ? '' : '<button class="link" data-act="del">Delete</button>') + '</div></div>';
+}
+function wireRems(root, rems, clientsById, after) {
+  qsa('.crem', root).forEach(function (el) {
+    var r = rems.filter(function (x) { return x.id === el.getAttribute('data-rid'); })[0]; if (!r) return;
+    var c = clientsById[r.clientId] || {};
+    qsa('[data-act]', el).forEach(function (b) {
+      b.onclick = function () {
+        var a = b.getAttribute('data-act');
+        if (a === 'ics') return downloadIcs(r, c);
+        b.disabled = true;
+        var p = a === 'del' ? (confirm('Delete this follow-up?') ? api('crmDeleteReminder', { id: r.id }) : Promise.reject(null)) : api('crmSetReminderDone', { id: r.id, done: a === 'done' });
+        p.then(function () { toast(a === 'done' ? 'Marked done.' : a === 'del' ? 'Deleted.' : 'Reopened.'); after(); }).catch(function (e) { b.disabled = false; if (e) toast(e.message, 1); });
+      };
+    });
+  });
+}
+
+function crmHome() {
+  loading('crm');
+  api('crmBoot', isAdmin() ? { agentId: CRM_UI.agentId } : {}).then(function (d) {
+    S.crm = d;
+    var byId = {}; d.clients.forEach(function (c) { byId[c.id] = c; c._s = [cName(c), c.phone, String(c.phone || '').replace(/\D/g, ''), c.email, c.address, c.source, (c.tags || []).join(' '), c.ownerName || ''].join(' ').toLowerCase(); });
+    var gName = {}; d.groups.forEach(function (g) { gName[g.id] = g.name; });
+    var tags = {}; d.clients.forEach(function (c) { (c.tags || []).forEach(function (t) { tags[t.toLowerCase()] = tags[t.toLowerCase()] || t; }); });
+    var tagList = Object.keys(tags).sort().map(function (k) { return tags[k]; });
+    var buckets = { overdue: [], due: [], upcoming: [] };
+    d.reminders.filter(function (r) { return byId[r.clientId]; }).sort(function (a, b) { return a.dueAt < b.dueAt ? -1 : 1; }).forEach(function (r) { buckets[remBucket(r)].push(r); });
+    // The tab the agent picked sticks while they stay on the page; otherwise show the most urgent non-empty list.
+    CRM_UI.remTab = CRM_UI.remPick || (buckets.overdue.length ? 'overdue' : buckets.due.length ? 'due' : 'upcoming');
+    var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(l) + '</option>'; };
+    var inner = '<div class="top"><div><h1>CRM</h1><p class="sub">' + (d.admin ? 'Every agent’s clients. Pick an agent to narrow the list.' : 'Your clients, notes and follow-ups. Only you (and the admin) can see them.') + '</p></div>' +
+      '<div class="cact"><button class="btn" id="cAdd">+ Add client</button><button class="ub" id="cImp">Import</button><button class="ub" id="cExp">Export</button><button class="ub" id="cGrp">Groups</button><button class="ub" id="cFeed">Calendar feed</button></div></div>' +
+      (d.admin ? '<div class="cagent f"><label for="cAg">Agent</label><select id="cAg">' + opt('', 'All agents', CRM_UI.agentId) + (d.agents || []).map(function (a) { return opt(a.id, a.name, CRM_UI.agentId); }).join('') + '</select></div>' : '') +
+      '<div class="card gb crems"><div class="ush"><h2>Follow-ups</h2></div><div class="seg" role="group" aria-label="Follow-ups">' +
+      [['overdue', 'Overdue'], ['due', 'Due today'], ['upcoming', 'Upcoming']].map(function (x) { return '<button type="button" data-rt="' + x[0] + '" class="' + (CRM_UI.remTab === x[0] ? 'on' : '') + '" aria-pressed="' + (CRM_UI.remTab === x[0]) + '">' + x[1] + ' <span class="ucount' + (x[0] === 'overdue' && buckets.overdue.length ? ' red' : '') + '">' + buckets[x[0]].length + '</span></button>'; }).join('') + '</div>' +
+      '<div id="remList">' + (buckets[CRM_UI.remTab].length ? buckets[CRM_UI.remTab].slice(0, 50).map(function (r) { return remRow(r, byId[r.clientId], true); }).join('') : '<div class="uempty">' + { overdue: 'Nothing overdue.', due: 'Nothing due today.', upcoming: 'No upcoming follow-ups. Add one from a client’s page.' }[CRM_UI.remTab] + '</div>') + '</div></div>' +
+      '<div class="cfil"><div class="f cq"><label for="cQ">Search</label><input type="search" id="cQ" placeholder="Name, phone, tag…" value="' + h(CRM_UI.q) + '" autocomplete="off"></div>' +
+      '<div class="f"><label for="cSt">Status</label><select id="cSt">' + opt('', 'All', CRM_UI.status) + d.statuses.map(function (s) { return opt(s, s, CRM_UI.status); }).join('') + '</select></div>' +
+      '<div class="f"><label for="cTy">Type</label><select id="cTy">' + opt('', 'All', CRM_UI.type) + Object.keys(d.types).map(function (k) { return opt(k, d.types[k], CRM_UI.type); }).join('') + '</select></div>' +
+      '<div class="f"><label for="cTg">Tag</label><select id="cTg">' + opt('', 'All', CRM_UI.tag) + tagList.map(function (t) { return opt(t.toLowerCase(), t, CRM_UI.tag); }).join('') + '</select></div>' +
+      '<div class="f"><label for="cGr">Group</label><select id="cGr">' + opt('', 'All', CRM_UI.group) + d.groups.map(function (g) { return opt(g.id, g.name + (d.admin && !CRM_UI.agentId ? ' · ' + (g.ownerName || '') : '') + ' (' + g.count + ')', CRM_UI.group); }).join('') + '</select></div></div>' +
+      '<div class="card gb clist"><div id="cRows"></div></div>';
+    page('crm', inner, function () {
+      var draw = function () {
+        var q = CRM_UI.q.toLowerCase().trim(), qd = q.replace(/\D/g, '');
+        var list = d.clients.filter(function (c) {
+          if (CRM_UI.status && c.status !== CRM_UI.status) return false;
+          if (CRM_UI.type && c.type !== CRM_UI.type) return false;
+          if (CRM_UI.tag && !(c.tags || []).some(function (t) { return t.toLowerCase() === CRM_UI.tag; })) return false;
+          if (CRM_UI.group && (c.groups || []).indexOf(CRM_UI.group) < 0) return false;
+          return !q || q.split(/\s+/).every(function (w) { return c._s.indexOf(w) >= 0; }) || (qd.length >= 3 && c._s.indexOf(qd) >= 0);
+        }).sort(function (a, b) { return cName(a).localeCompare(cName(b)); });
+        var shown = list.slice(0, CRM_UI.shown);
+        qs('#cRows').innerHTML = (list.length ? '<div class="tbl"><table class="ctbl"><thead><tr><th>Name</th><th>Status</th><th>Type</th><th>Phone</th><th>Email</th>' + (d.admin ? '<th>Agent</th>' : '') + '<th>Tags</th><th>Next follow-up</th></tr></thead><tbody>' +
+          shown.map(function (c) {
+            return '<tr><td class="cnm"><a href="#/crm/c/' + h(c.id) + '"><b>' + h(cName(c)) + '</b></a></td><td data-l="Status">' + crmStatusPill(c.status) + '</td><td data-l="Type">' + h(d.types[c.type] || c.type) + '</td>' +
+              '<td data-l="Phone">' + h(c.phone) + '</td><td data-l="Email">' + h(c.email) + '</td>' + (d.admin ? '<td data-l="Agent">' + h(c.ownerName) + '</td>' : '') +
+              '<td data-l="Tags">' + (c.tags || []).map(function (t) { return '<span class="ctag">' + h(t) + '</span>'; }).join('') + '</td><td data-l="Follow-up">' + (c.nextDue ? '<span class="' + (new Date(c.nextDue).getTime() < Date.now() ? 'rt' : '') + '">' + h(fmtTs(c.nextDue)) + '</span>' : '') + '</td></tr>';
+          }).join('') + '</tbody></table></div>' : '<div class="uempty">' + (d.clients.length ? 'No clients match these filters.' : 'No clients yet. Use <b>+ Add client</b> or <b>Import</b>.') + '</div>') +
+          '<div class="cfoot">' + h(list.length) + ' of ' + h(d.clients.length) + ' clients' + (list.length > shown.length ? ' · <button class="link" id="cMore">Show more</button>' : '') + '</div>';
+        var mo = qs('#cMore'); if (mo) mo.onclick = function () { CRM_UI.shown += 200; draw(); };
+      };
+      draw();
+      qs('#cQ').addEventListener('input', debounce(function () { CRM_UI.q = qs('#cQ').value; CRM_UI.shown = 100; draw(); }, 120));
+      [['#cSt', 'status'], ['#cTy', 'type'], ['#cTg', 'tag'], ['#cGr', 'group']].forEach(function (x) { qs(x[0]).onchange = function () { CRM_UI[x[1]] = this.value; CRM_UI.shown = 100; draw(); }; });
+      var ag = qs('#cAg'); if (ag) ag.onchange = function () { CRM_UI.agentId = this.value; CRM_UI.group = ''; crmHome(); };
+      qsa('[data-rt]').forEach(function (b) { b.onclick = function () { CRM_UI.remPick = b.getAttribute('data-rt'); page.keepScroll = true; crmHome(); }; });
+      wireRems(qs('#remList'), d.reminders, byId, function () { page.keepScroll = true; crmHome(); });
+      qs('#cAdd').onclick = function () { clientForm(null, d); };
+      qs('#cImp').onclick = function () { importModal(d); };
+      qs('#cExp').onclick = function () { exportModal(d); };
+      qs('#cGrp').onclick = function () { groupsModal(d); };
+      qs('#cFeed').onclick = function () { feedModal(d); };
+    });
+  }).catch(function (e) { failView('crm', e); });
+}
+
+function clientView(id) {
+  loading('crm');
+  var bootP = S.crm ? Promise.resolve(S.crm) : api('crmBoot', isAdmin() ? { agentId: CRM_UI.agentId } : {}).then(function (d) { S.crm = d; return d; });
+  Promise.all([api('crmGetClient', { id: id }), bootP]).then(function (res) {
+    var g = res[0], d = res[1], c = g.client;
+    var gName = {}; d.groups.forEach(function (x) { gName[x.id] = x.name; });
+    var by = {}; by[c.id] = c;
+    var kv = function (l, v) { return '<div><span>' + h(l) + '</span><b>' + (v || '—') + '</b></div>'; };
+    var inner = '<a class="link cback" href="#/crm">← All clients</a><div class="top"><div><div class="pills">' + crmStatusPill(c.status) + '<span class="pill p-pend">' + h(d.types[c.type] || c.type) + '</span></div><h1>' + h(cName(c)) + '</h1></div>' +
+      '<div class="cact"><button class="btn" id="cEdit">Edit</button><button class="ub red" id="cDel">Delete</button></div></div>' +
+      '<div class="card gb"><div class="kv">' + kv('Phone', h(c.phone)) + kv('Email', h(c.email)) + kv('Address', h(c.address)) + kv('Source', h(c.source)) +
+      kv('Tags', (c.tags || []).map(function (t) { return '<span class="ctag">' + h(t) + '</span>'; }).join('')) + kv('Groups', (c.groups || []).map(function (x) { return h(gName[x] || ''); }).filter(Boolean).join(', ')) +
+      (c.ownerName !== undefined ? kv('Agent', h(c.ownerName)) : '') + kv('Added', h(fmtTs(c.createdAt))) + kv('Updated', h(fmtTs(c.updatedAt))) + '</div>' +
+      (g.txns.length ? '<h3 class="csub">Linked transactions</h3><div class="clinks">' + g.txns.map(function (t) { return '<a class="ub" href="#/t/' + h(t.id) + '">' + h(t.title) + ' · ' + h(t.typeLabel) + ' · ' + h(t.status) + '</a>'; }).join('') + '</div>' : '') + '</div>' +
+      '<div class="cgrid"><div class="card gb"><h3>Follow-ups</h3><form id="rf" class="rform" novalidate><div class="f"><label for="rd">Date &amp; time</label><input type="datetime-local" id="rd" required></div><div class="f rnote"><label for="rn">Note</label><input type="text" id="rn" maxlength="300" placeholder="Call about…"></div><button class="btn" id="rb">Add follow-up</button></form><div id="re"></div>' +
+      '<div id="rl">' + (g.reminders.length ? g.reminders.map(function (r) { return remRow(r, c, false); }).join('') : '<div class="uempty">No follow-ups yet.</div>') + '</div></div>' +
+      '<div class="card gb"><h3>Notes</h3><form id="nf" novalidate><textarea id="nt" maxlength="5000" placeholder="Add a note…" aria-label="New note"></textarea><div class="actions"><button class="btn" id="nb">Add note</button></div></form><div id="ne"></div>' +
+      '<div class="feed">' + (g.notes.length ? g.notes.map(function (n) { return '<div class="ev"><small>' + h(fmtTs(n.createdAt)) + (n.by ? ' · ' + h(n.by) : '') + '</small><div class="ntext">' + h(n.text) + '</div></div>'; }).join('') : '<div class="uempty">No notes yet.</div>') + '</div></div></div>';
+    page('crm', inner, function () {
+      var again = function () { page.keepScroll = true; clientView(id); };
+      qs('#cEdit').onclick = function () { clientForm(c, d, g.txns); };
+      qs('#cDel').onclick = function () { if (!confirm('Delete ' + cName(c) + ' from the CRM?')) return; api('crmDeleteClient', { id: c.id }).then(function () { toast('Client deleted.'); S.crm = null; location.hash = '#/crm'; }).catch(function (e) { toast(e.message, 1); }); };
+      wireRems(qs('#rl'), g.reminders, by, function () { S.crm = null; again(); });
+      qs('#rf').onsubmit = function (e) {
+        e.preventDefault(); var v = qs('#rd').value, err = qs('#re');
+        if (!v || isNaN(new Date(v))) { err.innerHTML = '<div class="err">Choose a date and time.</div>'; return; }
+        qs('#rb').disabled = true;
+        api('crmAddReminder', { clientId: c.id, dueAt: new Date(v).toISOString(), note: qs('#rn').value }).then(function () { toast('Follow-up added.'); S.crm = null; again(); })
+          .catch(function (x) { qs('#rb').disabled = false; err.innerHTML = '<div class="err">' + h(x.message) + '</div>'; });
+      };
+      qs('#nf').onsubmit = function (e) {
+        e.preventDefault(); var v = qs('#nt').value.trim(); if (!v) { qs('#ne').innerHTML = '<div class="err">Write a note first.</div>'; return; }
+        qs('#nb').disabled = true;
+        api('crmAddNote', { clientId: c.id, text: v }).then(function () { toast('Note added.'); again(); }).catch(function (x) { qs('#nb').disabled = false; qs('#ne').innerHTML = '<div class="err">' + h(x.message) + '</div>'; });
+      };
+    });
+  }).catch(function (e) { failView('crm', e); });
+}
+
+function clientForm(c, d, linked) {
+  var isNew = !c; c = c || { type: '', status: 'New Lead', tags: [], groups: [], txnIds: [] };
+  var ownerId = c.ownerId || (d.admin ? (CRM_UI.agentId || S.user.id) : S.user.id);
+  var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(l) + '</option>'; };
+  var inp = function (id, l, v, type, extra) { return '<div class="f' + (extra || '') + '"><label for="' + id + '">' + l + '</label><input type="' + (type || 'text') + '" id="' + id + '" value="' + h(v || '') + '"' + (type === 'email' ? ' autocapitalize="none" spellcheck="false"' : '') + '></div>'; };
+  var m = modal('<h2>' + (isNew ? 'Add client' : 'Edit client') + '</h2><div id="ce"></div><form id="cf" novalidate><div class="fgrid">' +
+    inp('cfF', 'First name', c.firstName) + inp('cfL', 'Last name', c.lastName) + inp('cfP', 'Phone', c.phone, 'tel') + inp('cfE', 'Email', c.email, 'email', ' w2') + inp('cfA', 'Address', c.address, 'text', ' w3') +
+    '<div class="f"><label for="cfT">Client type <span class="req">*</span></label><select id="cfT">' + opt('', 'Choose…', c.type) + Object.keys(d.types).map(function (k) { return opt(k, d.types[k], c.type); }).join('') + '</select></div>' +
+    '<div class="f"><label for="cfS">Status</label><select id="cfS">' + d.statuses.map(function (s) { return opt(s, s, c.status); }).join('') + '</select></div>' +
+    '<div class="f"><label for="cfSo">Source</label><input type="text" id="cfSo" list="cfSoL" maxlength="60" value="' + h(c.source || '') + '"><datalist id="cfSoL">' + d.sources.map(function (s) { return '<option value="' + h(s) + '">'; }).join('') + '</datalist></div>' +
+    '<div class="f w3"><label for="cfTg">Tags (comma separated)</label><input type="text" id="cfTg" value="' + h((c.tags || []).join(', ')) + '" placeholder="vip, first-time buyer"></div>' +
+    (d.admin && isNew ? '<div class="f w3"><label for="cfO">Agent</label><select id="cfO">' + opt(S.user.id, uName(S.user) + ' (me)', ownerId) + (d.agents || []).filter(function (a) { return a.id !== S.user.id; }).map(function (a) { return opt(a.id, a.name, ownerId); }).join('') + '</select></div>' : '') +
+    '<div class="f w3"><label>Groups</label><div class="chips" id="cfG"></div></div>' +
+    '<div class="f w3"><label>Linked transactions</label><div class="clinkp" id="cfX"></div></div>' +
+    (isNew ? '<div class="f w3"><label for="cfN">First note</label><textarea id="cfN" maxlength="5000"></textarea></div>' : '') +
+    '</div><div class="actions"><button class="btn" id="cfB">' + (isNew ? 'Add client' : 'Save') + '</button></div></form>', true);
+  var sel = { g: (c.groups || []).slice(), x: (c.txnIds || []).slice() };
+  function drawPicks() {
+    var o = qs('#cfO', m) ? qs('#cfO', m).value : ownerId;
+    var gs = d.groups.filter(function (g) { return g.ownerId === o; });
+    sel.g = sel.g.filter(function (id) { return gs.some(function (g) { return g.id === id; }); });
+    qs('#cfG', m).innerHTML = gs.length ? gs.map(function (g) { var on = sel.g.indexOf(g.id) >= 0; return '<button type="button" class="chip' + (on ? ' on' : '') + '" data-g="' + h(g.id) + '" aria-pressed="' + on + '">' + h(g.name) + '</button>'; }).join('') : '<span class="cmuted">No groups yet. Create them with <b>Groups</b> on the CRM page.</span>';
+    var tx = d.txns.filter(function (t) { return t.agentId === o; });
+    (linked || []).forEach(function (t) { if (!tx.some(function (x) { return x.id === t.id; })) tx.push(t); });
+    sel.x = sel.x.filter(function (id) { return tx.some(function (t) { return t.id === id; }); });
+    qs('#cfX', m).innerHTML = tx.length ? tx.map(function (t) { var on = sel.x.indexOf(t.id) >= 0; return '<label class="' + (on ? 'on' : '') + '"><input type="checkbox" value="' + h(t.id) + '"' + (on ? ' checked' : '') + '><span>' + h(t.title) + ' <small>' + h(t.typeLabel) + ' · ' + h(t.status) + '</small></span></label>'; }).join('') : '<span class="cmuted">No transactions for this agent yet.</span>';
+    qsa('[data-g]', m).forEach(function (b) { b.onclick = function () { var id = b.getAttribute('data-g'), i = sel.g.indexOf(id); if (i >= 0) sel.g.splice(i, 1); else sel.g.push(id); drawPicks(); }; });
+    qsa('#cfX input', m).forEach(function (x) { x.onchange = function () { var i = sel.x.indexOf(x.value); if (x.checked && i < 0) sel.x.push(x.value); if (!x.checked && i >= 0) sel.x.splice(i, 1); x.closest('label').classList.toggle('on', x.checked); }; });
+  }
+  drawPicks();
+  if (qs('#cfO', m)) qs('#cfO', m).onchange = drawPicks;
+  function save(allowDup) {
+    var v = function (id) { return qs(id, m) ? qs(id, m).value.trim() : ''; };
+    var client = { firstName: v('#cfF'), lastName: v('#cfL'), phone: v('#cfP'), email: v('#cfE'), address: v('#cfA'), type: v('#cfT'), status: v('#cfS'), source: v('#cfSo'), tags: v('#cfTg'), groups: sel.g, txnIds: sel.x };
+    var err = !client.firstName && !client.lastName ? 'Enter a first or last name.' : !client.type ? 'Choose a client type.' : (client.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(client.email)) ? 'Email address is not valid.' : '';
+    if (err) { qs('#ce', m).innerHTML = '<div class="err">' + h(err) + '</div>'; return; }
+    if (isNew) client.note = v('#cfN');
+    var b = qs('#cfB', m); b.disabled = true;
+    var p = { client: client, allowDuplicate: !!allowDup }; if (!isNew) p.id = c.id; if (qs('#cfO', m)) p.ownerId = qs('#cfO', m).value;
+    api('crmSaveClient', p).then(function (r) { m.close(); toast(isNew ? 'Client added.' : 'Saved.'); S.crm = null; if (isNew) location.hash = '#/crm/c/' + r.id; else { page.keepScroll = true; clientView(c.id); } })
+      .catch(function (e) {
+        b.disabled = false;
+        qs('#ce', m).innerHTML = '<div class="err">' + h(e.message) + (e.code === 'DUPLICATE' ? ' <button type="button" class="link" id="cfDup">Save anyway</button>' : '') + '</div>';
+        var dup = qs('#cfDup', m); if (dup) dup.onclick = function () { save(true); };
+        qs('.box', m).scrollTop = 0; m.scrollTop = 0;
+      });
+  }
+  qs('#cf', m).onsubmit = function (e) { e.preventDefault(); save(false); };
+}
+
+function exportModal(d) {
+  var scope = d.admin ? (CRM_UI.agentId ? ((d.agents || []).filter(function (a) { return a.id === CRM_UI.agentId; })[0] || {}).name || 'this agent' : 'all agents') : 'your clients';
+  var m = modal('<h2>Export clients</h2><p class="sub">Downloads a CSV of ' + h(scope) + '. A private copy is also saved in Drive' + (d.admin ? ' (your CRM folder)' : ' (your CRM folder)') + '. Cells that start with = + - @ get a leading apostrophe so spreadsheets never run them as formulas.</p><div id="xe"></div><div class="actions"><button class="btn" id="xb">Download CSV</button></div>');
+  qs('#xb', m).onclick = function () {
+    var b = this; b.disabled = true;
+    api('crmExport', d.admin ? { agentId: CRM_UI.agentId } : {}).then(function (r) { crmDownload(r.fileName, r.csv, 'text/csv;charset=utf-8'); m.close(); toast(r.count + ' clients exported.'); })
+      .catch(function (e) { b.disabled = false; qs('#xe', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
+  };
+}
+
+var CRM_TEMPLATE = 'First Name,Last Name,Phone,Email,Address,City,State,Zip,Client Type,Source,Status,Tags,Groups,Note\r\nJane,Sample,(951) 555-0100,jane@example.com,123 Main St,Riverside,CA,92501,Buyer,Referral,New Lead,"first-time, vip",Open House Oct,Pre-approved up to 600k\r\n';
+function importModal(d) {
+  var st = { csv: '', name: '', mapping: null, owner: d.admin ? (CRM_UI.agentId || S.user.id) : '' };
+  var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + h(l) + '</option>'; };
+  var m = modal('<h2>Import clients</h2><p class="sub">Upload a CSV. You’ll match its columns, see every row, and confirm before anything is saved. Duplicates are found by email or phone.</p><div id="ie"></div>' +
+    '<div class="cact"><label class="btn" id="ipick">Choose CSV file<input type="file" class="hidden" id="ifile" accept=".csv,text/csv"></label><button type="button" class="ub" id="itpl">Download template</button></div>' +
+    (d.admin ? '<div class="f cagent"><label for="iown">Import into</label><select id="iown">' + opt(S.user.id, uName(S.user) + ' (me)', st.owner) + (d.agents || []).filter(function (a) { return a.id !== S.user.id; }).map(function (a) { return opt(a.id, a.name, st.owner); }).join('') + '</select></div>' : '') +
+    '<div id="ibody"></div>', true);
+  var err = function (msg) { qs('#ie', m).innerHTML = msg ? '<div class="err">' + h(msg) + '</div>' : ''; };
+  qs('#itpl', m).onclick = function () { crmDownload('crm-import-template.csv', '\uFEFF' + CRM_TEMPLATE, 'text/csv;charset=utf-8'); };
+  if (qs('#iown', m)) qs('#iown', m).onchange = function () { st.owner = this.value; if (st.csv) preview(); };
+  qs('#ifile', m).onchange = function () {
+    var f = this.files[0]; if (!f) return; err('');
+    if (f.size > 2 * 1024 * 1024) return err('That file is too large (max 2 MB).');
+    var rd = new FileReader();
+    rd.onload = function () { st.csv = String(rd.result || '').replace(/^\uFEFF/, ''); st.name = f.name; st.mapping = null; preview(); };
+    rd.onerror = function () { err('Could not read that file.'); };
+    rd.readAsText(f);
+  };
+  function body() { var p = { csv: st.csv }; if (st.mapping) p.mapping = st.mapping; if (d.admin) p.ownerId = st.owner; return p; }
+  function preview() {
+    qs('#ibody', m).innerHTML = '<div class="loading"><span class="spin"></span>Reading ' + h(st.name) + '…</div>';
+    api('crmImportPreview', body()).then(function (p) {
+      st.mapping = p.mapping;
+      var colOpts = function (f) { return opt('', '— not imported —', p.mapping[f] === undefined ? '' : p.mapping[f]) + p.headers.map(function (hd, i) { return opt(i, hd || ('Column ' + (i + 1)), p.mapping[f]); }).join(''); };
+      var stPill = { 'new': '<span class="pill p-ok">New</span>', duplicate: '<span class="pill p-pend">Duplicate</span>', invalid: '<span class="pill p-rej">Invalid</span>' };
+      qs('#ibody', m).innerHTML = '<h3 class="csub">1 · Match columns <small>(' + h(st.name) + ', ' + p.total + ' rows)</small></h3><div class="imap">' +
+        p.fields.map(function (f) { return '<div class="f"><label for="im_' + f + '">' + h(p.labels[f]) + '</label><select id="im_' + f + '" data-f="' + f + '">' + colOpts(f) + '</select></div>'; }).join('') + '</div>' +
+        (p.named ? '' : '<div class="err">Match a name column (First Name, Last Name or Full Name).</div>') +
+        '<h3 class="csub">2 · Check the rows</h3><div class="icounts"><span class="pill p-ok">' + p.counts['new'] + ' new</span><span class="pill p-pend">' + p.counts.duplicate + ' duplicates</span><span class="pill p-rej">' + p.counts.invalid + ' invalid (skipped)</span></div>' +
+        '<div class="tbl iprev"><table class="ctbl"><thead><tr><th>Row</th><th>Name</th><th>Result</th><th>Phone</th><th>Email</th><th>Status</th><th>Notes</th></tr></thead><tbody>' +
+        p.rows.slice(0, 200).map(function (r) {
+          var msg = (r.errors || []).concat(r.warnings || []).concat(r.dupOf ? [r.dupOf.name ? 'Matches ' + r.dupOf.name : 'Same as row ' + r.dupOf.row] : []);
+          return '<tr><td data-l="Row">' + r.n + '</td><td class="cnm"><b>' + h(r.name || '—') + '</b></td><td data-l="Result">' + stPill[r.state] + '</td><td data-l="Phone">' + h(r.phone) + '</td><td data-l="Email">' + h(r.email) + '</td><td data-l="Status">' + h(r.status) + '</td><td data-l="Notes">' + h(msg.join(' · ')) + '</td></tr>';
+        }).join('') + '</tbody></table></div>' + (p.rows.length > 200 ? '<p class="cmuted">Showing the first 200 rows.</p>' : '') +
+        '<h3 class="csub">3 · Duplicates</h3><div class="radios" id="idm"><label class="on"><input type="radio" name="idm" value="skip" checked>Skip them</label><label><input type="radio" name="idm" value="merge">Fill empty fields of the existing client (never overwrites)</label></div>' +
+        '<div class="actions"><button class="btn" id="igo"' + (p.named && (p.counts['new'] + p.counts.duplicate) ? '' : ' disabled') + '>Import ' + p.counts['new'] + ' new client' + (p.counts['new'] === 1 ? '' : 's') + '</button></div>';
+      qsa('[data-f]', m).forEach(function (s) { s.onchange = function () { var mp = {}; qsa('[data-f]', m).forEach(function (x) { if (x.value !== '') mp[x.getAttribute('data-f')] = Number(x.value); }); st.mapping = mp; preview(); }; });
+      qsa('#idm input', m).forEach(function (x) { x.onchange = function () { qsa('#idm label', m).forEach(function (l) { l.classList.toggle('on', l.contains(qs('#idm input:checked', m))); }); var go = qs('#igo', m); go.textContent = qs('#idm input:checked', m).value === 'merge' ? 'Import ' + p.counts['new'] + ' new, update ' + p.counts.duplicate : 'Import ' + p.counts['new'] + ' new client' + (p.counts['new'] === 1 ? '' : 's'); }; });
+      qs('#igo', m).onclick = function () {
+        var b = this; b.disabled = true; b.innerHTML = '<span class="spin"></span>Importing…';
+        var q = body(); q.dupMode = qs('#idm input:checked', m).value; q.fileName = st.name; q.mapping = st.mapping;
+        api('crmImportCommit', q).then(function (r) { m.close(); toast(r.created + ' added' + (r.merged ? ', ' + r.merged + ' updated' : '') + (r.skipped ? ', ' + r.skipped + ' skipped' : '') + (r.invalid ? ', ' + r.invalid + ' invalid' : '') + '.'); S.crm = null; crmHome(); })
+          .catch(function (e) { b.disabled = false; b.textContent = 'Try again'; err(e.message); });
+      };
+    }).catch(function (e) { qs('#ibody', m).innerHTML = ''; err(e.message); });
+  }
+}
+
+function groupsModal(d) {
+  var owner = d.admin ? (CRM_UI.agentId || S.user.id) : S.user.id;
+  var mine = d.groups.filter(function (g) { return g.ownerId === owner; });
+  var m = modal('<h2>Groups</h2><p class="sub">Your own lists, like “Open House Oct” or “Investors”.' + (d.admin && owner !== S.user.id ? ' Showing this agent’s groups.' : '') + '</p><div id="ge"></div>' +
+    '<form id="gf" class="rform" novalidate><div class="f rnote"><label for="gn">New group</label><input type="text" id="gn" maxlength="40"></div><button class="btn" id="gb">Add group</button></form>' +
+    '<div class="glist">' + (mine.length ? mine.map(function (g) { return '<div class="row" data-g="' + h(g.id) + '"><div class="n"><b>' + h(g.name) + '</b><small>' + g.count + ' client' + (g.count === 1 ? '' : 's') + '</small></div><div class="acts"><button class="ub" data-a="ren">Rename</button><button class="link" data-a="del">Delete</button></div></div>'; }).join('') : '<div class="uempty">No groups yet.</div>') + '</div>');
+  var done = function (msg) { m.close(); toast(msg); S.crm = null; crmHome(); };
+  var err = function (e) { qs('#ge', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; };
+  qs('#gf', m).onsubmit = function (e) { e.preventDefault(); var v = qs('#gn', m).value.trim(); if (!v) return; api('crmSaveGroup', { name: v, ownerId: owner }).then(function () { done('Group added.'); }).catch(err); };
+  qsa('[data-g]', m).forEach(function (row) {
+    var id = row.getAttribute('data-g'), g = mine.filter(function (x) { return x.id === id; })[0];
+    qs('[data-a=ren]', row).onclick = function () { var v = prompt('Rename group', g.name); if (v && v.trim() && v.trim() !== g.name) api('crmSaveGroup', { id: id, name: v.trim() }).then(function () { done('Renamed.'); }).catch(err); };
+    qs('[data-a=del]', row).onclick = function () { if (confirm('Delete the group “' + g.name + '”? Clients stay; they just leave the group.')) api('crmDeleteGroup', { id: id }).then(function () { done('Group deleted.'); }).catch(err); };
+  });
+}
+
+function feedModal(d) {
+  var m = modal('<h2>Calendar feed</h2><p class="sub">Subscribe once and your open follow-ups appear in Google Calendar, Apple Calendar or Outlook, updating on their own. The link is private: anyone who has it can see your follow-ups, so don’t share it. You can turn it off or replace it any time.</p><div id="fe"></div><div id="fb"></div>');
+  function draw(active, token) {
+    var url = token ? CFG.API_URL + (CFG.API_URL.indexOf('?') >= 0 ? '&' : '?') + 'feed=' + encodeURIComponent(token) : '';
+    qs('#fb', m).innerHTML = (token ? '<div class="ok">Copy this link now. For safety it is shown only once.</div><div class="f"><label for="fu">Feed link</label><input type="text" id="fu" readonly value="' + h(url) + '"></div>' +
+      '<p class="cmuted">Google Calendar (computer): Other calendars → + → From URL → paste. iPhone: Settings → Calendar → Accounts → Add Subscribed Calendar.</p>' : '<p>' + (active ? 'Your feed is <b>on</b>' + (d.feed.createdAt ? ' (since ' + h(fmtTs(d.feed.createdAt)) + ')' : '') + '. The link was shown when you created it; make a new one if you lost it (the old one stops working).' : 'Your feed is <b>off</b>.') + '</p>') +
+      '<div class="actions">' + (token ? '<button class="btn" id="fc">Copy link</button>' : '') + (active ? '<button class="ub red" id="fr">Turn off</button>' : '') + '<button class="' + (token ? 'ub' : 'btn') + '" id="fn">' + (active ? 'Make a new link' : 'Turn on') + '</button></div>';
+    var fc = qs('#fc', m); if (fc) fc.onclick = function () { var i = qs('#fu', m); i.select(); (navigator.clipboard ? navigator.clipboard.writeText(i.value) : Promise.reject()).then(function () { toast('Copied.'); }, function () { document.execCommand('copy'); toast('Copied.'); }); };
+    var fr = qs('#fr', m); if (fr) fr.onclick = function () { api('crmFeed', { op: 'revoke' }).then(function () { d.feed = { active: false }; toast('Feed turned off.'); draw(false); }).catch(function (e) { qs('#fe', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; }); };
+    qs('#fn', m).onclick = function () { if (active && !confirm('Make a new link? The old link stops working.')) return; api('crmFeed', { op: 'create' }).then(function (r) { d.feed = { active: true, createdAt: r.createdAt }; draw(true, r.token); }).catch(function (e) { qs('#fe', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; }); };
+  }
+  draw(!!(d.feed && d.feed.active));
+}
+
 /* ---------------- router ---------------- */
 function route() {
   qsa('.modal').forEach(function (m) { m.remove(); }); document.body.style.overflow = '';
@@ -862,15 +1152,18 @@ function route() {
   S.txn = null;
   if (hs === '/new') return newView('');
   if (hs === '/account') return passwordView(false);
+  var mc = hs.match(/^\/crm\/c\/([A-Za-z0-9_-]+)$/);
+  if (mc && canCrm()) return clientView(mc[1]);
+  if (/^\/crm\/?$/.test(hs) && canCrm()) { CRM_UI.remPick = ''; return crmHome(); }
   if (hs === '/review' && isAdmin()) return reviewView();
   if (hs === '/users' && isAdmin()) return usersView();
   if (hs === '/archive' && isAdmin()) return archiveView();
   return dashView();
 }
 function render() {
-  if (S.tcApi === undefined) {   // feature detection: TC features only when the backend says it has them (1.3.0+)
+  if (S.tcApi === undefined) {   // feature detection: TC (1.3.0+) and CRM (1.4.0+) only when the backend says it has them
     S.tcApi = false;
-    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); }, function () { }).then(render);
+    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); }, function () { }).then(render);
   }
   if (!S.token) return loginView();
   if (!S.user) {
