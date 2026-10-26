@@ -270,12 +270,13 @@ function names(a) { return (a || []).map(function (p) { return p.name; }).join('
 var PDF_B64 = 'JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgNjEyIDc5Ml0vQ29udGVudHMgNCAwIFIvUmVzb3VyY2VzPDwvRm9udDw8L0YxIDUgMCBSPj4+Pj4+ZW5kb2JqCjQgMCBvYmo8PC9MZW5ndGggNTk+PnN0cmVhbQpCVCAvRjEgMjQgVGYgNzIgNzAwIFRkIChEZW1vIGRvY3VtZW50IC0gc2FtcGxlIG9ubHkpIFRqIEVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iajw8L1R5cGUvRm9udC9TdWJ0eXBlL1R5cGUxL0Jhc2VGb250L0hlbHZldGljYT4+ZW5kb2JqCnRyYWlsZXI8PC9Sb290IDEgMCBSPj4KJSVFT0YK';
 
 var DB = { users: [], txns: [], items: [], docs: [], notes: [], audit: [], sessions: {} };
-DB.users.push({ id: 'U1', username: 'admin@demo.test', pw: 'demo', name: 'Enrique Esparza', email: 'admin@demo.test', phone: '', role: 'admin', owner: true, active: true, mustChange: false, lastLogin: daysAgo(1), locked: false });
-DB.users.push({ id: 'U2', username: 'agent@demo.test', pw: 'demo', name: 'Alex Rivera (sample agent)', email: 'agent@demo.test', phone: '', role: 'agent', owner: false, active: true, mustChange: false, lastLogin: daysAgo(2), locked: false });
-DB.users.push({ id: 'U3', username: 'sample@demo.test', pw: '', name: 'Sample Agent', email: 'sample@demo.test', phone: '', role: 'agent', owner: false, active: true, mustChange: true, lastLogin: '', locked: false });
+DB.users.push({ id: 'U1', username: 'admin@demo.test', pw: 'demo', name: 'Enrique Esparza', firstName: 'Enrique', lastName: 'Esparza', email: 'admin@demo.test', phone: '', role: 'admin', owner: true, active: true, mustChange: false, lastLogin: daysAgo(1), locked: false });
+DB.users.push({ id: 'U2', username: 'agent@demo.test', pw: 'demo', name: 'Alex Rivera', firstName: 'Alex', lastName: 'Rivera', email: 'agent@demo.test', phone: '', role: 'agent', owner: false, active: true, mustChange: false, lastLogin: daysAgo(2), locked: false });
+DB.users.push({ id: 'U3', username: 'sample@demo.test', pw: '', name: 'Sample Agent', firstName: 'Sample', lastName: 'Agent', email: 'sample@demo.test', phone: '', role: 'agent', owner: false, active: true, mustChange: true, lastLogin: '', locked: false });
 
 function user(id) { return DB.users.filter(function (u) { return u.id === id; })[0]; }
-function pub(u) { return { id: u.id, username: u.username, name: u.name, email: u.email, role: u.role, owner: !!u.owner, mustChange: !!u.mustChange }; }
+function mName(v, label) { var s = String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f<>]/g, ' ').replace(/\s+/g, ' ').trim(); if (!s) Fail(label + ' is required.'); if (s.length > 50) Fail(label + ' must be 50 characters or fewer.'); return s; }
+function pub(u) { return { id: u.id, username: u.username, name: u.name, firstName: u.firstName || '', lastName: u.lastName || '', email: u.email, role: u.role, owner: !!u.owner, mustChange: !!u.mustChange }; }
 function txn(id) { return DB.txns.filter(function (t) { return t.id === id; })[0]; }
 function itemsOf(id) { return DB.items.filter(function (i) { return i.txnId === id; }); }
 function docsOfItem(id) { return DB.docs.filter(function (d) { return d.itemId === id && !d.removed; }); }
@@ -418,14 +419,18 @@ A.changePassword = function (b, u) {
   Object.keys(DB.sessions).forEach(function (t) { if (DB.sessions[t] === u.id) delete DB.sessions[t]; }); // sign out everywhere
   var tok = nid('S') + nid('S'); DB.sessions[tok] = u.id; return { user: pub(u), token: tok };
 };
-A.listUsers = function (b, u) { needAdmin(u); return DB.users.map(function (x) { return { id: x.id, username: x.username, name: x.name, email: x.email, phone: x.phone, role: x.role, owner: !!x.owner, active: x.active, mustChange: x.mustChange, lastLogin: x.lastLogin, locked: x.locked }; }); };
+A.listUsers = function (b, u) { needAdmin(u); return DB.users.map(function (x) { return { id: x.id, username: x.username, name: x.name, firstName: x.firstName || '', lastName: x.lastName || '', email: x.email, phone: x.phone, role: x.role, owner: !!x.owner, active: x.active, mustChange: x.mustChange, lastLogin: x.lastLogin, locked: x.locked }; }); };
 A.createUser = function (b, u) {
   needAdmin(u); var em = String(b.email || b.username || '').trim().toLowerCase();
-  if (!String(b.name || '').trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) Fail('Enter a name and a valid email.');
+  var fn = mName(b.firstName, 'First name'), ln = mName(b.lastName, 'Last name');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) Fail('Enter a valid email.');
   if (DB.users.some(function (x) { return x.username === em; })) Fail('A user with that email already exists.');
-  var nu = { id: nid('U'), username: em, pw: '', name: b.name.trim(), email: em, phone: b.phone || '', role: 'agent', owner: false, active: true, mustChange: true, lastLogin: '', locked: false };
+  var nu = { id: nid('U'), username: em, pw: '', name: fn + ' ' + ln, firstName: fn, lastName: ln, email: em, phone: b.phone || '', role: 'agent', owner: false, active: true, mustChange: true, lastLogin: '', locked: false };
   DB.users.push(nu); return { user: pub(nu), tempPassword: '' };
 };
+A.updateUser = function (b, u) { needAdmin(u); var x = user(b.userId); if (!x) Fail('User not found.'); if (x.owner && !u.owner) Fail('Only the owner can edit this account.');
+  var fn = mName(b.firstName, 'First name'), ln = mName(b.lastName, 'Last name'); x.firstName = fn; x.lastName = ln; x.name = fn + ' ' + ln; if (b.phone !== undefined) x.phone = String(b.phone).slice(0, 40);
+  return { user: A.listUsers({}, u).filter(function (y) { return y.id === x.id; })[0] }; };
 A.resetPassword = function (b, u) { needAdmin(u); var x = user(b.userId); if (!x) Fail('User not found.'); if (x.owner && !u.owner) Fail('Only the owner can reset this account.'); x.pw = ''; x.mustChange = true; x.locked = false;
   Object.keys(DB.sessions).forEach(function (t) { if (DB.sessions[t] === x.id) delete DB.sessions[t]; });
   DB.codes = DB.codes || {}; DB.codes[x.username] = '123456'; return { emailed: true, tempPassword: '' }; };

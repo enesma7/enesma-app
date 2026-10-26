@@ -17,6 +17,11 @@ function fmtTs(s) { if (!s) return ''; var d = new Date(s); if (isNaN(d)) return
 function initials(n) { return String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(function (x) { return x[0]; }).join('').toUpperCase(); }
 function toast(msg, bad) { var t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = msg; document.body.appendChild(t); setTimeout(function () { t.remove(); }, bad ? 6000 : 3500); }
 function debounce(fn, ms) { var t; return function () { var a = arguments, s = this; clearTimeout(t); t = setTimeout(function () { fn.apply(s, a); }, ms); }; }
+/* Display name: First Last (v1.2.1+), else the legacy name, else the email (older backends). */
+function uName(u) { if (!u) return ''; var fl = [u.firstName, u.lastName].map(function (x) { return String(x || '').trim(); }).filter(Boolean).join(' '); return fl || String(u.name || '').trim() || u.email || u.username || ''; }
+function splitNm(u) { if (u.firstName || u.lastName) return { f: u.firstName || '', l: u.lastName || '' }; var p = String(u.name || '').trim().split(/\s+/); return { f: p[0] || '', l: p.slice(1).join(' ') }; }
+var NAME_MAX = 50;
+function nameErr(f, l) { if (!f) return 'First name is required.'; if (!l) return 'Last name is required.'; if (f.length > NAME_MAX || l.length > NAME_MAX) return 'Names must be ' + NAME_MAX + ' characters or fewer.'; return ''; }
 function isAdmin() { return S.user && S.user.role === 'admin'; }
 var SEARCH_ICON = '<svg viewBox="0 0 24 24"><defs><linearGradient id="sgr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EAD59E"/><stop offset="1" stop-color="#D5BE87"/></linearGradient></defs><g fill="none" stroke="url(#sgr)" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M16 16l5 5"/></g></svg>';
 
@@ -206,7 +211,7 @@ function shell(active, inner) {
     '<header><a class="brand" href="#/" aria-label="Transaction Center home">' + titleMark('tc-sm') + '</a>' +
     '<nav class="main">' + nav + '</nav><div class="hspace"></div>' +
     '<div class="search"><span>' + SEARCH_ICON + '</span><input id="q" type="search" placeholder="Search address, client, escrow #" autocomplete="off" aria-label="Search transactions"><div class="sres hidden" id="sres"></div></div>' +
-    '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(S.user.name)) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(S.user.name) + '</b>' + h(S.user.username) + ' · ' + (isAdmin() ? 'Admin' : 'Agent') + '</div><a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
+    '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + h(S.user.username) + ' · ' + (isAdmin() ? 'Admin' : 'Agent') + '</div><a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
     '<main>' + inner + '</main>';
 }
 var docClickBound = false;
@@ -297,6 +302,7 @@ function codeView(email, step, msg, okMsg) {
 }
 function passwordView(forced) {
   var inner = '<div style="max-width:520px"><h1>' + (forced ? 'Set your password' : 'Change password') + '</h1><p class="sub">' + (forced ? 'Choose your own password before continuing. ' : '') + 'At least 10 characters with letters and numbers.</p>' +
+    (forced ? '' : '<div class="card gb" id="acct" style="margin-bottom:14px"><h3>' + h(uName(S.user)) + '</h3><small>' + h(S.user.email || S.user.username) + ' · ' + (isAdmin() ? 'Admin' : 'Agent') + '</small></div>') +
     '<form class="card gb" id="pf"><div id="pe"></div><div class="f" style="margin-bottom:12px"><label>Current password</label><input type="password" id="p0" autocomplete="current-password" required></div>' +
     '<div class="f" style="margin-bottom:12px"><label>New password</label><input type="password" id="p1" autocomplete="new-password" minlength="10" required></div>' +
     '<div class="f"><label>Repeat new password</label><input type="password" id="p2" autocomplete="new-password" required></div><div class="actions">' + (forced ? '<button type="button" class="ub" id="pout">Sign out</button>' : '') + '<button class="btn">Save password</button></div></form></div>';
@@ -332,7 +338,7 @@ function dashView() {
     var statDefs = [['type:listing', c.listings, 'Listings'], ['type:purchase', c.purchases, 'Purchases'], ['Active', c.Active, 'Active'], ['In Escrow', c['In Escrow'], 'In Escrow'], ['Closed', c.Closed, 'Closed'], ['Expired Contract', c['Expired Contract'], 'Expired']];
     var extra = [];
     if (c.leaseListings) extra.push(c.leaseListings + ' lease listings'); if (c.leases) extra.push(c.leases + ' leases'); if (c.referrals) extra.push(c.referrals + ' referrals'); if (c.Cancelled) extra.push(c.Cancelled + ' cancelled');
-    var inner = '<div class="top"><div><h1>' + (S.scope === 'company' ? 'Company Transactions' : 'My Transactions') + '</h1><p class="sub">' + h(S.scope === 'company' ? 'All agents' : S.user.name) + ' · ' + d.transactions.length + ' files' + (extra.length ? ' · ' + extra.join(' · ') : '') + '</p></div>' +
+    var inner = '<div class="top"><div><h1>' + (S.scope === 'company' ? 'Company Transactions' : 'My Transactions') + '</h1><p class="sub">' + h(S.scope === 'company' ? 'All agents' : uName(S.user)) + ' · ' + d.transactions.length + ' files' + (extra.length ? ' · ' + extra.join(' · ') : '') + '</p></div>' +
       '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' + (isAdmin() ? '<div class="seg"><button data-s="personal" class="' + (S.scope === 'personal' ? 'on' : '') + '">Personal</button><button data-s="company" class="' + (S.scope === 'company' ? 'on' : '') + '">Company</button></div>' : '') + '<a class="btn" href="#/new">+ New Transaction</a></div></div>' +
       (isAdmin() && S.badges.review ? '<a class="ok" href="#/review" style="display:block;text-decoration:none"><b>' + d.pendingReview + '</b> checklist item(s) waiting for review' + (d.cancelRequests ? ' · <b>' + d.cancelRequests + '</b> cancellation request(s)' : '') + ' → Open Review</a>' : '') +
       '<div class="stats">' + statDefs.map(function (s) { return '<button class="stat gb' + (S.filter === s[0] ? ' on' : '') + '" data-f="' + h(s[0]) + '"><b>' + (s[1] || 0) + '</b><span>' + s[2] + '</span></button>'; }).join('') + '</div>' +
@@ -361,7 +367,7 @@ function newView(type) {
     var inner = '<h1>New Transaction</h1><p class="sub">Choose the type, then answer the intake questions. The checklist unlocks once intake is complete.</p>' +
       '<div class="types">' + TYPES.map(function (t) { return '<button class="type' + (type === t.k ? ' sel' : '') + '" data-t="' + t.k + '">' + t.l + '<small>' + t.d + '</small></button>'; }).join('') + '</div>' +
       (type ? '<form id="nf" novalidate><div id="ne"></div>' +
-        (users ? '<div class="card gb"><h3>Agent</h3><div class="fgrid"><div class="f w2"><label>File belongs to</label><select id="agentId">' + users.filter(function (u) { return u.active; }).map(function (u) { return '<option value="' + h(u.id) + '"' + (u.id === S.user.id ? ' selected' : '') + '>' + h(u.name) + (u.role === 'admin' ? ' (admin)' : '') + '</option>'; }).join('') + '</select></div></div></div>' : '') +
+        (users ? '<div class="card gb"><h3>Agent</h3><div class="fgrid"><div class="f w2"><label>File belongs to</label><select id="agentId">' + users.filter(function (u) { return u.active; }).map(function (u) { return '<option value="' + h(u.id) + '"' + (u.id === S.user.id ? ' selected' : '') + '>' + h(uName(u)) + (u.role === 'admin' ? ' (admin)' : '') + '</option>'; }).join('') + '</select></div></div></div>' : '') +
         formHtml(type, {}, 'n') + '<div class="actions"><a class="ub" href="#/">Cancel</a><button class="btn" id="nb">Create &amp; open checklist</button></div></form>' : '');
     page('new', inner, function () {
       qsa('.type').forEach(function (b) { b.onclick = function () { newView(b.getAttribute('data-t')); }; });
@@ -712,20 +718,21 @@ function usersView() {
   loading('users');
   api('listUsers').then(function (users) {
     var inner = '<div class="top"><div><h1>Users</h1><p class="sub">Agents sign in with their email and see only their own files. Enrique is the only admin. New agents set their own password with a code emailed to them (“First time or forgot password?” on the sign-in page).</p></div><button class="btn" id="nu">+ Add agent</button></div>' +
-      '<div class="gb tbl"><table><thead><tr><th>Name</th><th>Email login</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>' +
+      '<div class="gb tbl"><table><thead><tr><th>Name (First Last)</th><th>Email login</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>' +
       users.map(function (u) {
-        return '<tr><td><b>' + h(u.name) + '</b><br><small>' + h(u.email) + ' ' + h(u.phone) + '</small></td><td>' + h(u.username) + '</td><td>' + (u.role === 'admin' ? '<span class="pill p-ok">Admin</span>' : '<span class="pill p-pend">Agent</span>') + (u.owner ? ' <small>owner</small>' : '') + '</td>' +
+        return '<tr><td><b class="un">' + h(uName(u)) + '</b><br><small>' + h(u.email) + ' ' + h(u.phone) + '</small></td><td>' + h(u.username) + '</td><td>' + (u.role === 'admin' ? '<span class="pill p-ok">Admin</span>' : '<span class="pill p-pend">Agent</span>') + (u.owner ? ' <small>owner</small>' : '') + '</td>' +
           '<td>' + (u.active ? (u.locked ? '<span class="pill p-rej">Locked</span>' : u.mustChange ? '<span class="pill p-miss">Password not set</span>' : '<span class="pill p-ok">Active</span>') : '<span class="pill p-miss">Disabled</span>') + '</td><td><small>' + h(fmtTs(u.lastLogin)) + '</small></td>' +
-          '<td style="white-space:nowrap">' + (u.owner && !S.user.owner ? '' : '<button class="link rp" data-id="' + h(u.id) + '" data-n="' + h(u.name) + '">Reset password</button> ') + (u.owner || u.id === S.user.id ? '' : '<button class="link act" data-id="' + h(u.id) + '" data-a="' + (u.active ? '' : '1') + '">' + (u.active ? 'Disable' : 'Enable') + '</button>') + '</td></tr>';
+          '<td style="white-space:nowrap">' + (u.owner && !S.user.owner ? '' : '<button class="link eu" data-id="' + h(u.id) + '">Edit</button> <button class="link rp" data-id="' + h(u.id) + '" data-n="' + h(uName(u)) + '">Reset password</button> ') + (u.owner || u.id === S.user.id ? '' : '<button class="link act" data-id="' + h(u.id) + '" data-a="' + (u.active ? '' : '1') + '">' + (u.active ? 'Disable' : 'Enable') + '</button>') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
     page('users', inner, function () {
       qs('#nu').onclick = function () {
-        var m = modal('<h2>Add agent</h2><div id="ae"></div><div class="fgrid"><div class="f w3"><label>Full name</label><input type="text" id="an"></div>' +
+        var m = modal('<h2>Add agent</h2><div id="ae"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="af" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="al" maxlength="50" required></div>' +
           '<div class="f w2"><label>Email (their login)</label><input type="email" id="am" autocapitalize="none"></div><div class="f"><label>Phone</label><input type="tel" id="ap"></div></div><div class="actions"><button class="btn" id="ab">Create user</button></div>');
         qs('#ab', m).onclick = function () {
-          var em = qs('#am', m).value.trim().toLowerCase();
-          api('createUser', { name: qs('#an', m).value.trim(), username: em, email: em, phone: qs('#ap', m).value.trim(), role: 'agent' }).then(function (r) {
-            qs('.box', m).innerHTML = '<h2>Agent added</h2><p>Tell <b>' + h(r.user.name) + '</b> to open ' + h(location.origin + location.pathname) + ', tap <b>First time or forgot password?</b> and enter <b>' + h(r.user.username) + '</b>. A code is emailed to them to set their own password.</p>' +
+          var em = qs('#am', m).value.trim().toLowerCase(), fn = qs('#af', m).value.trim(), ln = qs('#al', m).value.trim(), ne = nameErr(fn, ln);
+          if (ne) { qs('#ae', m).innerHTML = '<div class="err">' + h(ne) + '</div>'; return; }
+          api('createUser', { firstName: fn, lastName: ln, name: fn + ' ' + ln /* older backends */, username: em, email: em, phone: qs('#ap', m).value.trim(), role: 'agent' }).then(function (r) {
+            qs('.box', m).innerHTML = '<h2>Agent added</h2><p>Tell <b>' + h(uName(r.user)) + '</b> to open ' + h(location.origin + location.pathname) + ', tap <b>First time or forgot password?</b> and enter <b>' + h(r.user.username) + '</b>. A code is emailed to them to set their own password.</p>' +
               (r.tempPassword /* older backend (before v1.2) */ ? '<div class="ok">Temporary password (shown once): <b style="font-family:monospace;font-size:16px">' + h(r.tempPassword) + '</b></div>' : '') + '<div class="actions"><button class="btn" id="dn">Done</button></div>';
             qs('#dn', m).onclick = function () { m.close(); usersView(); };
           }).catch(function (e) { qs('#ae', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
@@ -733,6 +740,20 @@ function usersView() {
       };
       qsa('.rp').forEach(function (b) { b.onclick = function () { if (!confirm('Reset the password for ' + b.getAttribute('data-n') + '? Their current password stops working, they are signed out everywhere, and they get an email with a code to choose a new one.')) return; api('resetPassword', { userId: b.getAttribute('data-id') }).then(function (r) { modal(r.tempPassword /* older backend (before v1.2) */ ? '<h2>Temporary password</h2><div class="ok">' + h(b.getAttribute('data-n')) + ': <b style="font-family:monospace;font-size:16px">' + h(r.tempPassword) + '</b></div><p class="sub">Shown once. They must change it at sign-in.</p>'
           : '<h2>Password reset</h2><div class="ok">' + h(b.getAttribute('data-n')) + ' was signed out and emailed a code to set a new password.</div><p class="sub">The code expires in 30 minutes and works once. Nobody else ever sees their password.</p>'); usersView(); }).catch(function (e) { toast(e.message, 1); }); }; });
+      qsa('.eu').forEach(function (b) { b.onclick = function () {
+        var u = users.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (!u) return; var nm = splitNm(u);
+        var m = modal('<h2>Edit user</h2><p class="sub">' + h(u.email || u.username) + '</p><div id="ee"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="ef" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="el" maxlength="50" required></div>' +
+          '<div class="f"><label>Phone</label><input type="tel" id="ep"></div></div><div class="actions"><button class="btn" id="eb">Save</button></div>');
+        qs('#ef', m).value = nm.f; qs('#el', m).value = nm.l; qs('#ep', m).value = u.phone || '';
+        qs('#eb', m).onclick = function () {
+          var fn = qs('#ef', m).value.trim(), ln = qs('#el', m).value.trim(), ne = nameErr(fn, ln);
+          if (ne) { qs('#ee', m).innerHTML = '<div class="err">' + h(ne) + '</div>'; return; }
+          api('updateUser', { userId: u.id, firstName: fn, lastName: ln, phone: qs('#ep', m).value.trim() }).then(function (r) {
+            if (u.id === S.user.id && r && r.user) { S.user.firstName = r.user.firstName; S.user.lastName = r.user.lastName; S.user.name = r.user.name; }
+            m.close(); toast('Saved.'); usersView();
+          }).catch(function (e) { qs('#ee', m).innerHTML = '<div class="err">' + h(/unknown action/i.test(e.message) ? 'Editing names needs the Transaction Center backend 1.2.1 or later.' : e.message) + '</div>'; });
+        };
+      }; });
       qsa('.act').forEach(function (b) { b.onclick = function () { api('setUserActive', { userId: b.getAttribute('data-id'), active: !!b.getAttribute('data-a') }).then(usersView).catch(function (e) { toast(e.message, 1); }); }; });
     });
   }).catch(function (e) { failView('users', e); });
