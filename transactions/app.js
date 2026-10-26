@@ -859,7 +859,13 @@ function archiveView() {
 /* ---------------- CRM (backend 1.4.0+, detected from ping 'crm') ----------------
    Agents see their own clients; admins see everyone with an agent filter; TC view has no CRM (the server enforces all of it).
    Phone and email are plain text only: no texting or emailing from here. */
-function canCrm() { return !!S.crmApi && !!S.user && (isAdmin() || activeRole() === 'agent'); }
+// CRM: admin, the agent role, and (backend 1.4.2+, feature crm_tc) an agent+TC user in TC View. Always their own clients.
+function canCrm() { return !!S.crmApi && !!S.user && (isAdmin() || activeRole() === 'agent' || (S.crmTc && activeRole() === 'tc' && myRoles().indexOf('agent') >= 0)); }
+// A linked transaction is the agent's own file: from TC View, open it in My Files (the TC role only sees assigned files).
+document.addEventListener('click', function (e) {
+  var a = e.target && e.target.closest ? e.target.closest('a[data-ownfile]') : null;
+  if (a && activeRole() === 'tc' && myRoles().indexOf('agent') >= 0) { S.asRole = 'agent'; sessionStorage.setItem('tc_role', 'agent'); S.scope = 'personal'; S.filter = ''; S.dash = null; S.txn = null; }
+});
 var CRM_UI = { q: '', status: '', type: '', tag: '', group: '', agentId: '', remTab: 'overdue', remPick: '', shown: 100 };
 function dayPT(d) { return new Date(d).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); }
 function remBucket(r) { var now = Date.now(), t = new Date(r.dueAt).getTime(); if (t < now) return 'overdue'; return dayPT(t) === dayPT(now) ? 'due' : 'upcoming'; }
@@ -980,7 +986,7 @@ function clientView(id) {
       '<div class="card gb"><div class="kv">' + kv('Phone', h(c.phone)) + kv('Email', h(c.email)) + kv('Address', h(c.address)) + kv('Source', h(c.source)) +
       kv('Tags', (c.tags || []).map(function (t) { return '<span class="ctag">' + h(t) + '</span>'; }).join('')) + kv('Groups', (c.groups || []).map(function (x) { return h(gName[x] || ''); }).filter(Boolean).join(', ')) +
       (c.ownerName !== undefined ? kv('Agent', h(c.ownerName)) : '') + kv('Added', h(fmtTs(c.createdAt))) + kv('Updated', h(fmtTs(c.updatedAt))) + '</div>' +
-      (g.txns.length ? '<h3 class="csub">Linked transactions</h3><div class="clinks">' + g.txns.map(function (t) { return '<a class="ub" href="#/t/' + h(t.id) + '">' + h(t.title) + ' · ' + h(t.typeLabel) + ' · ' + h(t.status) + '</a>'; }).join('') + '</div>' : '') + '</div>' +
+      (g.txns.length ? '<h3 class="csub">Linked transactions</h3><div class="clinks">' + g.txns.map(function (t) { return '<a class="ub" data-ownfile="1" href="#/t/' + h(t.id) + '">' + h(t.title) + ' · ' + h(t.typeLabel) + ' · ' + h(t.status) + '</a>'; }).join('') + '</div>' : '') + '</div>' +
       '<div class="cgrid"><div class="card gb"><h3>Follow-ups</h3><form id="rf" class="rform" novalidate><div class="f"><label for="rd">Date &amp; time</label><input type="datetime-local" id="rd" required></div><div class="f rnote"><label for="rn">Note</label><input type="text" id="rn" maxlength="300" placeholder="Call about…"></div><button class="btn" id="rb">Add follow-up</button></form><div id="re"></div>' +
       '<div id="rl">' + (g.reminders.length ? g.reminders.map(function (r) { return remRow(r, c, false); }).join('') : '<div class="uempty">No follow-ups yet.</div>') + '</div></div>' +
       '<div class="card gb"><h3>Notes</h3><form id="nf" novalidate><textarea id="nt" maxlength="5000" placeholder="Add a note…" aria-label="New note"></textarea><div class="actions"><button class="btn" id="nb">Add note</button></div></form><div id="ne"></div>' +
@@ -1193,7 +1199,7 @@ function route() {
 function render() {
   if (S.tcApi === undefined) {   // feature detection: TC (1.3.0+) and CRM (1.4.0+) only when the backend says it has them
     S.tcApi = false;
-    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); }, function () { }).then(render);
+    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); }, function () { }).then(render);
   }
   if (!S.token) return loginView();
   if (!S.user) {
