@@ -218,3 +218,26 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:24px}
   .utbl td[data-l]:empty{display:none}
   .utbl td.uact{white-space:normal!important;padding-top:6px}
 }
+/* v1.3.0: role toggle (agent + TC users), Users screen sections, role picker */
+.rtog{flex:none}
+.rtog button{min-height:38px;white-space:nowrap}
+.rtog button:focus-visible{outline:2px solid #D5BE87;outline-offset:1px}
+@media(max-width:1239px){.rtog{order:3}}
+@media(max-width:899px){.rtog{order:6;flex:1 1 100%;display:flex}.rtog button{flex:1 1 0;min-height:40px}}
+.usec{margin:0 0 28px}
+.ush{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.ush h2{margin:0;font-size:19px}
+.ucount{display:inline-block;min-width:26px;padding:2px 8px;border-radius:12px;background:var(--gold);color:var(--k);font-size:12px;font-weight:700;text-align:center}
+.uempty{padding:16px 18px;color:var(--soft);font-size:14px}
+.usec:first-of-type{margin-top:22px}
+/* same column grid in every section so the three tables line up */
+@media(min-width:601px){.usec .utbl{width:100%;table-layout:fixed}.usec .utbl th:nth-child(1){width:17%}.usec .utbl th:nth-child(2){width:21%}.usec .utbl th:nth-child(3){width:11%}.usec .utbl th:nth-child(4){width:13%}.usec .utbl th:nth-child(5){width:12%}.usec .utbl th:nth-child(6){width:11%}.usec .utbl td{overflow-wrap:anywhere}.usec .utbl .pill{white-space:normal}}
+.utbl td.uact{white-space:normal}
+.rpick{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.rpick label{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid rgba(0,0,7,.25);border-radius:10px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:14px;color:var(--k);min-height:44px}
+.rpick label.on{border:2px solid transparent;background:linear-gradient(var(--w),var(--w)) padding-box,var(--gold) border-box;padding:9px 11px}
+.rpick input{margin:3px 0 0;width:18px;height:18px;accent-color:#D5BE87;flex:none}
+.rpick input:disabled+span{opacity:.45}
+.rpick small{display:block;font-weight:400;color:var(--soft);font-size:12px;margin-top:2px}
+.udrop .who small{color:var(--soft)}
+@media(max-width:600px){.utbl th{width:auto!important}.ush h2{font-size:17px}}

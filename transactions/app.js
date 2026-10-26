@@ -4,7 +4,7 @@
 var CFG = window.TC_CONFIG || {};
 var DEMO = /[?&]demo=1\b/.test(location.search) || sessionStorage.getItem('tc_demo') === '1';
 var $app = document.getElementById('app');
-var S = { token: null, user: null, scope: 'personal', filter: '', dash: null, txn: null, tab: 'checklist', badges: { review: 0 } };
+var S = { token: null, user: null, scope: 'personal', filter: '', dash: null, txn: null, tab: 'checklist', badges: { review: 0 }, tcApi: undefined, asRole: sessionStorage.getItem('tc_role') || '' };
 
 /* ---------------- utilities ---------------- */
 function h(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -26,11 +26,20 @@ function nameErr(f, l) { if (!f) return 'First name is required.'; if (!l) retur
 /* Activity labels. 'converted' from a listing (older backends) and 'accepted_contract' both read as Accepted Contract. */
 function actLabel(a, t) { var x = String(a.action || ''); if (x === 'accepted_contract' || (x === 'converted' && t && t.convertedFrom === 'listing')) return 'Accepted Contract'; return x.replace(/_/g, ' '); }
 function isAdmin() { return S.user && S.user.role === 'admin'; }
+/* Roles (backend 1.3.0+, detected from ping). Older backends: the single role field, and no TC features at all. */
+function myRoles() { if (!S.user) return []; if (S.user.role === 'admin') return ['admin']; return (S.tcApi && S.user.roles && S.user.roles.length) ? S.user.roles : [S.user.role === 'tc' ? 'tc' : 'agent']; }
+function isDual() { return !!S.tcApi && myRoles().length > 1; }
+function activeRole() { var r = myRoles(); return r.indexOf(S.asRole) >= 0 ? S.asRole : r[0]; }
+function isTC() { return !!S.tcApi && activeRole() === 'tc'; }
+function rolesOf(u) { if (!u) return []; if (u.role === 'admin') return ['admin']; return (u.roles && u.roles.length) ? u.roles : [u.role === 'tc' ? 'tc' : 'agent']; }
+function roleLabel(u) { var r = rolesOf(u); if (r[0] === 'admin') return 'Admin'; return r.map(function (x) { return x === 'tc' ? 'Transaction Coordinator' : 'Agent'; }).join(' · '); }
+function setRole(r) { S.asRole = r; sessionStorage.setItem('tc_role', r); S.scope = 'personal'; S.filter = ''; S.dash = null; S.txn = null; if (location.hash && location.hash !== '#/') location.hash = '#/'; else route(); }
 var SEARCH_ICON = '<svg viewBox="0 0 24 24"><defs><linearGradient id="sgr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EAD59E"/><stop offset="1" stop-color="#D5BE87"/></linearGradient></defs><g fill="none" stroke="url(#sgr)" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M16 16l5 5"/></g></svg>';
 
 /* ---------------- API ---------------- */
 function api(action, params) {
   var body = Object.assign({ action: action, token: S.token }, params || {});
+  if (isDual() && action !== 'ping' && action !== 'login') body.asRole = activeRole();   // the server checks every call against this role
   if (DEMO || !CFG.API_URL) {
     if (!DEMO) return Promise.reject(Object.assign(new Error('The Transaction Center backend is not connected yet.'), { code: 'SETUP' }));
     return window.TC_MOCK.call(body).then(unwrap);
@@ -53,7 +62,7 @@ function storeToken(tok) {
   try { localStorage.removeItem('tc_t'); } catch (e) { /* clean up tokens saved by older versions */ }
   if (tok) sessionStorage.setItem('tc_t', tok);
 }
-function signOutLocal() { storeToken(null); S.user = null; S.dash = null; S.txn = null; }
+function signOutLocal() { storeToken(null); S.user = null; S.dash = null; S.txn = null; S.asRole = ''; sessionStorage.removeItem('tc_role'); }
 
 /* ---------------- intake definitions ---------------- */
 var TYPES = [
@@ -210,12 +219,13 @@ document.title = APP_NAME;
 function shell(active, inner) {
   var nav = '<a href="#/" class="' + (active === 'dash' ? 'on' : '') + '">Transactions</a><a href="#/new" class="' + (active === 'new' ? 'on' : '') + '">+ New</a>';
   if (isAdmin()) nav += '<a href="#/review" class="' + (active === 'review' ? 'on' : '') + '">Review' + (S.badges.review ? '<span class="cnt">' + S.badges.review + '</span>' : '') + '</a><a href="#/users" class="' + (active === 'users' ? 'on' : '') + '">Users</a><a href="#/archive" class="' + (active === 'archive' ? 'on' : '') + '">Archive</a>';
+  var tog = isDual() ? '<div class="rtog seg" role="group" aria-label="View as">' + [['agent', 'My Files'], ['tc', 'TC View']].map(function (x) { return '<button type="button" data-role="' + x[0] + '" class="' + (activeRole() === x[0] ? 'on' : '') + '" aria-pressed="' + (activeRole() === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' : '';
   return (DEMO ? '<div class="demo"><b>DEMO PREVIEW</b> · sample data only, nothing is saved · <a href="#" id="exitDemo" style="color:#FBFBFB">exit demo</a></div>' : '') +
     '<header id="hdr"><button class="nbtn" id="nbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><span></span><span></span><span></span></button>' +
     '<a class="brand" href="#/" aria-label="Transaction Center home">' + titleMark('tc-sm') + '</a>' +
-    '<nav class="main" id="mnav" aria-label="Main">' + nav + '</nav><div class="hspace"></div>' +
+    '<nav class="main" id="mnav" aria-label="Main">' + nav + '</nav><div class="hspace"></div>' + tog +
     '<div class="search"><span>' + SEARCH_ICON + '</span><input id="q" type="search" placeholder="Search address, client, escrow #" autocomplete="off" aria-label="Search transactions"><div class="sres hidden" id="sres"></div></div>' +
-    '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + (isAdmin() ? 'Admin' : 'Agent') + '</div><a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
+    '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + h(roleLabel(S.user)) + (isDual() ? '<br><small>Now: ' + (isTC() ? 'TC View' : 'My Files') + '</small>' : '') + '</div><a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
     '<main>' + inner + '</main>';
 }
 var docClickBound = false;
@@ -225,7 +235,7 @@ function wireShell() {
     var run = debounce(function () {
       var v = q.value.trim(); if (v.length < 2) { box.classList.add('hidden'); return; }
       api('search', { q: v }).then(function (d) {
-        box.innerHTML = d.results.length ? d.results.map(function (r) { return '<a href="#/t/' + h(r.id) + '"><b>' + h(r.title) + '</b><small>' + h(r.typeLabel) + ' · ' + h(r.status) + ' · ' + h(r.clients) + (isAdmin() ? ' · ' + h(r.agentName) : '') + '</small></a>'; }).join('') : '<div class="empty">No matches for “' + h(v) + '”.</div>';
+        box.innerHTML = d.results.length ? d.results.map(function (r) { return '<a href="#/t/' + h(r.id) + '"><b>' + h(r.title) + '</b><small>' + h(r.typeLabel) + ' · ' + h(r.status) + ' · ' + h(r.clients) + (isAdmin() || isTC() ? ' · ' + h(r.agentName) : '') + '</small></a>'; }).join('') : '<div class="empty">No matches for “' + h(v) + '”.</div>';
         box.classList.remove('hidden');
       }).catch(function (e) { toast(e.message, 1); });
     }, 300);
@@ -248,6 +258,7 @@ function wireShell() {
     hd.addEventListener('keydown', function (e) { if (e.key === 'Escape' && hd.classList.contains('navopen')) { setNav(false, true); } });
     qsa('#mnav a').forEach(function (a) { a.addEventListener('click', function () { setNav(false); }); });
   }
+  qsa('.rtog button').forEach(function (b) { b.onclick = function () { if (b.getAttribute('data-role') !== activeRole()) setRole(b.getAttribute('data-role')); }; });
   var so = qs('#signout'); if (so) so.onclick = function () { api('logout').catch(function () { }); signOutLocal(); location.hash = '#/'; render(); };
   var ex = qs('#exitDemo'); if (ex) ex.onclick = function (e) { e.preventDefault(); sessionStorage.removeItem('tc_demo'); signOutLocal(); location.href = location.pathname; };
 }
@@ -314,7 +325,7 @@ function codeView(email, step, msg, okMsg) {
 }
 function passwordView(forced) {
   var inner = '<div style="max-width:520px"><h1>' + (forced ? 'Set your password' : 'Change password') + '</h1><p class="sub">' + (forced ? 'Choose your own password before continuing. ' : '') + 'At least 10 characters with letters and numbers.</p>' +
-    (forced ? '' : '<div class="card gb" id="acct" style="margin-bottom:14px"><h3>' + h(uName(S.user)) + '</h3><small>' + (isAdmin() ? 'Admin' : 'Agent') + '</small></div>') +
+    (forced ? '' : '<div class="card gb" id="acct" style="margin-bottom:14px"><h3>' + h(uName(S.user)) + '</h3><small>' + h(roleLabel(S.user)) + '</small></div>') +
     '<form class="card gb" id="pf"><div id="pe"></div><div class="f" style="margin-bottom:12px"><label>Current password</label><input type="password" id="p0" autocomplete="current-password" required></div>' +
     '<div class="f" style="margin-bottom:12px"><label>New password</label><input type="password" id="p1" autocomplete="new-password" minlength="10" required></div>' +
     '<div class="f"><label>Repeat new password</label><input type="password" id="p2" autocomplete="new-password" required></div><div class="actions">' + (forced ? '<button type="button" class="ub" id="pout">Sign out</button>' : '') + '<button class="btn">Save password</button></div></form></div>';
@@ -340,7 +351,7 @@ function tileHtml(t) {
   var p = t.progress || {}, pct = p.required ? Math.round(p.approved / p.required * 100) : 0;
   var pills = statusPill(t.status) + (p.rejected ? '<span class="pill p-rej">' + p.rejected + ' Rejected</span>' : '') + (p.pending ? '<span class="pill p-pend">' + p.pending + ' Pending</span>' : '') + (t.cancelPending ? '<span class="pill p-rej">Cancel requested</span>' : '');
   return '<a class="tile ' + (p.rejected || t.cancelPending ? 'rb' : 'gb') + '" href="#/t/' + h(t.id) + '"><div class="pills">' + pills + '</div><h3>' + h(t.title) + '</h3><p>' + h(t.typeLabel) + ' · ' + h(t.keyDate) + '</p><p>' + h(t.clients) + '</p>' +
-    (isAdmin() && S.scope === 'company' ? '<p>Agent: ' + h(t.agentName) + '</p>' : '') + '<div class="grow"></div><div class="bar"><i style="width:' + pct + '%"></i></div><p>' + (p.approved || 0) + '/' + (p.required || 0) + ' required docs approved</p></a>';
+    ((isAdmin() && S.scope === 'company') || isTC() ? '<p>Agent: ' + h(t.agentName) + '</p>' : '') + (t.tcName && !isTC() ? '<p>TC: ' + h(t.tcName) + '</p>' : '') + '<div class="grow"></div><div class="bar"><i style="width:' + pct + '%"></i></div><p>' + (p.approved || 0) + '/' + (p.required || 0) + ' required docs approved</p></a>';
 }
 function dashView() {
   loading('dash');
@@ -350,7 +361,7 @@ function dashView() {
     var statDefs = [['type:listing', c.listings, 'Listings'], ['type:purchase', c.purchases, 'Purchases'], ['Active', c.Active, 'Active'], ['In Escrow', c['In Escrow'], 'In Escrow'], ['Closed', c.Closed, 'Closed'], ['Expired Contract', c['Expired Contract'], 'Expired']];
     var extra = [];
     if (c.leaseListings) extra.push(c.leaseListings + ' lease listings'); if (c.leases) extra.push(c.leases + ' leases'); if (c.referrals) extra.push(c.referrals + ' referrals'); if (c.Cancelled) extra.push(c.Cancelled + ' cancelled');
-    var inner = '<div class="top"><div><h1>' + (S.scope === 'company' ? 'Company Transactions' : 'My Transactions') + '</h1><p class="sub">' + h(S.scope === 'company' ? 'All agents' : uName(S.user)) + ' · ' + d.transactions.length + ' files' + (extra.length ? ' · ' + extra.join(' · ') : '') + '</p></div>' +
+    var inner = '<div class="top"><div><h1>' + (S.scope === 'company' ? 'Company Transactions' : isTC() ? 'My TC Files' : 'My Transactions') + '</h1><p class="sub">' + h(S.scope === 'company' ? 'All agents' : isTC() ? uName(S.user) + ' · files you created or coordinate' : uName(S.user)) + ' · ' + d.transactions.length + ' files' + (extra.length ? ' · ' + extra.join(' · ') : '') + '</p></div>' +
       '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' + (isAdmin() ? '<div class="seg"><button data-s="personal" class="' + (S.scope === 'personal' ? 'on' : '') + '">Personal</button><button data-s="company" class="' + (S.scope === 'company' ? 'on' : '') + '">Company</button></div>' : '') + '<a class="btn" href="#/new">+ New Transaction</a></div></div>' +
       (isAdmin() && S.badges.review ? '<a class="ok" href="#/review" style="display:block;text-decoration:none"><b>' + d.pendingReview + '</b> checklist item(s) waiting for review' + (d.cancelRequests ? ' · <b>' + d.cancelRequests + '</b> cancellation request(s)' : '') + ' → Open Review</a>' : '') +
       '<div class="stats">' + statDefs.map(function (s) { return '<button class="stat gb' + (S.filter === s[0] ? ' on' : '') + '" data-f="' + h(s[0]) + '"><b>' + (s[1] || 0) + '</b><span>' + s[2] + '</span></button>'; }).join('') + '</div>' +
@@ -360,7 +371,7 @@ function dashView() {
     page('dash', inner, function () {
       drawTiles();
       qsa('[data-f]').forEach(function (b) { b.onclick = function () { var f = b.getAttribute('data-f'); S.filter = (S.filter === f && b.classList.contains('stat')) ? '' : f; qsa('[data-f]').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-f') === S.filter); }); drawTiles(); }; });
-      qsa('.seg button').forEach(function (b) { b.onclick = function () { S.scope = b.getAttribute('data-s'); S.filter = ''; dashView(); }; });
+      qsa('.seg button[data-s]').forEach(function (b) { b.onclick = function () { S.scope = b.getAttribute('data-s'); S.filter = ''; dashView(); }; });
     });
   }).catch(function (e) { failView('dash', e); });
 }
@@ -374,12 +385,27 @@ function drawTiles() {
 
 /* ---------------- new transaction ---------------- */
 function newView(type) {
+  var tcMode = isTC();
   var agentsP = isAdmin() ? api('listUsers') : Promise.resolve(null);
-  agentsP.then(function (users) {
+  var peopleP = (S.tcApi && !isAdmin()) ? api('listPeople') : Promise.resolve(null);
+  Promise.all([agentsP, peopleP]).then(function (res) {
+    var users = res[0], ppl = res[1], me = S.user.id;
+    var tcOpts = function (list) { return '<option value="">None</option>' + list.map(function (u) { return '<option value="' + h(u.id) + '">' + h(uName(u)) + '</option>'; }).join(''); };
+    var people = '';
+    if (users) {
+      var act = users.filter(function (u) { return u.active; });
+      people = '<div class="card gb"><h3>Agent' + (S.tcApi ? ' &amp; coordinator' : '') + '</h3><div class="fgrid"><div class="f w2"><label>File belongs to</label><select id="agentId">' + act.filter(function (u) { return !S.tcApi || rolesOf(u).indexOf('tc') < 0 || rolesOf(u).length > 1; }).map(function (u) { return '<option value="' + h(u.id) + '"' + (u.id === me ? ' selected' : '') + '>' + h(uName(u)) + (u.role === 'admin' ? ' (admin)' : '') + '</option>'; }).join('') + '</select></div>' +
+        (S.tcApi ? '<div class="f"><label>Transaction coordinator</label><select id="tcId">' + tcOpts(act.filter(function (u) { return rolesOf(u).indexOf('tc') >= 0; })) + '</select></div>' : '') + '</div></div>';
+    } else if (ppl && tcMode) {
+      var ags = ppl.agents.filter(function (u) { return u.id !== me; });
+      people = '<div class="card gb"><h3>Agent</h3><p class="sub" style="margin:0 0 12px">Pick the agent this file belongs to. It shows up in their files as their own, with you as the coordinator.</p><div class="fgrid"><div class="f w2"><label>Agent <span class="req">*</span></label><select id="agentId" required><option value="">Choose the agent…</option>' + ags.map(function (u) { return '<option value="' + h(u.id) + '">' + h(uName(u)) + '</option>'; }).join('') + '</select></div></div></div>';
+    } else if (ppl) {
+      people = '<div class="card gb"><h3>Transaction coordinator</h3><p class="sub" style="margin:0 0 12px">Is there a TC on this file? They can upload and edit details but can’t approve anything. Optional.</p><div class="fgrid"><div class="f w2"><label>TC</label><select id="tcId">' + tcOpts(ppl.tcs.filter(function (u) { return u.id !== me; })) + '</select></div></div></div>';
+    }
     var inner = '<h1>New Transaction</h1><p class="sub">Choose the type, then answer the intake questions. The checklist unlocks once intake is complete.</p>' +
       '<div class="types">' + TYPES.map(function (t) { return '<button class="type' + (type === t.k ? ' sel' : '') + '" data-t="' + t.k + '">' + t.l + '<small>' + t.d + '</small></button>'; }).join('') + '</div>' +
       (type ? '<form id="nf" novalidate><div id="ne"></div>' +
-        (users ? '<div class="card gb"><h3>Agent</h3><div class="fgrid"><div class="f w2"><label>File belongs to</label><select id="agentId">' + users.filter(function (u) { return u.active; }).map(function (u) { return '<option value="' + h(u.id) + '"' + (u.id === S.user.id ? ' selected' : '') + '>' + h(uName(u)) + (u.role === 'admin' ? ' (admin)' : '') + '</option>'; }).join('') + '</select></div></div></div>' : '') +
+        people +
         formHtml(type, {}, 'n') + '<div class="actions"><a class="ub" href="#/">Cancel</a><button class="btn" id="nb">Create &amp; open checklist</button></div></form>' : '');
     page('new', inner, function () {
       qsa('.type').forEach(function (b) { b.onclick = function () { newView(b.getAttribute('data-t')); }; });
@@ -387,9 +413,10 @@ function newView(type) {
       wireForm(form);
       form.onsubmit = function (e) {
         e.preventDefault(); var r = readForm(form);
+        if (tcMode && qs('#agentId') && !qs('#agentId').value) r.missing.unshift('Agent');
         if (r.missing.length) { qs('#ne').innerHTML = '<div class="err">Please complete: ' + h(r.missing.join(', ')) + '</div>'; qs('#ne').scrollIntoView({ behavior: 'smooth' }); return; }
         var b = qs('#nb'); b.disabled = true; b.innerHTML = '<span class="spin"></span>Creating folder…';
-        api('createTransaction', { type: type, intake: r.intake, agentId: qs('#agentId') ? qs('#agentId').value : undefined }).then(function (d) { toast('Transaction created. Checklist unlocked.'); location.hash = '#/t/' + d.id; })
+        api('createTransaction', { type: type, intake: r.intake, agentId: qs('#agentId') ? qs('#agentId').value : undefined, tcId: qs('#tcId') && qs('#tcId').value ? qs('#tcId').value : undefined }).then(function (d) { toast('Transaction created. Checklist unlocked.'); location.hash = '#/t/' + d.id; })
           .catch(function (err) { b.disabled = false; b.textContent = 'Create & open checklist'; qs('#ne').innerHTML = '<div class="err">' + h(err.message) + '</div>'; qs('#ne').scrollIntoView({ behavior: 'smooth' }); });
       };
     });
@@ -430,7 +457,7 @@ function drawTxn() {
   if (t.parentId) banner += '<div class="ok">Relisted from a cancelled file: <a href="#/t/' + h(t.parentId) + '">open the previous file</a>.</div>';
   var docCount = d.documents.filter(function (x) { return !x.removed; }).length;
   var inner = '<div class="top"><div><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + statusPill(t.status) + '<span class="pill p-pend">' + h(t.typeLabel) + '</span>' + (t.convertedFrom ? '<span class="pill p-miss">' + (t.convertedFrom === 'listing' ? 'Accepted Contract · from Listing' : 'Converted from ' + h(TYPE_LABEL[t.convertedFrom] || t.convertedFrom)) + '</span>' : '') + '</div><h1>' + h(t.title) + (t.zip ? ' ' + h(t.zip) : '') + '</h1>' +
-    '<p class="sub">' + h([sideTxt].concat(who).filter(Boolean).join(' · ')) + (isAdmin() ? ' · Agent: ' + h(t.agentName) : '') + '</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">' + acts + '</div></div>' + banner +
+    '<p class="sub">' + h([sideTxt].concat(who).filter(Boolean).join(' · ')) + (isAdmin() || isTC() ? ' · Agent: ' + h(t.agentName) : '') + (t.tcName ? ' · TC: ' + h(t.tcName) : '') + '</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">' + acts + '</div></div>' + banner +
     '<div class="tabs">' + [['checklist', 'Checklist'], ['storage', 'Document Storage (' + docCount + ')'], ['details', 'Details'], ['activity', 'Notes & Activity']].map(function (x) { return '<button data-tab="' + x[0] + '" class="' + (S.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div><div id="tabc"></div>' +
     '<div class="pbar"><div class="in"><b>' + p.approved + ' of ' + p.required + ' required approved</b><div class="bar"><i style="width:' + pct + '%"></i></div><b class="gt">' + pct + '%</b></div></div>';
   page('dash', inner, function () {
@@ -496,8 +523,9 @@ function drawTab() {
       else if (f.t === 'date') v = fmtDate(v); else if (f.t === 'money' && v) v = money(v); else if (f.comm) v = fmtComm(v, ii[f.k + 'Type']);
       return '<div' + (f.w === 3 || f.people ? ' style="grid-column:1/-1"' : '') + '><span>' + h(f.l) + '</span><b style="white-space:pre-line">' + (v ? h(v) : '—') + '</b></div>';
     }).join('') + (ii.finalPrice ? '<div><span>Final sales price</span><b>' + money(ii.finalPrice) + '</b></div>' : '') + (t.closedAt ? '<div><span>Closed</span><b>' + fmtDate(t.closedAt) + '</b></div>' : '') +
-      (t.retentionUntil ? '<div><span>Keep records until</span><b>' + fmtDate(t.retentionUntil) + '</b></div>' : '') + '<div><span>File ID</span><b>' + h(t.id) + '</b></div></div>' +
-      (canEdit() ? '<div class="actions"><button class="ub" id="editI">Edit intake</button></div>' : '') + '</div>';
+      (t.retentionUntil ? '<div><span>Keep records until</span><b>' + fmtDate(t.retentionUntil) + '</b></div>' : '') + (S.tcApi ? '<div><span>Transaction coordinator</span><b>' + (t.tcName ? h(t.tcName) : 'None') + '</b></div>' : '') + '<div><span>File ID</span><b>' + h(t.id) + '</b></div></div>' +
+      (canEdit() ? '<div class="actions">' + (S.tcApi && t.canAssignTc ? '<button class="ub" id="editTc">' + (t.tcName ? 'Change TC' : 'Add TC') + '</button>' : '') + '<button class="ub" id="editI">Edit intake</button></div>' : '') + '</div>';
+    if (qs('#editTc')) qs('#editTc').onclick = tcModal;
     if (qs('#editI')) qs('#editI').onclick = function () {
       c.innerHTML = '<form id="ef" novalidate><div id="ee"></div>' + formHtml(t.type, ii, 'e', { side: 1 }) + '<div class="actions"><button type="button" class="ub" id="ecan">Cancel</button><button class="btn">Save intake</button></div></form>';
       var f = qs('#ef'); wireForm(f); qs('#ecan').onclick = drawTab;
@@ -511,6 +539,19 @@ function drawTab() {
     qs('#ntb').onclick = function () { var v = qs('#nt').value.trim(); if (!v) return; api('addNote', { txnId: t.id, text: v }).then(function () { toast('Note added.'); refresh(); }).catch(function (e) { toast(e.message, 1); }); };
   }
   qsa('.dl', c).forEach(function (b) { b.onclick = function () { openDoc(b.getAttribute('data-doc'), b); }; });
+}
+
+/* Assign / change / remove the TC of a file (the file's agent or an admin; the server re-checks). */
+function tcModal() {
+  var t = S.txn.txn;
+  (isAdmin() ? api('listUsers').then(function (us) { return us.filter(function (u) { return u.active && rolesOf(u).indexOf('tc') >= 0; }); }) : api('listPeople').then(function (p) { return p.tcs; })).then(function (tcs) {
+    tcs = tcs.filter(function (u) { return u.id !== t.agentId; });
+    var m = modal('<h2>Transaction coordinator</h2><p class="sub">The TC sees this file, can upload documents and edit details, but can’t review or approve anything. Changes are recorded in the activity log.</p><div id="te"></div><div class="f"><label>TC</label><select id="tcSel"><option value="">None</option>' +
+      tcs.map(function (u) { return '<option value="' + h(u.id) + '"' + (u.id === t.tcId ? ' selected' : '') + '>' + h(uName(u)) + '</option>'; }).join('') + '</select></div><div class="actions"><button class="btn" id="tcSave">Save</button></div>');
+    qs('#tcSave', m).onclick = function () {
+      api('setTransactionTc', { id: t.id, tcId: qs('#tcSel', m).value }).then(function () { m.close(); toast('Coordinator updated.'); refresh(); }).catch(function (e) { qs('#te', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
+    };
+  }).catch(function (e) { toast(e.message, 1); });
 }
 
 /* ---------------- files ---------------- */
@@ -726,25 +767,50 @@ function reviewView() {
 }
 
 /* ---------------- admin: users ---------------- */
+/* Role picker (admin only; backend 1.3.0+). Admin is a role on its own and only the owner can grant it. */
+function rolePicker(sel, canAdmin) {
+  var opts = [['agent', 'Agent', 'Owns files and sees only their own'], ['tc', 'Transaction Coordinator', 'Sees only files they create or are assigned; can’t approve']];
+  if (canAdmin) opts.push(['admin', 'Admin', 'Sees and reviews every file (on its own)']);
+  return '<div class="f w3"><label>Roles *</label><div class="rpick">' + opts.map(function (o) { return '<label class="' + (sel.indexOf(o[0]) >= 0 ? 'on' : '') + '"><input type="checkbox" name="rl" value="' + o[0] + '"' + (sel.indexOf(o[0]) >= 0 ? ' checked' : '') + '><span><b>' + o[1] + '</b><small>' + o[2] + '</small></span></label>'; }).join('') + '</div></div>';
+}
+function wireRolePicker(m) {
+  var boxes = qsa('input[name=rl]', m);
+  var sync = function () { var adm = boxes.filter(function (x) { return x.value === 'admin' && x.checked; }).length; boxes.forEach(function (x) { if (x.value !== 'admin') { x.disabled = !!adm; if (adm) x.checked = false; } x.closest('label').classList.toggle('on', x.checked); }); };
+  boxes.forEach(function (x) { x.onchange = sync; }); sync();
+}
+function pickedRoles(m) { return qsa('input[name=rl]:checked', m).map(function (x) { return x.value; }); }
 function usersView() {
   loading('users');
   api('listUsers').then(function (users) {
-    var inner = '<div class="top"><div><h1>Users</h1><p class="sub">Agents sign in with their email and see only their own files. Enrique is the only admin. New agents set their own password with a code emailed to them (“First time or forgot password?” on the sign-in page).</p></div><button class="btn" id="nu">+ Add agent</button></div>' +
-      '<div class="gb tbl"><table class="utbl"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>' +
-      users.map(function (u) {
-        return '<tr><td class="unm"><b class="un">' + h(uName(u)) + '</b></td><td class="uem" data-l="Email">' + (hasName(u) ? h(u.email || u.username) : '') + '</td><td data-l="Phone">' + h(u.phone || '') + '</td><td data-l="Role">' + (u.role === 'admin' ? '<span class="pill p-ok">Admin</span>' : '<span class="pill p-pend">Agent</span>') + (u.owner ? ' <small>owner</small>' : '') + '</td>' +
-          '<td data-l="Status">' + (u.active ? (u.locked ? '<span class="pill p-rej">Locked</span>' : u.mustChange ? '<span class="pill p-miss">Password not set</span>' : '<span class="pill p-ok">Active</span>') : '<span class="pill p-miss">Disabled</span>') + '</td><td data-l="Last sign-in"><small>' + h(fmtTs(u.lastLogin)) + '</small></td>' +
-          '<td class="uact" style="white-space:nowrap">' + (u.owner && !S.user.owner ? '' : '<button class="link eu" data-id="' + h(u.id) + '">Edit</button> <button class="link rp" data-id="' + h(u.id) + '" data-n="' + h(uName(u)) + '">Reset password</button> ') + (u.owner || u.id === S.user.id ? '' : '<button class="link act" data-id="' + h(u.id) + '" data-a="' + (u.active ? '' : '1') + '">' + (u.active ? 'Disable' : 'Enable') + '</button>') + '</td></tr>';
-      }).join('') + '</tbody></table></div>';
+    var row = function (u, sec) {
+      var rs = rolesOf(u), pills = rs[0] === 'admin' ? '<span class="pill p-ok">Admin</span>' : rs.map(function (r) { return '<span class="pill ' + (r === sec ? 'p-ok' : 'p-pend') + '">' + (r === 'tc' ? 'TC' : 'Agent') + '</span>'; }).join(' ');
+      return '<tr><td class="unm"><b class="un">' + h(uName(u)) + '</b></td><td class="uem" data-l="Email">' + (hasName(u) ? h(u.email || u.username) : '') + '</td><td data-l="Phone">' + h(u.phone || '') + '</td><td data-l="Role">' + pills + (u.owner ? ' <small>owner</small>' : '') + '</td>' +
+        '<td data-l="Status">' + (u.active ? (u.locked ? '<span class="pill p-rej">Locked</span>' : u.mustChange ? '<span class="pill p-miss">Password not set</span>' : '<span class="pill p-ok">Active</span>') : '<span class="pill p-miss">Disabled</span>') + '</td><td data-l="Last sign-in"><small>' + h(fmtTs(u.lastLogin)) + '</small></td>' +
+        '<td class="uact">' + (u.owner && !S.user.owner ? '' : '<button class="link eu" data-id="' + h(u.id) + '">Edit</button> <button class="link rp" data-id="' + h(u.id) + '" data-n="' + h(uName(u)) + '">Reset password</button> ') + (u.owner || u.id === S.user.id ? '' : '<button class="link act" data-id="' + h(u.id) + '" data-a="' + (u.active ? '' : '1') + '">' + (u.active ? 'Disable' : 'Enable') + '</button>') + '</td></tr>';
+    };
+    var section = function (key, title, list, empty) {
+      return '<section class="usec" aria-labelledby="us_' + key + '"><div class="ush"><h2 id="us_' + key + '">' + title + '</h2><span class="ucount">' + list.length + '</span></div>' +
+        (list.length ? '<div class="gb tbl"><table class="utbl"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>' + list.map(function (u) { return row(u, key); }).join('') + '</tbody></table></div>'
+          : '<div class="card gb uempty">' + empty + '</div>') + '</section>';
+    };
+    var admins = users.filter(function (u) { return rolesOf(u)[0] === 'admin'; }), agents = users.filter(function (u) { return rolesOf(u).indexOf('agent') >= 0; }), tcs = users.filter(function (u) { return rolesOf(u).indexOf('tc') >= 0; });
+    var inner = '<div class="top"><div><h1>Users</h1><p class="sub">' + (S.tcApi ? 'Agents see only their own files. Transaction coordinators see only files they created or were assigned to, and can’t review or approve. Someone can be both an agent and a TC (they appear in both lists). Only an admin chooses roles. ' : 'Agents sign in with their email and see only their own files. Enrique is the only admin. ') + 'New users set their own password with a code emailed to them (“First time or forgot password?” on the sign-in page).</p></div><button class="btn" id="nu">' + (S.tcApi ? '+ Add user' : '+ Add agent') + '</button></div>' +
+      section('admin', 'Admins', admins, 'No admins.') + section('agent', 'Agents', agents, 'No agents yet.') +
+      section('tc', 'Transaction Coordinators', tcs, S.tcApi ? 'No transaction coordinators yet. Use <b>+ Add user</b> and tick Transaction Coordinator.' : 'Transaction coordinators arrive with the next backend update.');
     page('users', inner, function () {
       qs('#nu').onclick = function () {
-        var m = modal('<h2>Add agent</h2><div id="ae"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="af" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="al" maxlength="50" required></div>' +
-          '<div class="f w2"><label>Email (their login)</label><input type="email" id="am" autocapitalize="none"></div><div class="f"><label>Phone</label><input type="tel" id="ap"></div></div><div class="actions"><button class="btn" id="ab">Create user</button></div>');
+        var m = modal('<h2>' + (S.tcApi ? 'Add user' : 'Add agent') + '</h2><div id="ae"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="af" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="al" maxlength="50" required></div>' +
+          '<div class="f w2"><label>Email (their login)</label><input type="email" id="am" autocapitalize="none"></div><div class="f"><label>Phone</label><input type="tel" id="ap"></div>' + (S.tcApi ? rolePicker(['agent'], !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="ab">Create user</button></div>');
+        if (S.tcApi) wireRolePicker(m);
         qs('#ab', m).onclick = function () {
           var em = qs('#am', m).value.trim().toLowerCase(), fn = qs('#af', m).value.trim(), ln = qs('#al', m).value.trim(), ne = nameErr(fn, ln);
+          var roles = S.tcApi ? pickedRoles(m) : null;
+          if (!ne && roles && !roles.length) ne = 'Choose at least one role.';
           if (ne) { qs('#ae', m).innerHTML = '<div class="err">' + h(ne) + '</div>'; return; }
-          api('createUser', { firstName: fn, lastName: ln, name: fn + ' ' + ln /* older backends */, username: em, email: em, phone: qs('#ap', m).value.trim(), role: 'agent' }).then(function (r) {
-            qs('.box', m).innerHTML = '<h2>Agent added</h2><p>Tell <b>' + h(uName(r.user)) + '</b> to open ' + h(location.origin + location.pathname) + ', tap <b>First time or forgot password?</b> and enter <b>' + h(r.user.username) + '</b>. A code is emailed to them to set their own password.</p>' +
+          var body = { firstName: fn, lastName: ln, name: fn + ' ' + ln /* older backends */, username: em, email: em, phone: qs('#ap', m).value.trim() };
+          if (roles) body.roles = roles; else body.role = 'agent';
+          api('createUser', body).then(function (r) {
+            qs('.box', m).innerHTML = '<h2>' + (S.tcApi ? h(roleLabel(r.user)) + ' added' : 'Agent added') + '</h2><p>Tell <b>' + h(uName(r.user)) + '</b> to open ' + h(location.origin + location.pathname) + ', tap <b>First time or forgot password?</b> and enter <b>' + h(r.user.username) + '</b>. A code is emailed to them to set their own password.' + (S.tcApi ? ' Their roles are already set and they can’t change them.' : '') + '</p>' +
               (r.tempPassword /* older backend (before v1.2) */ ? '<div class="ok">Temporary password (shown once): <b style="font-family:monospace;font-size:16px">' + h(r.tempPassword) + '</b></div>' : '') + '<div class="actions"><button class="btn" id="dn">Done</button></div>';
             qs('#dn', m).onclick = function () { m.close(); usersView(); };
           }).catch(function (e) { qs('#ae', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
@@ -754,13 +820,18 @@ function usersView() {
           : '<h2>Password reset</h2><div class="ok">' + h(b.getAttribute('data-n')) + ' was signed out and emailed a code to set a new password.</div><p class="sub">The code expires in 30 minutes and works once. Nobody else ever sees their password.</p>'); usersView(); }).catch(function (e) { toast(e.message, 1); }); }; });
       qsa('.eu').forEach(function (b) { b.onclick = function () {
         var u = users.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (!u) return; var nm = splitNm(u);
+        var canRoles = S.tcApi && !u.owner && u.id !== S.user.id && (rolesOf(u)[0] !== 'admin' || S.user.owner);
         var m = modal('<h2>Edit user</h2><p class="sub">' + h(u.email || u.username) + '</p><div id="ee"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="ef" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="el" maxlength="50" required></div>' +
-          '<div class="f"><label>Phone</label><input type="tel" id="ep"></div></div><div class="actions"><button class="btn" id="eb">Save</button></div>');
+          '<div class="f"><label>Phone</label><input type="tel" id="ep"></div>' + (canRoles ? rolePicker(rolesOf(u), !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="eb">Save</button></div>');
         qs('#ef', m).value = nm.f; qs('#el', m).value = nm.l; qs('#ep', m).value = u.phone || '';
+        if (canRoles) wireRolePicker(m);
         qs('#eb', m).onclick = function () {
-          var fn = qs('#ef', m).value.trim(), ln = qs('#el', m).value.trim(), ne = nameErr(fn, ln);
+          var fn = qs('#ef', m).value.trim(), ln = qs('#el', m).value.trim(), ne = nameErr(fn, ln), roles = canRoles ? pickedRoles(m) : null;
+          if (!ne && roles && !roles.length) ne = 'Choose at least one role.';
           if (ne) { qs('#ee', m).innerHTML = '<div class="err">' + h(ne) + '</div>'; return; }
-          api('updateUser', { userId: u.id, firstName: fn, lastName: ln, phone: qs('#ep', m).value.trim() }).then(function (r) {
+          var body = { userId: u.id, firstName: fn, lastName: ln, phone: qs('#ep', m).value.trim() };
+          if (roles && roles.join() !== rolesOf(u).join()) body.roles = roles;
+          api('updateUser', body).then(function (r) {
             if (u.id === S.user.id && r && r.user) { S.user.firstName = r.user.firstName; S.user.lastName = r.user.lastName; S.user.name = r.user.name; }
             m.close(); toast('Saved.'); usersView();
           }).catch(function (e) { qs('#ee', m).innerHTML = '<div class="err">' + h(/unknown action/i.test(e.message) ? 'Editing names needs the Transaction Center backend 1.2.1 or later.' : e.message) + '</div>'; });
@@ -797,6 +868,10 @@ function route() {
   return dashView();
 }
 function render() {
+  if (S.tcApi === undefined) {   // feature detection: TC features only when the backend says it has them (1.3.0+)
+    S.tcApi = false;
+    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); }, function () { }).then(render);
+  }
   if (!S.token) return loginView();
   if (!S.user) {
     $app.innerHTML = '<div class="loading"><span class="spin"></span>Loading…</div>';
