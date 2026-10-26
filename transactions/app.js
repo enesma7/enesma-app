@@ -217,8 +217,10 @@ function titleMark(size) {
 }
 document.title = APP_NAME;
 function shell(active, inner) {
-  var nav = '<a href="#/" class="' + (active === 'dash' ? 'on' : '') + '">Transactions</a>' + (canCrm() ? '<a href="#/crm" class="' + (active === 'crm' ? 'on' : '') + '">CRM</a>' : '') + '<a href="#/new" class="' + (active === 'new' ? 'on' : '') + '">+ New</a>';
+  var nav = '<a href="#/" class="' + (active === 'dash' ? 'on' : '') + '">Transactions</a><a href="#/new" class="' + (active === 'new' ? 'on' : '') + '">+ New</a>';
   if (isAdmin()) nav += '<a href="#/review" class="' + (active === 'review' ? 'on' : '') + '">Review' + (S.badges.review ? '<span class="cnt">' + S.badges.review + '</span>' : '') + '</a><a href="#/users" class="' + (active === 'users' ? 'on' : '') + '">Users</a><a href="#/archive" class="' + (active === 'archive' ? 'on' : '') + '">Archive</a>';
+  // CRM sits last, set apart from the transaction tabs (gold tab, divider before it).
+  if (canCrm()) nav += '<a href="#/crm" class="crmtab' + (active === 'crm' ? ' on' : '') + '"' + (active === 'crm' ? ' aria-current="page"' : '') + '>CRM</a>';
   var tog = isDual() ? '<div class="rtog seg" role="group" aria-label="View as">' + [['agent', 'My Files'], ['tc', 'TC View']].map(function (x) { return '<button type="button" data-role="' + x[0] + '" class="' + (activeRole() === x[0] ? 'on' : '') + '" aria-pressed="' + (activeRole() === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' : '';
   return (DEMO ? '<div class="demo"><b>DEMO PREVIEW</b> · sample data only, nothing is saved · <a href="#" id="exitDemo" style="color:#FBFBFB">exit demo</a></div>' : '') +
     '<header id="hdr"><button class="nbtn" id="nbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><span></span><span></span><span></span></button>' +
@@ -1004,13 +1006,40 @@ function clientView(id) {
   }).catch(function (e) { failView('crm', e); });
 }
 
+/* 1.4.1: CRM phones are 000-000-0000 (the server normalizes and checks too). A leading 1 / +1 is dropped. */
+var PHONE_ERR = 'Phone must be a 10-digit number (000-000-0000).';
+function phoneDigits(v) { var d = String(v || '').replace(/\D/g, ''); return d.charAt(0) === '1' ? d.slice(1) : d; }
+function fmtPhone(v) { var d = phoneDigits(v).slice(0, 10); return d.length > 6 ? d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6) : d.length > 3 ? d.slice(0, 3) + '-' + d.slice(3) : d; }
+function phoneOk(v) { return !v || /^\d{3}-\d{3}-\d{4}$/.test(v); }
+function wirePhone(el) {
+  if (!el) return;
+  var cur = el.value; if (phoneDigits(cur).length === 10 || !cur) el.value = fmtPhone(cur);   // a legacy number that can't be formatted stays visible to fix
+  function put(raw, caretDigits) {
+    el.value = fmtPhone(raw);
+    if (caretDigits === undefined) return;
+    var i = 0, n = 0; while (i < el.value.length && n < caretDigits) { if (/\d/.test(el.value.charAt(i))) n++; i++; }
+    try { el.setSelectionRange(i, i); } catch (e) { }
+  }
+  el.addEventListener('input', function () {
+    var pos = el.selectionStart == null ? el.value.length : el.selectionStart, before = el.value.slice(0, pos);
+    var lead = String(el.value).replace(/\D/g, '').charAt(0) === '1' ? 1 : 0;
+    put(el.value, Math.max(0, before.replace(/\D/g, '').length - lead));
+  });
+  // Pasting "+1 (951) 555-0101" would be cut by maxlength before formatting, so format the pasted text ourselves.
+  el.addEventListener('paste', function (e) {
+    var t = (e.clipboardData || window.clipboardData); if (!t) return; e.preventDefault();
+    var a = el.selectionStart || 0, b = el.selectionEnd || 0;
+    put(el.value.slice(0, a) + t.getData('text') + el.value.slice(b));
+  });
+}
+
 function clientForm(c, d, linked) {
   var isNew = !c; c = c || { type: '', status: 'New Lead', tags: [], groups: [], txnIds: [] };
   var ownerId = c.ownerId || (d.admin ? (CRM_UI.agentId || S.user.id) : S.user.id);
   var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(l) + '</option>'; };
   var inp = function (id, l, v, type, extra) { return '<div class="f' + (extra || '') + '"><label for="' + id + '">' + l + '</label><input type="' + (type || 'text') + '" id="' + id + '" value="' + h(v || '') + '"' + (type === 'email' ? ' autocapitalize="none" spellcheck="false"' : '') + '></div>'; };
   var m = modal('<h2>' + (isNew ? 'Add client' : 'Edit client') + '</h2><div id="ce"></div><form id="cf" novalidate><div class="fgrid">' +
-    inp('cfF', 'First name', c.firstName) + inp('cfL', 'Last name', c.lastName) + inp('cfP', 'Phone', c.phone, 'tel') + inp('cfE', 'Email', c.email, 'email', ' w2') + inp('cfA', 'Address', c.address, 'text', ' w3') +
+    inp('cfF', 'First name', c.firstName) + inp('cfL', 'Last name', c.lastName) + '<div class="f"><label for="cfP">Phone</label><input type="tel" id="cfP" inputmode="tel" autocomplete="tel-national" placeholder="000-000-0000" maxlength="12" value="' + h(c.phone || '') + '"></div>' + inp('cfE', 'Email', c.email, 'email', ' w2') + inp('cfA', 'Address', c.address, 'text', ' w3') +
     '<div class="f"><label for="cfT">Client type <span class="req">*</span></label><select id="cfT">' + opt('', 'Choose…', c.type) + Object.keys(d.types).map(function (k) { return opt(k, d.types[k], c.type); }).join('') + '</select></div>' +
     '<div class="f"><label for="cfS">Status</label><select id="cfS">' + d.statuses.map(function (s) { return opt(s, s, c.status); }).join('') + '</select></div>' +
     '<div class="f"><label for="cfSo">Source</label><input type="text" id="cfSo" list="cfSoL" maxlength="60" value="' + h(c.source || '') + '"><datalist id="cfSoL">' + d.sources.map(function (s) { return '<option value="' + h(s) + '">'; }).join('') + '</datalist></div>' +
@@ -1034,11 +1063,12 @@ function clientForm(c, d, linked) {
     qsa('#cfX input', m).forEach(function (x) { x.onchange = function () { var i = sel.x.indexOf(x.value); if (x.checked && i < 0) sel.x.push(x.value); if (!x.checked && i >= 0) sel.x.splice(i, 1); x.closest('label').classList.toggle('on', x.checked); }; });
   }
   drawPicks();
+  wirePhone(qs('#cfP', m));
   if (qs('#cfO', m)) qs('#cfO', m).onchange = drawPicks;
   function save(allowDup) {
     var v = function (id) { return qs(id, m) ? qs(id, m).value.trim() : ''; };
     var client = { firstName: v('#cfF'), lastName: v('#cfL'), phone: v('#cfP'), email: v('#cfE'), address: v('#cfA'), type: v('#cfT'), status: v('#cfS'), source: v('#cfSo'), tags: v('#cfTg'), groups: sel.g, txnIds: sel.x };
-    var err = !client.firstName && !client.lastName ? 'Enter a first or last name.' : !client.type ? 'Choose a client type.' : (client.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(client.email)) ? 'Email address is not valid.' : '';
+    var err = !client.firstName && !client.lastName ? 'Enter a first or last name.' : !client.type ? 'Choose a client type.' : !phoneOk(client.phone) ? PHONE_ERR : (client.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(client.email)) ? 'Email address is not valid.' : '';
     if (err) { qs('#ce', m).innerHTML = '<div class="err">' + h(err) + '</div>'; return; }
     if (isNew) client.note = v('#cfN');
     var b = qs('#cfB', m); b.disabled = true;

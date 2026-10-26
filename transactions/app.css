@@ -298,3 +298,15 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:24px}
   .crem .acts{gap:6px}
 }
 @media(max-width:400px){.cfil{grid-template-columns:1fr}.crems .seg{display:flex}.crems .seg button{flex:1 1 auto;justify-content:center;padding:8px 10px}.cact>*{flex:1 1 auto;justify-content:center}}
+/* v1.4.1: CRM tab sits last in the nav, set apart by a divider, as an Aztec Gold tab with Rocket Black text */
+nav.main a.crmtab{margin-left:17px;opacity:1;color:var(--k);font-weight:600;background:var(--gold);padding:8px 16px}
+nav.main a.crmtab:before{content:"";position:absolute;left:-10px;top:10px;bottom:10px;width:1px;background:rgba(0,0,7,.28)}
+nav.main a.crmtab:hover{box-shadow:inset 0 0 0 1px rgba(0,0,7,.35)}
+nav.main a.crmtab.on{font-weight:700;box-shadow:inset 0 0 0 2px var(--k)}
+nav.main a.crmtab.on:after{left:16px;right:16px;bottom:6px;height:2px;background:var(--k)}
+@media(max-width:899px){
+  nav.main a.crmtab{margin:13px 0 0;padding:10px 12px}
+  nav.main a.crmtab:before{left:0;right:0;top:-8px;bottom:auto;width:auto;height:1px}
+  nav.main a.crmtab.on{background:var(--gold);box-shadow:inset 0 0 0 2px var(--k)}
+  nav.main a.crmtab.on:after{display:block;left:auto;right:14px;top:50%;bottom:auto;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--k)}
+}
