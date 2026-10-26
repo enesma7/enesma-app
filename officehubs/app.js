@@ -99,7 +99,7 @@ function viewLocation(L) {
   $app.innerHTML = '<a class="back" href="#/">&larr; All locations</a>' +
     '<div class="lochead"><div><i class="rule"></i><h1>' + h(L.name) + '</h1><p class="sub" style="margin:0"><a href="' + h(L.maps) + '" target="_blank" rel="noopener">' + h(L.address) + '</a></p>' +
     '<div class="host" style="margin-top:10px"><img src="' + h(L.host.logo) + '" alt="' + h(L.host.name) + '" width="88" height="36"><span>Located at ' + h(L.host.name) + '</span></div></div>' +
-    '<a class="btn ghost" href="#book" id="jump">Reserve a space</a></div>' + soonBanner() +
+    '</div>' + soonBanner() +
     '<div class="grid"><section class="card"><h2>Availability</h2><div class="tabs" role="tablist">' + L.spaces.map(function (s) {
       return '<button class="tab' + (s.id === S.tab ? ' on' : '') + '" role="tab" data-tab="' + s.id + '">' + h(s.label) + (s.group !== s.label ? '<small>' + h(s.group) + '</small>' : '<small>&nbsp;</small>') + '</button>';
     }).join('') + '</div><div class="cal" id="cal"></div><p class="small" style="margin:10px 0 0">Booked times show as busy. Times are Pacific Time.</p></section>' +
