@@ -1,6 +1,6 @@
 {
   "name": "Transaction Center",
-  "short_name": "Transactions",
+  "short_name": "Transaction Center",
   "id": "/transactions/",
   "start_url": "/transactions/?source=homescreen",
   "scope": "/transactions/",
