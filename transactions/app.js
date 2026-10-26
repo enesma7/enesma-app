@@ -210,8 +210,9 @@ function shell(active, inner) {
   var nav = '<a href="#/" class="' + (active === 'dash' ? 'on' : '') + '">Transactions</a><a href="#/new" class="' + (active === 'new' ? 'on' : '') + '">+ New</a>';
   if (isAdmin()) nav += '<a href="#/review" class="' + (active === 'review' ? 'on' : '') + '">Review' + (S.badges.review ? '<span class="cnt">' + S.badges.review + '</span>' : '') + '</a><a href="#/users" class="' + (active === 'users' ? 'on' : '') + '">Users</a><a href="#/archive" class="' + (active === 'archive' ? 'on' : '') + '">Archive</a>';
   return (DEMO ? '<div class="demo"><b>DEMO PREVIEW</b> · sample data only, nothing is saved · <a href="#" id="exitDemo" style="color:#FBFBFB">exit demo</a></div>' : '') +
-    '<header><a class="brand" href="#/" aria-label="Transaction Center home">' + titleMark('tc-sm') + '</a>' +
-    '<nav class="main">' + nav + '</nav><div class="hspace"></div>' +
+    '<header id="hdr"><button class="nbtn" id="nbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><span></span><span></span><span></span></button>' +
+    '<a class="brand" href="#/" aria-label="Transaction Center home">' + titleMark('tc-sm') + '</a>' +
+    '<nav class="main" id="mnav" aria-label="Main">' + nav + '</nav><div class="hspace"></div>' +
     '<div class="search"><span>' + SEARCH_ICON + '</span><input id="q" type="search" placeholder="Search address, client, escrow #" autocomplete="off" aria-label="Search transactions"><div class="sres hidden" id="sres"></div></div>' +
     '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + h(S.user.username) + ' · ' + (isAdmin() ? 'Admin' : 'Agent') + '</div><a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
     '<main>' + inner + '</main>';
@@ -237,7 +238,15 @@ function wireShell() {
       var u = qs('#udrop'); if (u && !e.target.closest('.umenu')) u.classList.add('hidden');
     });
   }
-  var ub = qs('#ubtn'); if (ub) ub.onclick = function () { qs('#udrop').classList.toggle('hidden'); };
+  var ub = qs('#ubtn'); if (ub) { ub.setAttribute('aria-haspopup', 'true'); ub.setAttribute('aria-expanded', 'false'); ub.onclick = function () { var d = qs('#udrop'); d.classList.toggle('hidden'); ub.setAttribute('aria-expanded', d.classList.contains('hidden') ? 'false' : 'true'); }; }
+  /* narrow screens: tabs live behind the hamburger */
+  var nb = qs('#nbtn'), hd = qs('#hdr');
+  if (nb && hd) {
+    var setNav = function (open, focusBtn) { hd.classList.toggle('navopen', open); nb.setAttribute('aria-expanded', open ? 'true' : 'false'); nb.setAttribute('aria-label', open ? 'Close menu' : 'Menu'); if (open) { var f = qs('#mnav a'); if (f) f.focus(); } else if (focusBtn) nb.focus(); };
+    nb.onclick = function () { setNav(!hd.classList.contains('navopen')); };
+    hd.addEventListener('keydown', function (e) { if (e.key === 'Escape' && hd.classList.contains('navopen')) { setNav(false, true); } });
+    qsa('#mnav a').forEach(function (a) { a.addEventListener('click', function () { setNav(false); }); });
+  }
   var so = qs('#signout'); if (so) so.onclick = function () { api('logout').catch(function () { }); signOutLocal(); location.hash = '#/'; render(); };
   var ex = qs('#exitDemo'); if (ex) ex.onclick = function (e) { e.preventDefault(); sessionStorage.removeItem('tc_demo'); signOutLocal(); location.href = location.pathname; };
 }
