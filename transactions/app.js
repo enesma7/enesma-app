@@ -38,10 +38,12 @@ function unwrap(res) {
   if (e.code === 'MUST_CHANGE' && S.user) { S.user.mustChange = true; render(); }
   throw e;
 }
-function storeToken(tok, remember) {
+/* The session token lives only in sessionStorage (cleared when the tab closes), never in localStorage or a URL. */
+function storeToken(tok) {
   S.token = tok;
-  sessionStorage.removeItem('tc_t'); localStorage.removeItem('tc_t');
-  if (tok) (remember ? localStorage : sessionStorage).setItem('tc_t', tok);
+  sessionStorage.removeItem('tc_t');
+  try { localStorage.removeItem('tc_t'); } catch (e) { /* clean up tokens saved by older versions */ }
+  if (tok) sessionStorage.setItem('tc_t', tok);
 }
 function signOutLocal() { storeToken(null); S.user = null; S.dash = null; S.txn = null; }
 
@@ -64,8 +66,8 @@ var F = {
     { h: 'Property' }].concat(PROPERTY).concat([
     { h: 'Listing agreement' },
     { k: 'listingDate', l: 'Listing contract date', t: 'date', r: 1 }, { k: 'expirationDate', l: 'Expiration date', t: 'date', r: 1 },
-    { k: 'listPrice', l: 'List price', t: 'money', r: 1 }, { k: 'listingCommission', l: 'Listing commission', r: 1, ph: 'e.g. 2.5% or $10,000' },
-    { k: 'buyerBrokerComp', l: 'Offered to buyer broker', ph: 'e.g. 2% or none' }, { k: 'occupancy', l: 'Occupancy', opts: ['Owner occupied', 'Tenant occupied', 'Vacant'] },
+    { k: 'listPrice', l: 'List price', t: 'money', r: 1 }, { k: 'listingCommission', l: 'Listing commission', r: 1, comm: 1 },
+    { k: 'buyerBrokerComp', l: 'Offered to buyer broker', comm: 1 }, { k: 'occupancy', l: 'Occupancy', opts: ['Owner occupied', 'Tenant occupied', 'Vacant'] },
     { h: 'Sellers' }, { k: 'sellers', l: 'Sellers', people: 1, r: 1 },
     { h: 'Notes' }, { k: 'notes', l: 'Notes for the office', ta: 1, w: 3 }]),
   purchase: [
@@ -74,7 +76,7 @@ var F = {
     { h: 'Contract' },
     { k: 'contractDate', l: 'Contract (acceptance) date', t: 'date', r: 1 }, { k: 'estCloseDate', l: 'Estimated close of escrow', t: 'date', r: 1 },
     { k: 'purchasePrice', l: 'Purchase price', t: 'money', r: 1 }, { k: 'emdAmount', l: 'Earnest money deposit', t: 'money' },
-    { k: 'commission', l: 'Our commission', r: 1, ph: 'e.g. 2.5% or $12,000' }, { k: 'financing', l: 'Financing', opts: ['Conventional', 'FHA', 'VA', 'Cash', 'Other'] },
+    { k: 'commission', l: 'Our commission', r: 1, comm: 1 }, { k: 'financing', l: 'Financing', opts: ['Conventional', 'FHA', 'VA', 'Cash', 'Other'] },
     { h: 'Buyers' }, { k: 'buyers', l: 'Buyers', people: 1, r: 1 },
     { h: 'Sellers' }, { k: 'sellers', l: 'Sellers', people: 1, r: 1 },
     { h: 'Escrow, title & lender' },
@@ -86,7 +88,7 @@ var F = {
     { h: 'Property' }].concat(PROPERTY).concat([
     { h: 'Lease listing agreement' },
     { k: 'listingDate', l: 'Listing contract date', t: 'date', r: 1 }, { k: 'expirationDate', l: 'Expiration date', t: 'date', r: 1 },
-    { k: 'monthlyRent', l: 'Monthly rent', t: 'money', r: 1 }, { k: 'listingCommission', l: 'Listing commission', r: 1, ph: 'e.g. one month rent' },
+    { k: 'monthlyRent', l: 'Monthly rent', t: 'money', r: 1 }, { k: 'listingCommission', l: 'Listing commission', r: 1, comm: 1 },
     { h: 'Landlords' }, { k: 'landlords', l: 'Landlords', people: 1, r: 1 },
     { h: 'Notes' }, { k: 'notes', l: 'Notes for the office', ta: 1, w: 3 }]),
   lease: [
@@ -95,21 +97,35 @@ var F = {
     { h: 'Lease' },
     { k: 'leaseStart', l: 'Lease start', t: 'date', r: 1 }, { k: 'leaseEnd', l: 'Lease end', t: 'date' },
     { k: 'monthlyRent', l: 'Monthly rent', t: 'money', r: 1 }, { k: 'securityDeposit', l: 'Security deposit', t: 'money' },
-    { k: 'commission', l: 'Our commission', r: 1 },
+    { k: 'commission', l: 'Our commission', r: 1, comm: 1 },
     { h: 'Landlords' }, { k: 'landlords', l: 'Landlords', people: 1, r: 1 },
     { h: 'Tenants' }, { k: 'tenants', l: 'Tenants', people: 1, r: 1 },
     { h: 'Notes' }, { k: 'notes', l: 'Notes for the office', ta: 1, w: 3 }]),
   referral: [
     { h: 'Referral' },
     { k: 'clientName', l: 'Client name', r: 1 }, { k: 'clientPhone', l: 'Client phone', t: 'tel' }, { k: 'clientEmail', l: 'Client email', t: 'email' },
-    { k: 'referredTo', l: 'Referred to (agent · brokerage)', r: 1, w: 2 }, { k: 'referralFee', l: 'Referral fee', r: 1, ph: 'e.g. 25%' },
+    { k: 'referredTo', l: 'Referred to (agent · brokerage)', r: 1, w: 2 }, { k: 'referralFee', l: 'Referral fee', r: 1, comm: 1 },
     { k: 'location', l: 'Area / location', r: 1 }, { k: 'expectedClose', l: 'Expected close', t: 'date' }, { k: 'referralSide', l: 'Client is', opts: ['Buyer', 'Seller', 'Tenant', 'Landlord'] },
     { h: 'Notes' }, { k: 'notes', l: 'Notes for the office', ta: 1, w: 3 }]
 };
 
-function fieldHtml(f, v, pre) {
+/* Commission inputs: number + %/$ toggle. Stored as <k> = number, <k>Type = 'percent' | 'amount'. */
+function commType(v, ty) { return ty === 'amount' || ty === 'percent' ? ty : (/\$/.test(String(v || '')) ? 'amount' : 'percent'); }
+function fmtComm(v, ty) {
+  if (!v) return ''; var n = String(v).replace(/[$,%\s]/g, '');
+  if (!/^\d+(\.\d+)?$/.test(n)) return String(v);
+  return commType(v, ty) === 'amount' ? '$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 }) : n + '%';
+}
+function fieldHtml(f, v, pre, all) {
   var id = (pre || 'f') + '_' + f.k, req = f.r ? ' <span class="req">*</span>' : '';
   var cls = 'f' + (f.w === 2 ? ' w2' : f.w === 3 ? ' w3' : '');
+  if (f.comm) {
+    var ty = commType(v, (all || {})[f.k + 'Type']), num = String(v == null ? '' : v).replace(/[$,%\s]/g, '');
+    return '<div class="' + cls + '" data-k="' + f.k + '" data-r="' + (f.r ? 1 : '') + '" data-comm="1"><label for="' + id + '">' + h(f.l) + req + '</label><div class="comm"><input id="' + id + '" type="text" inputmode="decimal" placeholder="' + (ty === 'amount' ? 'Amount' : 'Rate') + '" value="' + h(num) + '">' +
+      '<div class="seg" role="radiogroup" aria-label="' + h(f.l) + ' unit">' + [['percent', '%'], ['amount', '$']].map(function (o) {
+        return '<label class="' + (ty === o[0] ? 'on' : '') + '" title="' + (o[0] === 'percent' ? 'Percent' : 'Dollar amount') + '"><input type="radio" name="' + id + '_ty" value="' + o[0] + '"' + (ty === o[0] ? ' checked' : '') + '>' + o[1] + '</label>';
+      }).join('') + '</div></div></div>';
+  }
   if (f.people) {
     var arr = (v && v.length) ? v : [{}];
     return '<div class="f w3 people" data-k="' + f.k + '" data-r="' + (f.r ? 1 : '') + '"><label>' + h(f.l) + req + ' · name, phone, email</label><div class="plist">' +
@@ -138,7 +154,7 @@ function formHtml(type, intake, pre, skip) {
   F[type].forEach(function (f) {
     if (skip && skip[f.k]) return;
     if (f.h) { if (open) out += '</div></div>'; out += '<div class="card gb" data-h="' + h(f.h) + '"><h3>' + h(f.h) + '</h3><div class="fgrid">'; open = true; return; }
-    out += fieldHtml(f, (intake || {})[f.k], pre);
+    out += fieldHtml(f, (intake || {})[f.k], pre, intake);
   });
   if (open) out += '</div></div>';
   return out.replace(/<div class="card gb" data-h="[^"]*"><h3>[^<]*<\/h3><div class="fgrid"><\/div><\/div>/g, '');
@@ -149,7 +165,8 @@ function wireForm(root) {
     if (e.target.classList.contains('x') && e.target.closest('.prow')) { var pl = e.target.closest('.plist'); if (pl.children.length > 1) e.target.closest('.prow').remove(); else qsa('input', e.target.closest('.prow')).forEach(function (i) { i.value = ''; }); }
   });
   root.addEventListener('change', function (e) {
-    if (e.target.type === 'radio') qsa('label', e.target.closest('.radios')).forEach(function (l) { l.classList.toggle('on', l.contains(e.target)); });
+    if (e.target.type === 'radio') qsa('label', e.target.closest('.radios,.seg')).forEach(function (l) { l.classList.toggle('on', l.contains(e.target)); });
+    if (e.target.type === 'radio' && e.target.closest('.seg')) { var ci = qs('input[type=text]', e.target.closest('.comm')); if (ci) ci.placeholder = e.target.value === 'amount' ? 'Amount' : 'Rate'; }
   });
 }
 function readForm(root) {
@@ -158,6 +175,10 @@ function readForm(root) {
     var k = el.getAttribute('data-k'), v;
     if (el.classList.contains('people')) {
       v = qsa('.prow', el).map(function (r) { var p = {}; qsa('input', r).forEach(function (i) { p[i.getAttribute('data-p')] = i.value.trim(); }); return p; }).filter(function (p) { return p.name; });
+    } else if (el.getAttribute('data-comm')) {
+      var ck = qs('.seg input:checked', el); v = qs('input[type=text]', el).value.replace(/[$,%\s]/g, '');
+      out[k + 'Type'] = ck ? ck.value : 'percent';
+      if (v && (!/^\d+(\.\d+)?$/.test(v) || (out[k + 'Type'] === 'percent' && Number(v) > 100))) { el.classList.add('bad'); missing.push(qs('label', el).textContent.replace(/\s*\*.*$/, '') + ' (number only, % up to 100)'); out[k] = v; return; }
     } else if (qs('.radios', el)) { var c = qs('input:checked', el); v = c ? c.value : ''; }
     else { var inp = qs('input,select,textarea', el); v = inp ? inp.value.trim() : ''; }
     out[k] = v;
@@ -170,7 +191,14 @@ function readForm(root) {
 
 /* ---------------- shell ---------------- */
 /* Title lockup: TRANSACTION (Michroma, wide tracking) over CENTER (smaller, wider tracking, Aztec Gold gradient). Live text, no image. */
-function titleMark(size) { return '<span class="tc-title ' + size + '"><span class="tc-t1">Transaction</span> <span class="tc-t2">Center</span></span>'; }
+/* Shared title lockup: the ONE source for the product name. Used by the sign-in screen, the header, the page <title>,
+   and (rendered to assets/tc-title-email.png from this same markup + app.css) the backend's emails and the Agent Hub tile. */
+var APP_NAME = CFG.APP_NAME || 'Transaction Center';
+function titleMark(size) {
+  var w = APP_NAME.split(/\s+/), last = w.pop();
+  return '<span class="tc-title ' + size + '" role="img" aria-label="' + h(APP_NAME) + '"><span class="tc-t1" aria-hidden="true">' + h(w.join(' ')) + '</span> <span class="tc-t2" aria-hidden="true">' + h(last) + '</span></span>';
+}
+document.title = APP_NAME;
 function shell(active, inner) {
   var nav = '<a href="#/" class="' + (active === 'dash' ? 'on' : '') + '">Transactions</a><a href="#/new" class="' + (active === 'new' ? 'on' : '') + '">+ New</a>';
   if (isAdmin()) nav += '<a href="#/review" class="' + (active === 'review' ? 'on' : '') + '">Review' + (S.badges.review ? '<span class="cnt">' + S.badges.review + '</span>' : '') + '</a><a href="#/users" class="' + (active === 'users' ? 'on' : '') + '">Users</a><a href="#/archive" class="' + (active === 'archive' ? 'on' : '') + '">Archive</a>';
@@ -206,7 +234,15 @@ function wireShell() {
   var so = qs('#signout'); if (so) so.onclick = function () { api('logout').catch(function () { }); signOutLocal(); location.hash = '#/'; render(); };
   var ex = qs('#exitDemo'); if (ex) ex.onclick = function (e) { e.preventDefault(); sessionStorage.removeItem('tc_demo'); signOutLocal(); location.href = location.pathname; };
 }
-function page(active, inner, after) { $app.innerHTML = shell(active, inner); wireShell(); if (!page.keepScroll) window.scrollTo(0, 0); page.keepScroll = false; if (after) after(); }
+/* Which page the current URL should show; a slow response for a page the user already left is dropped. */
+function expectedPage() {
+  var hs = location.hash.replace(/^#/, '') || '/';
+  if (hs === '/new') return 'new';
+  if (hs === '/account') return '';
+  if (/^\/(review|users|archive)$/.test(hs) && isAdmin()) return hs.slice(1);
+  return 'dash';
+}
+function page(active, inner, after) { if (S.user && !S.user.mustChange && active !== expectedPage()) return; $app.innerHTML = shell(active, inner); wireShell(); if (!page.keepScroll) window.scrollTo(0, 0); page.keepScroll = false; if (after) after(); }
 function loading(active) { page(active, '<div class="loading"><span class="spin"></span>Loading…</div>'); }
 function failView(active, e) { page(active, '<div class="err">' + h(e.message) + '</div><a class="ub" href="#/">Back to transactions</a>'); }
 
@@ -216,21 +252,52 @@ function loginView(msg) {
   $app.innerHTML = '<div class="login"><form class="box" id="lf" autocomplete="on"><h1 class="app">' + titleMark('tc-lg') + '</h1>' +
     (msg ? '<div class="err">' + h(msg) + '</div>' : '') +
     (noApi ? '<div class="ok">The secure backend is being connected. Sign-in opens as soon as setup is finished.<br><a href="?demo=1">Preview with sample data</a></div>' : '') +
-    (DEMO ? '<div class="ok">Demo preview. Sign in as <b>admin</b> or <b>agent</b> with password <b>demo</b>.</div>' : '') +
-    '<div class="f"><label for="lu">Username</label><input id="lu" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>' +
+    (DEMO ? '<div class="ok">Demo preview. Sign in as <b>admin@demo.test</b> or <b>agent@demo.test</b> with password <b>demo</b>.</div>' : '') +
+    '<div class="f"><label for="lu">Email</label><input id="lu" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" required></div>' +
     '<div class="f"><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password" required></div>' +
-    '<label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:4px 0 16px"><input type="checkbox" id="lr" style="accent-color:#D5BE87"> Keep me signed in on this device</label>' +
-    '<button class="btn" id="lb"' + (noApi ? ' disabled' : '') + '>Sign in</button><div class="fine">Forgot your password? Ask the office to reset it.<br>Private system · access is logged.</div></form></div>';
+    '<button class="btn" id="lb"' + (noApi ? ' disabled' : '') + '>Sign in</button><div class="fine"><a href="#" id="lc">First time or forgot password?</a><br>Private system · access is logged.</div></form></div>';
+  qs('#lc').onclick = function (e) { e.preventDefault(); codeView(qs('#lu').value.trim()); };
   qs('#lf').onsubmit = function (e) {
     e.preventDefault(); var b = qs('#lb'); b.disabled = true; b.innerHTML = '<span class="spin"></span>Signing in…';
-    api('login', { username: qs('#lu').value, password: qs('#lp').value }).then(function (d) {
-      storeToken(d.token, qs('#lr').checked); S.user = d.user; render();
-    }).catch(function (err) { loginView(err.message); });
+    api('login', { email: qs('#lu').value.trim().toLowerCase(), username: qs('#lu').value.trim().toLowerCase(), password: qs('#lp').value }).then(function (d) {
+      storeToken(d.token); S.user = d.user; render();
+    }).catch(function (err) { var em = qs('#lu').value; loginView(err.message); qs('#lu').value = em; qs('#lp').focus(); });
+  };
+}
+/* First sign-in and forgot password: a 6-digit code is emailed from Enrique's Apps Script account. */
+function codeView(email, step, msg, okMsg) {
+  var two = step === 2;
+  $app.innerHTML = '<div class="login"><form class="box" id="cf" autocomplete="on"><h1 class="app">' + titleMark('tc-lg') + '</h1>' +
+    '<h2 style="font-size:17px;margin:0 0 6px">' + (two ? 'Enter your code' : 'Set up or reset your password') + '</h2>' +
+    '<p class="sub" style="margin:0 0 14px">' + (two ? 'We emailed a 6-digit code to <b>' + h(email) + '</b>. It expires in 15 minutes. Check spam if you don’t see it.' : 'Enter the email address the office registered for you. We’ll email you a code.') + '</p>' +
+    (msg ? '<div class="err">' + h(msg) + '</div>' : '') + (okMsg ? '<div class="ok">' + h(okMsg) + '</div>' : '') +
+    (two ? '<input type="hidden" id="ce" value="' + h(email) + '"><div class="f"><label for="cc">Code</label><input id="cc" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>' +
+      '<div class="f"><label for="c1">New password</label><input id="c1" type="password" autocomplete="new-password" minlength="10" required></div>' +
+      '<div class="f"><label for="c2">Repeat new password</label><input id="c2" type="password" autocomplete="new-password" required></div>' +
+      '<p class="sub" style="font-size:12px;margin:0 0 12px">At least 10 characters with letters and numbers.</p>'
+      : '<div class="f"><label for="ce">Email</label><input id="ce" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" value="' + h(email) + '" required></div>') +
+    '<button class="btn" id="cb">' + (two ? 'Save password and sign in' : 'Email me a code') + '</button><div class="fine">' + (two ? '<a href="#" id="cr">Send a new code</a> · ' : '') + '<a href="#" id="cbk">Back to sign in</a></div></form></div>';
+  qs('#cbk').onclick = function (e) { e.preventDefault(); loginView(); };
+  if (qs('#cr')) qs('#cr').onclick = function (e) { e.preventDefault(); codeView(email); };
+  function unsupported(err) { return /unknown action/i.test(err.message) ? 'Password setup by email isn’t switched on yet. Ask Enrique to reset your password.' : err.message; }
+  qs('#cf').onsubmit = function (e) {
+    e.preventDefault(); var b = qs('#cb'), em = qs('#ce').value.trim().toLowerCase();
+    if (!two) {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return codeView(em, 1, 'Enter a valid email address.');
+      b.disabled = true; b.innerHTML = '<span class="spin"></span>Sending…';
+      return api('requestPasswordCode', { email: em }).then(function () { codeView(em, 2, '', 'If that email has an account, a code is on its way.'); }).catch(function (err) { codeView(em, 1, unsupported(err)); });
+    }
+    var p1 = qs('#c1').value;
+    if (p1 !== qs('#c2').value) return codeView(em, 2, 'The new passwords do not match.');
+    if (p1.length < 10 || !/[A-Za-z]/.test(p1) || !/\d/.test(p1)) return codeView(em, 2, 'Use at least 10 characters with letters and numbers.');
+    b.disabled = true; b.innerHTML = '<span class="spin"></span>Saving…';
+    api('resetPasswordWithCode', { email: em, code: qs('#cc').value.trim(), newPassword: p1 }).then(function (d) { storeToken(d.token); S.user = d.user; toast('Password saved. You’re signed in.'); location.hash = '#/'; render(); })
+      .catch(function (err) { codeView(em, 2, unsupported(err)); });
   };
 }
 function passwordView(forced) {
-  var inner = '<div style="max-width:520px"><h1>' + (forced ? 'Set your password' : 'Change password') + '</h1><p class="sub">' + (forced ? 'Your account uses a temporary password. Choose your own before continuing. ' : '') + 'At least 10 characters with letters and numbers.</p>' +
-    '<form class="card gb" id="pf"><div id="pe"></div><div class="f" style="margin-bottom:12px"><label>Current ' + (forced ? '(temporary) ' : '') + 'password</label><input type="password" id="p0" autocomplete="current-password" required></div>' +
+  var inner = '<div style="max-width:520px"><h1>' + (forced ? 'Set your password' : 'Change password') + '</h1><p class="sub">' + (forced ? 'Choose your own password before continuing. ' : '') + 'At least 10 characters with letters and numbers.</p>' +
+    '<form class="card gb" id="pf"><div id="pe"></div><div class="f" style="margin-bottom:12px"><label>Current password</label><input type="password" id="p0" autocomplete="current-password" required></div>' +
     '<div class="f" style="margin-bottom:12px"><label>New password</label><input type="password" id="p1" autocomplete="new-password" minlength="10" required></div>' +
     '<div class="f"><label>Repeat new password</label><input type="password" id="p2" autocomplete="new-password" required></div><div class="actions">' + (forced ? '<button type="button" class="ub" id="pout">Sign out</button>' : '') + '<button class="btn">Save password</button></div></form></div>';
   if (forced) {
@@ -241,7 +308,7 @@ function passwordView(forced) {
     e.preventDefault(); var p1 = qs('#p1').value;
     if (p1 !== qs('#p2').value) { qs('#pe').innerHTML = '<div class="err">The new passwords do not match.</div>'; return; }
     if (p1.length < 10 || !/[A-Za-z]/.test(p1) || !/\d/.test(p1)) { qs('#pe').innerHTML = '<div class="err">Use at least 10 characters with letters and numbers.</div>'; return; }
-    api('changePassword', { current: qs('#p0').value, newPassword: p1 }).then(function (d) { S.user = d.user; toast('Password saved.'); location.hash = '#/'; render(); })
+    api('changePassword', { current: qs('#p0').value, newPassword: p1 }).then(function (d) { if (d.token) storeToken(d.token); S.user = d.user; toast('Password saved.'); location.hash = '#/'; render(); })
       .catch(function (err) { qs('#pe').innerHTML = '<div class="err">' + h(err.message) + '</div>'; });
   };
 }
@@ -408,7 +475,7 @@ function drawTab() {
       var v = ii[f.k];
       if (f.people) v = (v || []).map(function (pp) { return [pp.name, pp.phone, pp.email].filter(Boolean).join(' · '); }).join('\n');
       else if (f.radio) v = (f.radio.filter(function (o) { return o[0] === (f.k === 'side' ? t.side : v); })[0] || [])[1];
-      else if (f.t === 'date') v = fmtDate(v); else if (f.t === 'money' && v) v = money(v);
+      else if (f.t === 'date') v = fmtDate(v); else if (f.t === 'money' && v) v = money(v); else if (f.comm) v = fmtComm(v, ii[f.k + 'Type']);
       return '<div' + (f.w === 3 || f.people ? ' style="grid-column:1/-1"' : '') + '><span>' + h(f.l) + '</span><b style="white-space:pre-line">' + (v ? h(v) : '—') + '</b></div>';
     }).join('') + (ii.finalPrice ? '<div><span>Final sales price</span><b>' + money(ii.finalPrice) + '</b></div>' : '') + (t.closedAt ? '<div><span>Closed</span><b>' + fmtDate(t.closedAt) + '</b></div>' : '') +
       (t.retentionUntil ? '<div><span>Keep records until</span><b>' + fmtDate(t.retentionUntil) + '</b></div>' : '') + '<div><span>File ID</span><b>' + h(t.id) + '</b></div></div>' +
@@ -644,26 +711,28 @@ function reviewView() {
 function usersView() {
   loading('users');
   api('listUsers').then(function (users) {
-    var inner = '<div class="top"><div><h1>Users</h1><p class="sub">Agents see only their own files. Admins see everything and review documents. Temporary passwords are shown once; give them to the person directly.</p></div><button class="btn" id="nu">+ Add user</button></div>' +
-      '<div class="gb tbl"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>' +
+    var inner = '<div class="top"><div><h1>Users</h1><p class="sub">Agents sign in with their email and see only their own files. Enrique is the only admin. New agents set their own password with a code emailed to them (“First time or forgot password?” on the sign-in page).</p></div><button class="btn" id="nu">+ Add agent</button></div>' +
+      '<div class="gb tbl"><table><thead><tr><th>Name</th><th>Email login</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>' +
       users.map(function (u) {
         return '<tr><td><b>' + h(u.name) + '</b><br><small>' + h(u.email) + ' ' + h(u.phone) + '</small></td><td>' + h(u.username) + '</td><td>' + (u.role === 'admin' ? '<span class="pill p-ok">Admin</span>' : '<span class="pill p-pend">Agent</span>') + (u.owner ? ' <small>owner</small>' : '') + '</td>' +
-          '<td>' + (u.active ? (u.locked ? '<span class="pill p-rej">Locked</span>' : u.mustChange ? '<span class="pill p-miss">Temp password</span>' : '<span class="pill p-ok">Active</span>') : '<span class="pill p-miss">Disabled</span>') + '</td><td><small>' + h(fmtTs(u.lastLogin)) + '</small></td>' +
+          '<td>' + (u.active ? (u.locked ? '<span class="pill p-rej">Locked</span>' : u.mustChange ? '<span class="pill p-miss">Password not set</span>' : '<span class="pill p-ok">Active</span>') : '<span class="pill p-miss">Disabled</span>') + '</td><td><small>' + h(fmtTs(u.lastLogin)) + '</small></td>' +
           '<td style="white-space:nowrap">' + (u.owner && !S.user.owner ? '' : '<button class="link rp" data-id="' + h(u.id) + '" data-n="' + h(u.name) + '">Reset password</button> ') + (u.owner || u.id === S.user.id ? '' : '<button class="link act" data-id="' + h(u.id) + '" data-a="' + (u.active ? '' : '1') + '">' + (u.active ? 'Disable' : 'Enable') + '</button>') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
     page('users', inner, function () {
       qs('#nu').onclick = function () {
-        var m = modal('<h2>Add user</h2><div id="ae"></div><div class="fgrid"><div class="f w2"><label>Full name</label><input type="text" id="an"></div><div class="f"><label>Role</label><select id="ar"><option value="agent">Agent</option>' + (S.user.owner ? '<option value="admin">Admin</option>' : '') + '</select></div>' +
-          '<div class="f w2"><label>Email (also the username)</label><input type="email" id="am" autocapitalize="none"></div><div class="f"><label>Phone</label><input type="tel" id="ap"></div></div><div class="actions"><button class="btn" id="ab">Create user</button></div>');
+        var m = modal('<h2>Add agent</h2><div id="ae"></div><div class="fgrid"><div class="f w3"><label>Full name</label><input type="text" id="an"></div>' +
+          '<div class="f w2"><label>Email (their login)</label><input type="email" id="am" autocapitalize="none"></div><div class="f"><label>Phone</label><input type="tel" id="ap"></div></div><div class="actions"><button class="btn" id="ab">Create user</button></div>');
         qs('#ab', m).onclick = function () {
           var em = qs('#am', m).value.trim().toLowerCase();
-          api('createUser', { name: qs('#an', m).value.trim(), username: em, email: em, phone: qs('#ap', m).value.trim(), role: qs('#ar', m).value }).then(function (r) {
-            qs('.box', m).innerHTML = '<h2>User created</h2><p>Give these to <b>' + h(r.user.name) + '</b> in person or by phone. They choose a new password at first sign-in.</p><div class="ok">Username: <b>' + h(r.user.username) + '</b><br>Temporary password: <b style="font-family:monospace;font-size:16px">' + h(r.tempPassword) + '</b></div><p class="sub">This password is not shown again.</p><div class="actions"><button class="btn" id="dn">Done</button></div>';
+          api('createUser', { name: qs('#an', m).value.trim(), username: em, email: em, phone: qs('#ap', m).value.trim(), role: 'agent' }).then(function (r) {
+            qs('.box', m).innerHTML = '<h2>Agent added</h2><p>Tell <b>' + h(r.user.name) + '</b> to open ' + h(location.origin + location.pathname) + ', tap <b>First time or forgot password?</b> and enter <b>' + h(r.user.username) + '</b>. A code is emailed to them to set their own password.</p>' +
+              (r.tempPassword /* older backend (before v1.2) */ ? '<div class="ok">Temporary password (shown once): <b style="font-family:monospace;font-size:16px">' + h(r.tempPassword) + '</b></div>' : '') + '<div class="actions"><button class="btn" id="dn">Done</button></div>';
             qs('#dn', m).onclick = function () { m.close(); usersView(); };
           }).catch(function (e) { qs('#ae', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
         };
       };
-      qsa('.rp').forEach(function (b) { b.onclick = function () { if (!confirm('Reset the password for ' + b.getAttribute('data-n') + '? They will be signed out everywhere.')) return; api('resetPassword', { userId: b.getAttribute('data-id') }).then(function (r) { modal('<h2>Temporary password</h2><div class="ok">' + h(b.getAttribute('data-n')) + ': <b style="font-family:monospace;font-size:16px">' + h(r.tempPassword) + '</b></div><p class="sub">Shown once. They must change it at sign-in.</p>'); usersView(); }).catch(function (e) { toast(e.message, 1); }); }; });
+      qsa('.rp').forEach(function (b) { b.onclick = function () { if (!confirm('Reset the password for ' + b.getAttribute('data-n') + '? Their current password stops working, they are signed out everywhere, and they get an email with a code to choose a new one.')) return; api('resetPassword', { userId: b.getAttribute('data-id') }).then(function (r) { modal(r.tempPassword /* older backend (before v1.2) */ ? '<h2>Temporary password</h2><div class="ok">' + h(b.getAttribute('data-n')) + ': <b style="font-family:monospace;font-size:16px">' + h(r.tempPassword) + '</b></div><p class="sub">Shown once. They must change it at sign-in.</p>'
+          : '<h2>Password reset</h2><div class="ok">' + h(b.getAttribute('data-n')) + ' was signed out and emailed a code to set a new password.</div><p class="sub">The code expires in 30 minutes and works once. Nobody else ever sees their password.</p>'); usersView(); }).catch(function (e) { toast(e.message, 1); }); }; });
       qsa('.act').forEach(function (b) { b.onclick = function () { api('setUserActive', { userId: b.getAttribute('data-id'), active: !!b.getAttribute('data-a') }).then(usersView).catch(function (e) { toast(e.message, 1); }); }; });
     });
   }).catch(function (e) { failView('users', e); });
@@ -705,6 +774,6 @@ function render() {
 }
 window.addEventListener('hashchange', function () { if (S.user && !S.user.mustChange) route(); });
 if (DEMO) sessionStorage.setItem('tc_demo', '1');
-S.token = sessionStorage.getItem('tc_t') || localStorage.getItem('tc_t');
+S.token = sessionStorage.getItem('tc_t'); try { localStorage.removeItem('tc_t'); } catch (e) { }
 render();
 })();

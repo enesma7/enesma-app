@@ -166,3 +166,11 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:24px}
   .pbar{padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
   .modal{padding:0}.modal .box{border-radius:0;min-height:100vh}
 }
+/* commission %/$ toggle */
+.comm{display:flex;gap:8px;align-items:stretch}.comm input{flex:1;min-width:0}
+.seg{display:inline-flex;border:1px solid rgba(0,0,7,.25);border-radius:10px;overflow:hidden;flex:none}
+.seg label{display:flex;align-items:center;justify-content:center;min-width:42px;padding:0 10px;margin:0;cursor:pointer;font-size:15px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--k)}
+.seg label+label{border-left:1px solid rgba(0,0,7,.15)}
+.seg label.on{background:var(--gold);color:var(--k)}
+.seg input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.seg label:focus-within{outline:2px solid #D5BE87;outline-offset:-2px}

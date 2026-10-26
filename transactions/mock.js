@@ -2,68 +2,169 @@
 (function () {
 'use strict';
 var CHECKLISTS = {
+  // C.A.R. 'Residential Listing 1-4 Units' checklist (Agent Hub), LISTING DOCUMENTS ONLY (items 1-18).
   listing: [
-    { code: 'LISTING', title: 'Listing', forms: 'RLA · Residential Listing Agreement', req: true },
-    { code: 'AD_L', title: 'Disclosure Regarding Real Estate Agency Relationship', forms: 'AD', req: true },
-    { code: 'PRBS_L', title: 'Possible Representation of More Than One Buyer or Seller', forms: 'PRBS', req: true },
-    { code: 'FHDA_L', title: 'Fair Housing & Discrimination Advisory', forms: 'FHDA', req: true },
-    { code: 'SBSA_L', title: 'Statewide Buyer and Seller Advisory', forms: 'SBSA', req: true },
-    { code: 'SA', title: "Seller's Advisory", forms: 'SA', req: true },
-    { code: 'WFA_L', title: 'Wire Fraud and Electronic Funds Transfer Advisory', forms: 'WFA', req: true },
-    { code: 'MCA_L', title: 'Market Conditions Advisory', forms: 'MCA', req: false },
-    { code: 'SPQ', title: 'Seller Property Questionnaire', forms: 'SPQ', req: true },
-    { code: 'TDS', title: 'Real Estate Transfer Disclosure Statement', forms: 'TDS', req: true },
-    { code: 'NHD', title: 'Natural Hazard Disclosure Statement & Report', forms: 'NHD', req: true },
-    { code: 'WHSD', title: 'Water Heater & Smoke/CO Detector Statement of Compliance', forms: 'WHSD', req: true },
-    { code: 'FLD_L', title: 'Lead-Based Paint Disclosure (pre-1978 homes)', forms: 'FLD', req: false },
-    { code: 'SELI', title: 'MLS Input / Seller Instruction to Exclude Listing', forms: 'MLS · SELI', req: false },
-    { code: 'MISC_L1', title: 'Misc', forms: 'Rename to what you uploaded', req: false, misc: true },
-    { code: 'MISC_L2', title: 'Misc', forms: 'Rename to what you uploaded', req: false, misc: true },
-    { code: 'CANCEL_LISTING', title: 'Cancellation of Listing', forms: 'CL · Required to request cancellation', req: false, cancel: true }
+    {"title": "Comparative Market Analysis - CMA", "forms": "Listing Documents", "req": true, "code": "L_COMPARATIVE_MARKET_ANALYSIS_"},
+    {"title": "Sellers Net Sheet - Signed by Seller(s)", "forms": "Listing Documents", "req": true, "code": "L_SELLERS_NET_SHEET_SIGNED_BY_"},
+    {"title": "Agency Disclosure - AD", "forms": "Listing Documents", "req": true, "code": "L_AGENCY_DISCLOSURE_AD"},
+    {"title": "Residential Listing Agreement - RLA", "forms": "Listing Documents", "req": true, "code": "L_RESIDENTIAL_LISTING_AGREEMEN"},
+    {"title": "Multiple Listing Service Addendum - MLSA", "forms": "Listing Documents", "req": true, "code": "L_MULTIPLE_LISTING_SERVICE_ADD"},
+    {"title": "Brokers Compensation Advisory - BCA", "forms": "Listing Documents", "req": true, "code": "L_BROKERS_COMPENSATION_ADVISOR"},
+    {"title": "Possible Representation of more than 1 B/S - PRBS", "forms": "Listing Documents", "req": true, "code": "L_POSSIBLE_REPRESENTATION_OF_M"},
+    {"title": "Fair Housing and Discrimination Advisory - FHDA", "forms": "Listing Documents", "req": true, "code": "L_FAIR_HOUSING_AND_DISCRIMINAT"},
+    {"title": "Sellers Advisory - SA", "forms": "Listing Documents", "req": true, "code": "L_SELLERS_ADVISORY_SA"},
+    {"title": "California Consumer Privacy Act Advisory - CCPA", "forms": "Listing Documents", "req": true, "code": "L_CALIFORNIA_CONSUMER_PRIVACY_"},
+    {"title": "SELM / Coming Soon", "forms": "Listing Documents · optional", "code": "L_SELM_COMING_SOON"},
+    {"title": "Modification of Terms (Seller) - MTLA", "forms": "Listing Documents · optional", "code": "L_MODIFICATION_OF_TERMS_SELLER"},
+    {"title": "MLS Print out (Active)", "forms": "Listing Documents", "req": true, "code": "L_MLS_PRINT_OUT_ACTIVE"},
+    {"title": "Misc", "forms": "Rename to what you uploaded", "code": "L_MISC1", "misc": true},
+    {"title": "Misc", "forms": "Rename to what you uploaded", "code": "L_MISC2", "misc": true},
+    {"title": "Rejected Offers - Complete Offer (& sup docs)", "forms": "Listing Documents · optional", "code": "L_REJECTED_OFFERS_COMPLETE_OFF"},
+    {"title": "Email to BA Rejecting Offer and pg 16 of RPA", "forms": "Listing Documents · optional", "code": "L_EMAIL_TO_BA_REJECTING_OFFER_"},
+    {"title": "Cancellation of Listing", "forms": "Required to request cancellation", "code": "CANCEL_LISTING", "cancel": true}
   ],
-  // Items added when a listing converts to a purchase (we represent the seller).
+  // Purchase items unlocked when a listing converts to a purchase (seller side): the 'Transaction' part of the same C.A.R. listing checklist (items 22-88).
   purchase_seller: [
-    { code: 'RPA', title: 'Residential Purchase Agreement', forms: 'RPA', req: true },
-    { code: 'COUNTERS', title: 'Counter Offers', forms: 'SCO · BCO · SMCO', req: false },
-    { code: 'ADDENDA', title: 'Addenda & Amendments', forms: 'ADM · AEA', req: false },
-    { code: 'ESCROW', title: 'Escrow Instructions', forms: 'Escrow opening & signed instructions', req: true },
-    { code: 'EMD', title: 'Earnest Money Deposit Receipt', forms: 'EMD receipt from escrow', req: true },
-    { code: 'DISCL_SIGNED', title: 'Seller Disclosures Signed by Buyer', forms: 'TDS · SPQ · NHD · AVID', req: true },
-    { code: 'RR', title: 'Request for Repair & Seller Response', forms: 'RR · RRRR', req: false },
-    { code: 'CR', title: 'Contingency Removal', forms: 'CR-B', req: true },
-    { code: 'VP', title: 'Verification of Property Condition', forms: 'VP', req: true },
-    { code: 'CDA', title: 'Commission Instructions', forms: 'CDA', req: true },
-    { code: 'CLOSING', title: 'Final Closing Statement', forms: 'Final settlement statement', req: true },
-    { code: 'MISC_P1', title: 'Misc', forms: 'Rename to what you uploaded', req: false, misc: true },
-    { code: 'MISC_P2', title: 'Misc', forms: 'Rename to what you uploaded', req: false, misc: true },
-    { code: 'CANCEL_CONTRACT', title: 'Cancellation of Contract', forms: 'CC · Required to request cancellation', req: false, cancel: true }
+    {"title": "MLS Active/Pending", "forms": "Sales Documentation", "req": true, "code": "P_MLS_ACTIVE_PENDING"},
+    {"title": "Property Profile", "forms": "Sales Documentation", "req": true, "code": "P_PROPERTY_PROFILE"},
+    {"title": "Agency Disclosure - AD for Buyers Agent", "forms": "Sales Documentation", "req": true, "code": "P_AGENCY_DISCLOSURE_AD_FOR_BUY"},
+    {"title": "Residential Purchase Agreement - RPA 07/24", "forms": "Sales Documentation", "req": true, "code": "P_RESIDENTIAL_PURCHASE_AGREEME"},
+    {"title": "Buyers Investigation Advisory - BIA", "forms": "Sales Documentation", "req": true, "code": "P_BUYERS_INVESTIGATION_ADVISOR"},
+    {"title": "Possible Representation of more than 1 B/S - PRBS", "forms": "Sales Documentation", "req": true, "code": "P_POSSIBLE_REPRESENTATION_OF_M"},
+    {"title": "Fair Housing and Discrimination Advisory - FHDA", "forms": "Sales Documentation", "req": true, "code": "P_FAIR_HOUSING_AND_DISCRIMINAT"},
+    {"title": "Buyers Homeowners Insurance Advisory - BHIA", "forms": "Sales Documentation", "req": true, "code": "P_BUYERS_HOMEOWNERS_INSURANCE_"},
+    {"title": "Wire Fraud Advisory -WFA - Signed by All Parties", "forms": "Sales Documentation", "req": true, "code": "P_WIRE_FRAUD_ADVISORY_WFA_SIGN"},
+    {"title": "California Consumer Privacy Act Advisory - CCPA", "forms": "Sales Documentation", "req": true, "code": "P_CALIFORNIA_CONSUMER_PRIVACY_"},
+    {"title": "FHA/VA Notice & Addendum", "forms": "Sales Documentation · optional", "code": "P_FHA_VA_NOTICE_ADDENDUM"},
+    {"title": "Manufactured Home Addendum", "forms": "Sales Documentation", "req": true, "code": "P_MANUFACTURED_HOME_ADDENDUM"},
+    {"title": "Counter Offers/Addendums", "forms": "Sales Documentation · optional", "code": "P_COUNTER_OFFERS_ADDENDUMS"},
+    {"title": "Cancellation of Contract & Release of Deposit", "forms": "Required to request cancellation", "code": "CANCEL_CONTRACT", "cancel": true},
+    {"title": "Escrow Acknowledgment of RPA - Page 17", "forms": "Escrow Documentation", "req": true, "code": "P_ESCROW_ACKNOWLEDGMENT_OF_RPA"},
+    {"title": "Escrow Receipt of Earnest Money Deposit - EMD", "forms": "Escrow Documentation", "req": true, "code": "P_ESCROW_RECEIPT_OF_EARNEST_MO"},
+    {"title": "Escrow Instructions", "forms": "Escrow Documentation", "req": true, "code": "P_ESCROW_INSTRUCTIONS"},
+    {"title": "Escrow Amendments", "forms": "Escrow Documentation · optional", "code": "P_ESCROW_AMENDMENTS"},
+    {"title": "Commission Instructions sign by Client and Broker", "forms": "Escrow Documentation", "req": true, "code": "P_COMMISSION_INSTRUCTIONS_SIGN"},
+    {"title": "Statement of Affiliated Services -InHouse Escrow", "forms": "Escrow Documentation · optional", "code": "P_STATEMENT_OF_AFFILIATED_SERV"},
+    {"title": "Affidvt of NonForeign- AS/Sellers FIRPTA 1 or QA 1", "forms": "Escrow Documentation", "req": true, "code": "P_AFFIDVT_OF_NONFOREIGN_AS_SEL"},
+    {"title": "Real Estate Transfer Disclosure - TDS", "forms": "Disclosures", "req": true, "code": "P_REAL_ESTATE_TRANSFER_DISCLOS"},
+    {"title": "Seller Property Questionnaire or ESD - SPQ", "forms": "Disclosures", "req": true, "code": "P_SELLER_PROPERTY_QUESTIONNAIR"},
+    {"title": "Agent Visual Inspection Disc. - ENESMA Realty Agent", "forms": "Disclosures", "req": true, "code": "P_AGENT_VISUAL_INSPECTION_DISC"},
+    {"title": "Agent Visual Inspection Disc. - Coop Agent", "forms": "Disclosures", "req": true, "code": "P_AGENT_VISUAL_INSPECTION_DISCX"},
+    {"title": "Statewide Buyer and Seller Advisory - SBSA", "forms": "Disclosures", "req": true, "code": "P_STATEWIDE_BUYER_AND_SELLER_A"},
+    {"title": "Market Conditions Advisory - MCA", "forms": "Disclosures", "req": true, "code": "P_MARKET_CONDITIONS_ADVISORY_M"},
+    {"title": "Water Conserving Fixtures/Carbon Monoxide- WCMD", "forms": "Disclosures", "req": true, "code": "P_WATER_CONSERVING_FIXTURES_CA"},
+    {"title": "Square Footage and Lot Size Advisory - SFLS", "forms": "Disclosures", "req": true, "code": "P_SQUARE_FOOTAGE_AND_LOT_SIZE_"},
+    {"title": "Environmental Hazards/Lead/Mold Booklet Receipt", "forms": "Disclosures", "req": true, "code": "P_ENVIRONMENTAL_HAZARDS_LEAD_M"},
+    {"title": "Wildfire Disaster Advisory - If Area w Prior Fires", "forms": "Disclosures", "req": true, "code": "P_WILDFIRE_DISASTER_ADVISORY_I"},
+    {"title": "Fire Hardening and Defensible Space Advisory -FHDS", "forms": "Disclosures", "req": true, "code": "P_FIRE_HARDENING_AND_DEFENSIBL"},
+    {"title": "Receipt For Reports - RFR or Receipt of Docs", "forms": "Disclosures · optional", "code": "P_RECEIPT_FOR_REPORTS_RFR_OR_R"},
+    {"title": "Home Warranty or Waiver", "forms": "Disclosures", "req": true, "code": "P_HOME_WARRANTY_OR_WAIVER"},
+    {"title": "Notice of Your Supplemental Prop Tax Bill - SPT", "forms": "Disclosures", "req": true, "code": "P_NOTICE_OF_YOUR_SUPPLEMENTAL_"},
+    {"title": "For Your Protection Get a Home Inspection - HID (For FHA/VA)", "forms": "Disclosures · optional", "code": "P_FOR_YOUR_PROTECTION_GET_A_HO"},
+    {"title": "Lead-Base Paint Hazards Disclosure- Before 1978", "forms": "Disclosures · optional", "code": "P_LEAD_BASE_PAINT_HAZARDS_DISC"},
+    {"title": "Water Heater and Smoke Detector - WHS If No TDS", "forms": "Disclosures · optional", "code": "P_WATER_HEATER_AND_SMOKE_DETEC"},
+    {"title": "Earthquake Hazards Report Signed by All Pre-1960", "forms": "Disclosures · optional", "code": "P_EARTHQUAKE_HAZARDS_REPORT_SI"},
+    {"title": "Notice to Perform / Demand to Close Escrow -NBP,NSP,DCE", "forms": "Disclosures · optional", "code": "P_NOTICE_TO_PERFORM_DEMAND_TO_"},
+    {"title": "Request For Repairs & Response (RR & RRRR)", "forms": "Disclosures · optional", "code": "P_REQUEST_FOR_REPAIRS_RESPONSE"},
+    {"title": "Contingency Removals - CR", "forms": "Disclosures · optional", "code": "P_CONTINGENCY_REMOVALS_CR"},
+    {"title": "Solar Advisory and Questionnaire", "forms": "Disclosures · optional", "code": "P_SOLAR_ADVISORY_AND_QUESTIONN"},
+    {"title": "Extension of Time- ETA", "forms": "Disclosures · optional", "code": "P_EXTENSION_OF_TIME_ETA"},
+    {"title": "Seller to Remain in Possession - SIP", "forms": "Disclosures · optional", "code": "P_SELLER_TO_REMAIN_IN_POSSESSI"},
+    {"title": "Misc", "forms": "Rename to what you uploaded", "code": "P_MISC1", "misc": true},
+    {"title": "Misc", "forms": "Rename to what you uploaded", "code": "P_MISC2", "misc": true},
+    {"title": "Misc", "forms": "Rename to what you uploaded", "code": "P_MISC3", "misc": true},
+    {"title": "Misc", "forms": "Rename to what you uploaded", "code": "P_MISC4", "misc": true},
+    {"title": "Preliminary Title Report", "forms": "Reports and Invoices", "req": true, "code": "P_PRELIMINARY_TITLE_REPORT"},
+    {"title": "Preliminary Title Report - Approval by Buyer", "forms": "Reports and Invoices", "req": true, "code": "P_PRELIMINARY_TITLE_REPORT_APP"},
+    {"title": "Termite Report or BIW", "forms": "Reports and Invoices", "req": true, "code": "P_TERMITE_REPORT_OR_BIW"},
+    {"title": "Termite Report Clearance signed by Buyer", "forms": "Reports and Invoices", "req": true, "code": "P_TERMITE_REPORT_CLEARANCE_SIG"},
+    {"title": "Property Inspection Report or BIW", "forms": "Reports and Invoices", "req": true, "code": "P_PROPERTY_INSPECTION_REPORT_O"},
+    {"title": "NHD Report", "forms": "Reports and Invoices", "req": true, "code": "P_NHD_REPORT"},
+    {"title": "NHD Receipt Signed by ALL parties", "forms": "Reports and Invoices", "req": true, "code": "P_NHD_RECEIPT_SIGNED_BY_ALL_PA"},
+    {"title": "Appraisal Report", "forms": "Reports and Invoices · optional", "code": "P_APPRAISAL_REPORT"},
+    {"title": "CCRS & HOA Signed Receipt", "forms": "Reports and Invoices · optional", "code": "P_CCRS_HOA_SIGNED_RECEIPT"},
+    {"title": "Additional Reports", "forms": "Reports and Invoices · optional", "code": "P_ADDITIONAL_REPORTS"},
+    {"title": "Invoices", "forms": "Reports and Invoices · optional", "code": "P_INVOICES"},
+    {"title": "Referral Fee Agreement -RFA", "forms": "Reports and Invoices · optional", "code": "P_REFERRAL_FEE_AGREEMENT_RFA"},
+    {"title": "CDA - Commission Disbursement Authorization", "forms": "Reports and Invoices · optional", "code": "P_CDA_COMMISSION_DISBURSEMENT_"},
+    {"title": "Verification of Property Condition - VP", "forms": "Closing Documents", "req": true, "code": "P_VERIFICATION_OF_PROPERTY_CON"},
+    {"title": "Closing Statement", "forms": "Closing Documents", "req": true, "code": "P_CLOSING_STATEMENT"},
+    {"title": "Conversation Log - ex. Emails, Text Messages", "forms": "Closing Documents", "req": true, "code": "P_CONVERSATION_LOG_EX_EMAILS_T"},
+    {"title": "Copy of Commission Check", "forms": "Closing Documents", "req": true, "code": "P_COPY_OF_COMMISSION_CHECK"},
+    {"title": "MLS Sold Printout", "forms": "Closing Documents", "req": true, "code": "P_MLS_SOLD_PRINTOUT"}
   ],
-  // Purchase where we represent the buyer.
+  // C.A.R. 'Residential Sales 1-4 Units' checklist (buyer side, items 1-70).
   purchase_buyer: [
-    { code: 'BRBC', title: 'Buyer Representation and Broker Compensation Agreement', forms: 'BRBC', req: true },
-    { code: 'AD_B', title: 'Disclosure Regarding Real Estate Agency Relationship', forms: 'AD', req: true },
-    { code: 'PRBS_B', title: 'Possible Representation of More Than One Buyer or Seller', forms: 'PRBS', req: true },
-    { code: 'FHDA_B', title: 'Fair Housing & Discrimination Advisory', forms: 'FHDA', req: true },
-    { code: 'SBSA_B', title: 'Statewide Buyer and Seller Advisory', forms: 'SBSA', req: true },
-    { code: 'BIA', title: "Buyer's Inspection Advisory", forms: 'BIA', req: true },
-    { code: 'WFA_B', title: 'Wire Fraud and Electronic Funds Transfer Advisory', forms: 'WFA', req: true },
-    { code: 'PREAPPROVAL', title: 'Pre-Approval / Proof of Funds', forms: 'Lender letter or POF', req: true },
-    { code: 'RPA', title: 'Residential Purchase Agreement', forms: 'RPA', req: true },
-    { code: 'COUNTERS', title: 'Counter Offers', forms: 'SCO · BCO · SMCO', req: false },
-    { code: 'ADDENDA', title: 'Addenda & Amendments', forms: 'ADM · AEA', req: false },
-    { code: 'ESCROW', title: 'Escrow Instructions', forms: 'Escrow opening & signed instructions', req: true },
-    { code: 'EMD', title: 'Earnest Money Deposit Receipt', forms: 'EMD receipt from escrow', req: true },
-    { code: 'DISCL_RECEIVED', title: 'Seller Disclosures Received & Signed', forms: 'TDS · SPQ · NHD · AVID', req: true },
-    { code: 'FLD_B', title: 'Lead-Based Paint Disclosure (pre-1978 homes)', forms: 'FLD', req: false },
-    { code: 'INSPECTION', title: 'Inspection Reports', forms: 'Home inspection & other reports', req: false },
-    { code: 'RR', title: 'Request for Repair & Seller Response', forms: 'RR · RRRR', req: false },
-    { code: 'CR', title: 'Contingency Removal', forms: 'CR-B', req: true },
-    { code: 'VP', title: 'Verification of Property Condition', forms: 'VP', req: true },
-    { code: 'CDA', title: 'Commission Instructions', forms: 'CDA', req: true },
-    { code: 'CLOSING', title: 'Final Closing Statement', forms: 'Final settlement statement', req: true },
-    { code: 'MISC_P1', title: 'Misc', forms: 'Rename to what you uploaded', req: false, misc: true },
-    { code: 'MISC_P2', title: 'Misc', forms: 'Rename to what you uploaded', req: false, misc: true },
-    { code: 'CANCEL_CONTRACT', title: 'Cancellation of Contract', forms: 'CC · Required to request cancellation', req: false, cancel: true }
+    {"title": "Buyer Representation Broker Compensation - BRBC", "forms": "Buyer Representation", "req": true, "code": "P_BUYER_REPRESENTATION_BROKER_"},
+    {"title": "Buyer Fin/Pers Info and/or Prefs - BFPI/BIPP", "forms": "Buyer Representation · optional", "code": "P_BUYER_FIN_PERS_INFO_AND_OR_P"},
+    {"title": "Modification of Terms (Buyer) - MTBR", "forms": "Buyer Representation · optional", "code": "P_MODIFICATION_OF_TERMS_BUYER_"},
+    {"title": "MLS Active/Pending", "forms": "Sales Documentation", "req": true, "code": "P_MLS_ACTIVE_PENDING"},
+    {"title": "Property Profile", "forms": "Sales Documentation", "req": true, "code": "P_PROPERTY_PROFILE"},
+    {"title": "Agency Disclosure - AD for Buyers Agent", "forms": "Sales Documentation", "req": true, "code": "P_AGENCY_DISCLOSURE_AD_FOR_BUY"},
+    {"title": "Residential Purchase Agreement - RPA 07/24", "forms": "Sales Documentation", "req": true, "code": "P_RESIDENTIAL_PURCHASE_AGREEME"},
+    {"title": "Buyers Investigation Advisory - BIA", "forms": "Sales Documentation", "req": true, "code": "P_BUYERS_INVESTIGATION_ADVISOR"},
+    {"title": "Possible Representation of more than 1 B/S - PRBS", "forms": "Sales Documentation", "req": true, "code": "P_POSSIBLE_REPRESENTATION_OF_M"},
+    {"title": "Fair Housing and Discrimination Advisory - FHDA", "forms": "Sales Documentation", "req": true, "code": "P_FAIR_HOUSING_AND_DISCRIMINAT"},
+    {"title": "Buyers Homeowners Insurance Advisory - BHIA", "forms": "Sales Documentation", "req": true, "code": "P_BUYERS_HOMEOWNERS_INSURANCE_"},
+    {"title": "Wire Fraud Advisory -WFA - Signed by All Parties", "forms": "Sales Documentation", "req": true, "code": "P_WIRE_FRAUD_ADVISORY_WFA_SIGN"},
+    {"title": "California Consumer Privacy Act Advisory - CCPA", "forms": "Sales Documentation", "req": true, "code": "P_CALIFORNIA_CONSUMER_PRIVACY_"},
+    {"title": "FHA/VA Notice & Addendum", "forms": "Sales Documentation · optional", "code": "P_FHA_VA_NOTICE_ADDENDUM"},
+    {"title": "Manufactured Home Addendum", "forms": "Sales Documentation", "req": true, "code": "P_MANUFACTURED_HOME_ADDENDUM"},
+    {"title": "Counter Offers/Addendums", "forms": "Sales Documentation · optional", "code": "P_COUNTER_OFFERS_ADDENDUMS"},
+    {"title": "Cancellation of Contract & Release of Deposit", "forms": "Required to request cancellation", "code": "CANCEL_CONTRACT", "cancel": true},
+    {"title": "Escrow Acknowledgment of RPA - Page 17", "forms": "Escrow Documentation", "req": true, "code": "P_ESCROW_ACKNOWLEDGMENT_OF_RPA"},
+    {"title": "Escrow Receipt of Earnest Money Deposit - EMD", "forms": "Escrow Documentation", "req": true, "code": "P_ESCROW_RECEIPT_OF_EARNEST_MO"},
+    {"title": "Escrow Instructions", "forms": "Escrow Documentation", "req": true, "code": "P_ESCROW_INSTRUCTIONS"},
+    {"title": "Escrow Amendments", "forms": "Escrow Documentation · optional", "code": "P_ESCROW_AMENDMENTS"},
+    {"title": "Commission Instructions sign by Client and Broker", "forms": "Escrow Documentation", "req": true, "code": "P_COMMISSION_INSTRUCTIONS_SIGN"},
+    {"title": "Statement of Affiliated Services -InHouse Escrow", "forms": "Escrow Documentation · optional", "code": "P_STATEMENT_OF_AFFILIATED_SERV"},
+    {"title": "Affidvt of NonForeign- AS/Sellers FIRPTA 1 or QA 1", "forms": "Escrow Documentation", "req": true, "code": "P_AFFIDVT_OF_NONFOREIGN_AS_SEL"},
+    {"title": "Real Estate Transfer Disclosure - TDS", "forms": "Disclosures", "req": true, "code": "P_REAL_ESTATE_TRANSFER_DISCLOS"},
+    {"title": "Seller Property Questionnaire or ESD - SPQ", "forms": "Disclosures", "req": true, "code": "P_SELLER_PROPERTY_QUESTIONNAIR"},
+    {"title": "Agent Visual Inspection Disc. - ENESMA Realty Agent", "forms": "Disclosures", "req": true, "code": "P_AGENT_VISUAL_INSPECTION_DISC"},
+    {"title": "Agent Visual Inspection Disc. - Coop Agent", "forms": "Disclosures", "req": true, "code": "P_AGENT_VISUAL_INSPECTION_DISCX"},
+    {"title": "Statewide Buyer and Seller Advisory - SBSA", "forms": "Disclosures", "req": true, "code": "P_STATEWIDE_BUYER_AND_SELLER_A"},
+    {"title": "Market Conditions Advisory - MCA", "forms": "Disclosures", "req": true, "code": "P_MARKET_CONDITIONS_ADVISORY_M"},
+    {"title": "Water Conserving Fixtures/Carbon Monoxide- WCMD", "forms": "Disclosures", "req": true, "code": "P_WATER_CONSERVING_FIXTURES_CA"},
+    {"title": "Square Footage and Lot Size Advisory - SFLS", "forms": "Disclosures", "req": true, "code": "P_SQUARE_FOOTAGE_AND_LOT_SIZE_"},
+    {"title": "Environmental Hazards/Lead/Mold Booklet Receipt", "forms": "Disclosures", "req": true, "code": "P_ENVIRONMENTAL_HAZARDS_LEAD_M"},
+    {"title": "Wildfire Disaster Advisory - If Area w Prior Fires", "forms": "Disclosures", "req": true, "code": "P_WILDFIRE_DISASTER_ADVISORY_I"},
+    {"title": "Fire Hardening and Defensible Space Advisory -FHDS", "forms": "Disclosures", "req": true, "code": "P_FIRE_HARDENING_AND_DEFENSIBL"},
+    {"title": "Receipt For Reports - RFR or Receipt of Docs", "forms": "Disclosures · optional", "code": "P_RECEIPT_FOR_REPORTS_RFR_OR_R"},
+    {"title": "Home Warranty or Waiver", "forms": "Disclosures", "req": true, "code": "P_HOME_WARRANTY_OR_WAIVER"},
+    {"title": "Notice of Your Supplemental Prop Tax Bill - SPT", "forms": "Disclosures", "req": true, "code": "P_NOTICE_OF_YOUR_SUPPLEMENTAL_"},
+    {"title": "For Your Protection Get a Home Inspection - HID (For FHA/VA)", "forms": "Disclosures · optional", "code": "P_FOR_YOUR_PROTECTION_GET_A_HO"},
+    {"title": "Lead-Base Paint Hazards Disclosure- Before 1978", "forms": "Disclosures · optional", "code": "P_LEAD_BASE_PAINT_HAZARDS_DISC"},
+    {"title": "Water Heater and Smoke Detector - WHS If No TDS", "forms": "Disclosures · optional", "code": "P_WATER_HEATER_AND_SMOKE_DETEC"},
+    {"title": "Earthquake Hazards Report Signed by All Pre-1960", "forms": "Disclosures · optional", "code": "P_EARTHQUAKE_HAZARDS_REPORT_SI"},
+    {"title": "Notice to Perform / Demand to Close Escrow -NBP,NSP,DCE", "forms": "Disclosures · optional", "code": "P_NOTICE_TO_PERFORM_DEMAND_TO_"},
+    {"title": "Request For Repairs & Response (RR & RRRR)", "forms": "Disclosures · optional", "code": "P_REQUEST_FOR_REPAIRS_RESPONSE"},
+    {"title": "Contingency Removals - CR", "forms": "Disclosures · optional", "code": "P_CONTINGENCY_REMOVALS_CR"},
+    {"title": "Solar Advisory and Questionnaire", "forms": "Disclosures · optional", "code": "P_SOLAR_ADVISORY_AND_QUESTIONN"},
+    {"title": "Extension of Time- ETA", "forms": "Disclosures · optional", "code": "P_EXTENSION_OF_TIME_ETA"},
+    {"title": "Seller to Remain in Possession - SIP", "forms": "Disclosures · optional", "code": "P_SELLER_TO_REMAIN_IN_POSSESSI"},
+    {"title": "Misc", "forms": "Rename to what you uploaded", "code": "P_MISC1", "misc": true},
+    {"title": "Misc", "forms": "Rename to what you uploaded", "code": "P_MISC2", "misc": true},
+    {"title": "Misc", "forms": "Rename to what you uploaded", "code": "P_MISC3", "misc": true},
+    {"title": "Misc", "forms": "Rename to what you uploaded", "code": "P_MISC4", "misc": true},
+    {"title": "Preliminary Title Report", "forms": "Reports and Invoices", "req": true, "code": "P_PRELIMINARY_TITLE_REPORT"},
+    {"title": "Preliminary Title Report - Approval by Buyer", "forms": "Reports and Invoices", "req": true, "code": "P_PRELIMINARY_TITLE_REPORT_APP"},
+    {"title": "Termite Report or BIW", "forms": "Reports and Invoices", "req": true, "code": "P_TERMITE_REPORT_OR_BIW"},
+    {"title": "Termite Report Clearance signed by Buyer", "forms": "Reports and Invoices", "req": true, "code": "P_TERMITE_REPORT_CLEARANCE_SIG"},
+    {"title": "Property Inspection Report or BIW", "forms": "Reports and Invoices", "req": true, "code": "P_PROPERTY_INSPECTION_REPORT_O"},
+    {"title": "NHD Report", "forms": "Reports and Invoices", "req": true, "code": "P_NHD_REPORT"},
+    {"title": "NHD Receipt Signed by ALL parties", "forms": "Reports and Invoices", "req": true, "code": "P_NHD_RECEIPT_SIGNED_BY_ALL_PA"},
+    {"title": "Appraisal Report", "forms": "Reports and Invoices · optional", "code": "P_APPRAISAL_REPORT"},
+    {"title": "CCRS & HOA Signed Receipt", "forms": "Reports and Invoices · optional", "code": "P_CCRS_HOA_SIGNED_RECEIPT"},
+    {"title": "Additional Reports", "forms": "Reports and Invoices · optional", "code": "P_ADDITIONAL_REPORTS"},
+    {"title": "Invoices", "forms": "Reports and Invoices · optional", "code": "P_INVOICES"},
+    {"title": "Referral Fee Agreement -RFA", "forms": "Reports and Invoices · optional", "code": "P_REFERRAL_FEE_AGREEMENT_RFA"},
+    {"title": "CDA - Commission Disbursement Authorization", "forms": "Reports and Invoices · optional", "code": "P_CDA_COMMISSION_DISBURSEMENT_"},
+    {"title": "Verification of Property Condition - VP", "forms": "Closing Documents", "req": true, "code": "P_VERIFICATION_OF_PROPERTY_CON"},
+    {"title": "Closing Statement", "forms": "Closing Documents", "req": true, "code": "P_CLOSING_STATEMENT"},
+    {"title": "Conversation Log - ex. Emails, Text Messages", "forms": "Closing Documents", "req": true, "code": "P_CONVERSATION_LOG_EX_EMAILS_T"},
+    {"title": "Copy of Commission Check", "forms": "Closing Documents", "req": true, "code": "P_COPY_OF_COMMISSION_CHECK"},
+    {"title": "MLS Sold Printout", "forms": "Closing Documents", "req": true, "code": "P_MLS_SOLD_PRINTOUT"}
   ],
   lease_listing: [
     { code: 'LISTING', title: 'Listing', forms: 'LL · Lease Listing Agreement', req: true },
@@ -169,9 +270,9 @@ function names(a) { return (a || []).map(function (p) { return p.name; }).join('
 var PDF_B64 = 'JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqCjIgMCBvYmo8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PmVuZG9iagozIDAgb2JqPDwvVHlwZS9QYWdlL1BhcmVudCAyIDAgUi9NZWRpYUJveFswIDAgNjEyIDc5Ml0vQ29udGVudHMgNCAwIFIvUmVzb3VyY2VzPDwvRm9udDw8L0YxIDUgMCBSPj4+Pj4+ZW5kb2JqCjQgMCBvYmo8PC9MZW5ndGggNTk+PnN0cmVhbQpCVCAvRjEgMjQgVGYgNzIgNzAwIFRkIChEZW1vIGRvY3VtZW50IC0gc2FtcGxlIG9ubHkpIFRqIEVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iajw8L1R5cGUvRm9udC9TdWJ0eXBlL1R5cGUxL0Jhc2VGb250L0hlbHZldGljYT4+ZW5kb2JqCnRyYWlsZXI8PC9Sb290IDEgMCBSPj4KJSVFT0YK';
 
 var DB = { users: [], txns: [], items: [], docs: [], notes: [], audit: [], sessions: {} };
-DB.users.push({ id: 'U1', username: 'admin', pw: 'demo', name: 'Enrique Esparza', email: 'enrique@example.com', phone: '', role: 'admin', owner: true, active: true, mustChange: false, lastLogin: daysAgo(1), locked: false });
-DB.users.push({ id: 'U2', username: 'agent', pw: 'demo', name: 'Zina (sample agent)', email: 'agent@example.com', phone: '', role: 'agent', owner: false, active: true, mustChange: false, lastLogin: daysAgo(2), locked: false });
-DB.users.push({ id: 'U3', username: 'sample.agent', pw: 'demo', name: 'Sample Agent', email: 'sample@example.com', phone: '', role: 'agent', owner: false, active: true, mustChange: true, lastLogin: '', locked: false });
+DB.users.push({ id: 'U1', username: 'admin@demo.test', pw: 'demo', name: 'Enrique Esparza', email: 'admin@demo.test', phone: '', role: 'admin', owner: true, active: true, mustChange: false, lastLogin: daysAgo(1), locked: false });
+DB.users.push({ id: 'U2', username: 'agent@demo.test', pw: 'demo', name: 'Alex Rivera (sample agent)', email: 'agent@demo.test', phone: '', role: 'agent', owner: false, active: true, mustChange: false, lastLogin: daysAgo(2), locked: false });
+DB.users.push({ id: 'U3', username: 'sample@demo.test', pw: '', name: 'Sample Agent', email: 'sample@demo.test', phone: '', role: 'agent', owner: false, active: true, mustChange: true, lastLogin: '', locked: false });
 
 function user(id) { return DB.users.filter(function (u) { return u.id === id; })[0]; }
 function pub(u) { return { id: u.id, username: u.username, name: u.name, email: u.email, role: u.role, owner: !!u.owner, mustChange: !!u.mustChange }; }
@@ -251,28 +352,28 @@ function addDoc(t, item, name, by, status, extra) {
 function seedApprove(t, n, by) { itemsOf(t.id).filter(function (i) { return i.active && i.req; }).slice(0, n).forEach(function (i) { addDoc(t, i, i.title + '.pdf', by, 'Approved'); }); }
 function P(n, ph, em) { return { name: n, phone: ph || '', email: em || '' }; }
 (function seed() {
-  var a = mkTxn('listing', { address: '1420 Vista Del Mar', city: 'Riverside', zip: '92506', propertyType: 'Single Family', listingDate: day(-20), expirationDate: day(160), listPrice: '849000', sellers: [P('Maria Lopez', '951-555-0101')], listingCommission: '2.5%', mlsNumber: 'IV26100001' }, 'U2');
+  var a = mkTxn('listing', { address: '1420 Vista Del Mar', city: 'Riverside', zip: '92506', propertyType: 'Single Family', listingDate: day(-20), expirationDate: day(160), listPrice: '849000', sellers: [P('Maria Lopez', '951-555-0101')], listingCommission: '2.5', listingCommissionType: 'percent', mlsNumber: 'IV26100001' }, 'U2');
   seedApprove(a, 6, 'U2');
-  var it = itemsOf(a.id); addDoc(a, it.filter(function (i) { return i.code === 'SPQ'; })[0], 'SPQ signed.pdf', 'U2', 'Pending');
-  var rj = it.filter(function (i) { return i.code === 'TDS'; })[0]; var rd = addDoc(a, rj, 'TDS.pdf', 'U2', 'Rejected'); rd.reviewNote = 'Page 3 is missing the seller initials.'; recompute(rj); rj.reviewNote = rd.reviewNote;
+  var it = itemsOf(a.id); addDoc(a, it[6], 'Seller questionnaire signed.pdf', 'U2', 'Pending');
+  var rj = it[7]; var rd = addDoc(a, rj, 'Disclosure.pdf', 'U2', 'Rejected'); rd.reviewNote = 'Page 3 is missing the seller initials.'; recompute(rj); rj.reviewNote = rd.reviewNote;
   DB.notes.push({ id: nid('N'), txnId: a.id, itemId: rj.id, userId: 'U1', kind: 'rejection', text: 'Page 3 is missing the seller initials.', createdAt: daysAgo(1) });
   addDoc(a, null, 'Listing packet (full).pdf', 'U2', '', { kind: 'packet', pages: 14 });
-  var b = mkTxn('purchase', { address: '88 Canyon Crest Dr', city: 'Corona', zip: '92882', side: 'buyer', contractDate: day(-12), estCloseDate: day(18), purchasePrice: '615000', buyers: [P('James & Ana Rivera')], sellers: [P('Owner of record')], escrowCompany: 'Inland Escrow', escrowNumber: 'IE-44821', commission: '2.5%' }, 'U2');
+  var b = mkTxn('purchase', { address: '88 Canyon Crest Dr', city: 'Corona', zip: '92882', side: 'buyer', contractDate: day(-12), estCloseDate: day(18), purchasePrice: '615000', buyers: [P('James & Ana Rivera')], sellers: [P('Owner of record')], escrowCompany: 'Inland Escrow', escrowNumber: 'IE-44821', commission: '2.5', commissionType: 'percent' }, 'U2');
   seedApprove(b, 9, 'U2'); addDoc(b, itemsOf(b.id)[9], 'Inspection report.pdf', 'U2', 'Pending');
-  var c = mkTxn('purchase', { address: '3021 Mission Inn Ave', city: 'Riverside', zip: '92507', side: 'seller', contractDate: day(-50), estCloseDate: day(-20), purchasePrice: '730000', finalPrice: '725000', buyers: [P('K. Nguyen')], sellers: [P('Robert Hall')], escrowCompany: 'Inland Escrow', commission: '2.5%' }, 'U1', { status: 'Closed', closedAt: day(-20), retentionUntil: addYears(day(-20), 7) });
+  var c = mkTxn('purchase', { address: '3021 Mission Inn Ave', city: 'Riverside', zip: '92507', side: 'seller', contractDate: day(-50), estCloseDate: day(-20), purchasePrice: '730000', finalPrice: '725000', buyers: [P('K. Nguyen')], sellers: [P('Robert Hall')], escrowCompany: 'Inland Escrow', commission: '2.5', commissionType: 'percent' }, 'U1', { status: 'Closed', closedAt: day(-20), retentionUntil: addYears(day(-20), 7) });
   seedApprove(c, 40, 'U1');
-  var d = mkTxn('purchase', { address: '9 Orchard Ln', city: 'Fontana', zip: '92335', side: 'both', contractDate: day(-140), estCloseDate: day(-110), purchasePrice: '540000', finalPrice: '540000', buyers: [P('L. Chen')], sellers: [P('S. Patel')], escrowCompany: 'First Escrow', commission: '5%' }, 'U2', { status: 'Closed', closedAt: day(-110), retentionUntil: addYears(day(-110), 7) });
+  var d = mkTxn('purchase', { address: '9 Orchard Ln', city: 'Fontana', zip: '92335', side: 'both', contractDate: day(-140), estCloseDate: day(-110), purchasePrice: '540000', finalPrice: '540000', buyers: [P('L. Chen')], sellers: [P('S. Patel')], escrowCompany: 'First Escrow', commission: '5', commissionType: 'percent' }, 'U2', { status: 'Closed', closedAt: day(-110), retentionUntil: addYears(day(-110), 7) });
   seedApprove(d, 40, 'U2');
-  var e = mkTxn('purchase', { address: '510 Lemon St', city: 'Riverside', zip: '92501', side: 'buyer', contractDate: day(-260), estCloseDate: day(-230), purchasePrice: '480000', finalPrice: '475000', buyers: [P('D. Morales')], sellers: [P('T. King')], escrowCompany: 'Inland Escrow', commission: '2.5%' }, 'U1', { status: 'Closed', closedAt: day(-230), retentionUntil: addYears(day(-230), 7) });
+  var e = mkTxn('purchase', { address: '510 Lemon St', city: 'Riverside', zip: '92501', side: 'buyer', contractDate: day(-260), estCloseDate: day(-230), purchasePrice: '480000', finalPrice: '475000', buyers: [P('D. Morales')], sellers: [P('T. King')], escrowCompany: 'Inland Escrow', commission: '2.5', commissionType: 'percent' }, 'U1', { status: 'Closed', closedAt: day(-230), retentionUntil: addYears(day(-230), 7) });
   seedApprove(e, 40, 'U1');
-  var f = mkTxn('lease_listing', { address: '77 Magnolia Ave #4', city: 'Riverside', zip: '92506', listingDate: day(-8), expirationDate: day(80), monthlyRent: '2400', landlords: [P('Westside Holdings LLC')], listingCommission: 'One month' }, 'U2');
+  var f = mkTxn('lease_listing', { address: '77 Magnolia Ave #4', city: 'Riverside', zip: '92506', listingDate: day(-8), expirationDate: day(80), monthlyRent: '2400', landlords: [P('Westside Holdings LLC')], listingCommission: '2400', listingCommissionType: 'amount' }, 'U2');
   seedApprove(f, 2, 'U2');
-  var g = mkTxn('lease', { address: '12 Arlington Ave', city: 'Riverside', zip: '92503', side: 'landlord', leaseStart: day(-30), monthlyRent: '2900', landlords: [P('A. Gomez')], tenants: [P('M. Brooks')], commission: 'One month' }, 'U1', { status: 'Closed', closedAt: day(-30), retentionUntil: addYears(day(-30), 7) });
+  var g = mkTxn('lease', { address: '12 Arlington Ave', city: 'Riverside', zip: '92503', side: 'landlord', leaseStart: day(-30), monthlyRent: '2900', landlords: [P('A. Gomez')], tenants: [P('M. Brooks')], commission: '2900', commissionType: 'amount' }, 'U1', { status: 'Closed', closedAt: day(-30), retentionUntil: addYears(day(-30), 7) });
   seedApprove(g, 40, 'U1');
   var hh = mkTxn('referral', { clientName: 'Paula Diaz', referredTo: 'Agent in Phoenix, AZ', referralFee: '25%', location: 'Phoenix, AZ', expectedClose: day(45) }, 'U2');
-  var i2 = mkTxn('listing', { address: '450 Palm Dr', city: 'Moreno Valley', zip: '92553', listingDate: day(-200), expirationDate: day(-20), listPrice: '520000', sellers: [P('Grace Kim')], listingCommission: '2.5%' }, 'U1', { status: 'Expired Contract', retentionUntil: addYears(day(-20), 7) });
+  var i2 = mkTxn('listing', { address: '450 Palm Dr', city: 'Moreno Valley', zip: '92553', listingDate: day(-200), expirationDate: day(-20), listPrice: '520000', sellers: [P('Grace Kim')], listingCommission: '2.5', listingCommissionType: 'percent' }, 'U1', { status: 'Expired Contract', retentionUntil: addYears(day(-20), 7) });
   seedApprove(i2, 5, 'U1');
-  var j = mkTxn('purchase', { address: '2205 Sunset Ridge', city: 'Norco', zip: '92860', side: 'seller', contractDate: day(-6), estCloseDate: day(24), purchasePrice: '1150000', buyers: [P('B. Allen')], sellers: [P('C. Ortiz')], escrowCompany: 'First Escrow', commission: '2%' }, 'U2', { convertedFrom: 'listing' });
+  var j = mkTxn('purchase', { address: '2205 Sunset Ridge', city: 'Norco', zip: '92860', side: 'seller', contractDate: day(-6), estCloseDate: day(24), purchasePrice: '1150000', buyers: [P('B. Allen')], sellers: [P('C. Ortiz')], escrowCompany: 'First Escrow', commission: '2', commissionType: 'percent' }, 'U2', { convertedFrom: 'listing' });
   seedApprove(j, 12, 'U2');
   var ci = itemsOf(j.id).filter(function (x) { return x.cancel && x.active; })[0]; addDoc(j, ci, 'Cancellation of Contract signed.pdf', 'U2', 'Pending');
   j.cancelRequest = { state: 'pending', requestedAt: daysAgo(0), requestedBy: 'U2', requestedByName: 'Zina (sample agent)', reason: 'Buyer could not qualify for the loan.', relist: true };
@@ -281,31 +382,53 @@ function P(n, ph, em) { return { name: n, phone: ph || '', email: em || '' }; }
 function access(u, id) { var t = txn(id); if (!t || (u.role !== 'admin' && t.agentId !== u.id)) Fail('Transaction not found.'); return t; }
 function needAdmin(u) { if (u.role !== 'admin') Fail('Admins only.', 'FORBIDDEN'); }
 function touch(t) { t.updatedAt = now(); }
-function tmpPw() { return 'Tmp-' + Math.random().toString(36).slice(2, 8) + '7'; }
 var A = {};
 A.ping = function () { return { pong: true }; };
 A.login = function (b) {
-  var u = DB.users.filter(function (x) { return x.username === String(b.username || '').trim().toLowerCase(); })[0];
-  if (!u || u.pw !== b.password || !u.active) Fail('Wrong username or password.');
+  var e = String(b.email || b.username || '').trim().toLowerCase(); if (e === 'admin' || e === 'agent') e += '@demo.test';
+  var u = DB.users.filter(function (x) { return x.username === e; })[0];
+  // Same rules as the live backend: one generic message, and 5 misses lock the email for 15 minutes.
+  DB.fails = DB.fails || {}; var f = DB.fails[e] || { n: 0, until: 0 };
+  if (f.until > Date.now()) Fail('Too many attempts. Try again in 15 minutes.', 'LOCKED');
+  if (!u || !u.pw || u.pw !== b.password || !u.active) {
+    f.n++; if (f.n >= 5) { f.until = Date.now() + 15 * 60 * 1000; f.n = 0; if (u) u.locked = true; } DB.fails[e] = f;
+    Fail('Invalid email or password.');
+  }
+  delete DB.fails[e]; u.locked = false;
   var tok = nid('S') + nid('S'); DB.sessions[tok] = u.id; u.lastLogin = now();
   return { token: tok, user: pub(u) };
+};
+A.requestPasswordCode = function (b) {
+  var e = String(b.email || '').trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) Fail('Enter your email address.');
+  DB.codes = DB.codes || {}; DB.codes[e] = '123456'; return { sent: true, demoCode: '123456' };
+};
+A.resetPasswordWithCode = function (b) {
+  var e = String(b.email || '').trim().toLowerCase(), u = DB.users.filter(function (x) { return x.username === e && x.active; })[0];
+  if (!u || !DB.codes || DB.codes[e] !== String(b.code || '').trim()) Fail('That code is invalid or expired. Request a new one. (Demo code: 123456)');
+  var p = String(b.newPassword || ''); if (p.length < 10 || !/[A-Za-z]/.test(p) || !/\d/.test(p)) Fail('Use at least 10 characters with letters and numbers.');
+  u.pw = p; u.mustChange = false; delete DB.codes[e];
+  var tok = nid('S') + nid('S'); DB.sessions[tok] = u.id; u.lastLogin = now(); return { token: tok, user: pub(u) };
 };
 A.logout = function (b) { delete DB.sessions[b.token]; return {}; };
 A.me = function (b, u) { return { user: pub(u) }; };
 A.changePassword = function (b, u) {
   if (b.current !== u.pw) Fail('Your current password is not correct.');
   var p = String(b.newPassword || ''); if (p.length < 10 || !/[A-Za-z]/.test(p) || !/\d/.test(p)) Fail('Use at least 10 characters with letters and numbers.');
-  u.pw = p; u.mustChange = false; return { user: pub(u) };
+  u.pw = p; u.mustChange = false;
+  Object.keys(DB.sessions).forEach(function (t) { if (DB.sessions[t] === u.id) delete DB.sessions[t]; }); // sign out everywhere
+  var tok = nid('S') + nid('S'); DB.sessions[tok] = u.id; return { user: pub(u), token: tok };
 };
 A.listUsers = function (b, u) { needAdmin(u); return DB.users.map(function (x) { return { id: x.id, username: x.username, name: x.name, email: x.email, phone: x.phone, role: x.role, owner: !!x.owner, active: x.active, mustChange: x.mustChange, lastLogin: x.lastLogin, locked: x.locked }; }); };
 A.createUser = function (b, u) {
-  needAdmin(u); if (b.role === 'admin' && !u.owner) Fail('Only the owner can create admins.');
-  if (!String(b.name || '').trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(b.username || '')) Fail('Enter a name and a valid email.');
-  if (DB.users.some(function (x) { return x.username === b.username; })) Fail('That username already exists.');
-  var pw = tmpPw(), nu = { id: nid('U'), username: b.username, pw: pw, name: b.name.trim(), email: b.email, phone: b.phone || '', role: b.role === 'admin' ? 'admin' : 'agent', owner: false, active: true, mustChange: true, lastLogin: '', locked: false };
-  DB.users.push(nu); return { user: pub(nu), tempPassword: pw };
+  needAdmin(u); var em = String(b.email || b.username || '').trim().toLowerCase();
+  if (!String(b.name || '').trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) Fail('Enter a name and a valid email.');
+  if (DB.users.some(function (x) { return x.username === em; })) Fail('A user with that email already exists.');
+  var nu = { id: nid('U'), username: em, pw: '', name: b.name.trim(), email: em, phone: b.phone || '', role: 'agent', owner: false, active: true, mustChange: true, lastLogin: '', locked: false };
+  DB.users.push(nu); return { user: pub(nu), tempPassword: '' };
 };
-A.resetPassword = function (b, u) { needAdmin(u); var x = user(b.userId); if (!x) Fail('User not found.'); if (x.owner && !u.owner) Fail('Only the owner can reset this account.'); x.pw = tmpPw(); x.mustChange = true; x.locked = false; return { tempPassword: x.pw }; };
+A.resetPassword = function (b, u) { needAdmin(u); var x = user(b.userId); if (!x) Fail('User not found.'); if (x.owner && !u.owner) Fail('Only the owner can reset this account.'); x.pw = ''; x.mustChange = true; x.locked = false;
+  Object.keys(DB.sessions).forEach(function (t) { if (DB.sessions[t] === x.id) delete DB.sessions[t]; });
+  DB.codes = DB.codes || {}; DB.codes[x.username] = '123456'; return { emailed: true, tempPassword: '' }; };
 A.setUserActive = function (b, u) { needAdmin(u); var x = user(b.userId); if (!x || x.owner) Fail('Cannot change this user.'); x.active = !!b.active; return {}; };
 A.createTransaction = function (b, u) {
   if (!TYPE_LABELS[b.type]) Fail('Choose a transaction type.');
@@ -458,7 +581,7 @@ A.setStatus = function (b, u) {
   else { t.closedAt = ''; t.retentionUntil = ''; }
   t.status = s; touch(t); audit(t.id, u.username, 'status_changed'); return {};
 };
-var OPEN = { ping: 1, login: 1 };
+var OPEN = { ping: 1, login: 1, requestPasswordCode: 1, resetPasswordWithCode: 1 };
 window.TC_MOCK = {
   call: function (body) {
     return new Promise(function (res) {
