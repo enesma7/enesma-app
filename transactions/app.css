@@ -323,13 +323,3 @@ nav.main a.crmtab.on:after{left:16px;right:16px;bottom:6px;height:2px;background
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media(min-width:761px){.ltbl th:nth-child(n){width:auto}.clist.wl .ctbl th:nth-child(1){width:17%}.clist.wl .ctbl th:nth-child(5){width:16%}}
 @media(max-width:760px){.lpick{grid-template-columns:1fr}.ltbl td.lact{text-align:left;padding-top:8px}}
-
-/* Back to Agent Hub (shown only when this page is the top window) */
-.ah-back{display:none;align-items:center;min-height:44px;min-width:44px;text-decoration:none;-webkit-tap-highlight-color:transparent;flex:none;cursor:pointer}
-.ah-top .ah-back{display:inline-flex}
-.ah-pill{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 15px 0 10px;border-radius:999px;background:linear-gradient(135deg,#EAD59E 0%,#D5BE87 100%);color:#000007;font:600 13px/1 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:.01em;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,7,.28),inset 0 1px 0 rgba(255,255,255,.4);transition:filter .15s,transform .1s}
-.ah-pill svg{width:14px;height:14px;flex:none}
-.ah-back:hover .ah-pill{filter:brightness(1.06)}
-.ah-back:active .ah-pill{transform:scale(.97)}
-.ah-back:focus{outline:none}.ah-back:focus-visible .ah-pill{outline:2px solid #D5BE87;outline-offset:3px}
-.login{position:relative}.login .ah-back{position:absolute;top:calc(10px + env(safe-area-inset-top));left:max(14px,env(safe-area-inset-left))}
