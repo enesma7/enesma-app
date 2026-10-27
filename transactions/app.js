@@ -26,6 +26,8 @@ function nameErr(f, l) { if (!f) return 'First name is required.'; if (!l) retur
 /* Activity labels. 'converted' from a listing (older backends) and 'accepted_contract' both read as Accepted Contract. */
 function actLabel(a, t) { var x = String(a.action || ''); if (x === 'accepted_contract' || (x === 'converted' && t && t.convertedFrom === 'listing')) return 'Accepted Contract'; return x.replace(/_/g, ' '); }
 function isAdmin() { return S.user && S.user.role === 'admin'; }
+/* 1.4.4: the backend can switch off transaction creation for TCs (user.canCreate false). Older backends don't send it. */
+function canCreate() { return !S.user || S.user.canCreate !== false; }
 /* Roles (backend 1.3.0+, detected from ping). Older backends: the single role field, and no TC features at all. */
 function myRoles() { if (!S.user) return []; if (S.user.role === 'admin') return ['admin']; return (S.tcApi && S.user.roles && S.user.roles.length) ? S.user.roles : [S.user.role === 'tc' ? 'tc' : 'agent']; }
 function isDual() { return !!S.tcApi && myRoles().length > 1; }
@@ -50,7 +52,7 @@ function api(action, params) {
 }
 function unwrap(res) {
   if (res && res.ok) return res.data;
-  var e = new Error((res && res.error) || 'Something went wrong.'); e.code = res && res.code;
+  var e = new Error((res && res.error) || 'Something went wrong.'); e.code = res && res.code; e.fields = res && res.fields;
   if (e.code === 'AUTH') { signOutLocal(); render(); }
   if (e.code === 'MUST_CHANGE' && S.user) { S.user.mustChange = true; render(); }
   throw e;
@@ -272,6 +274,7 @@ function expectedPage() {
   if (hs === '/account') return '';
   if (/^\/crm(\/|$)/.test(hs) && canCrm()) return 'crm';
   if (/^\/(review|users|archive)$/.test(hs) && isAdmin()) return hs.slice(1);
+  if (/^\/review\/[A-Za-z0-9_-]+$/.test(hs) && isAdmin() && S.batchReview) return 'review';
   return 'dash';
 }
 function page(active, inner, after) { if (S.user && !S.user.mustChange && active !== expectedPage()) return; $app.innerHTML = shell(active, inner); wireShell(); if (!page.keepScroll) window.scrollTo(0, 0); page.keepScroll = false; if (after) after(); }
@@ -297,8 +300,8 @@ function loginView(msg) {
   };
 }
 /* First sign-in and forgot password: a 6-digit code is emailed from Enrique's Apps Script account. */
-function codeView(email, step, msg, okMsg) {
-  var two = step === 2;
+function codeView(email, step, msg, okMsg, need) {
+  var two = step === 2; need = need || [];
   $app.innerHTML = '<div class="login"><form class="box" id="cf" autocomplete="on"><h1 class="app">' + titleMark('tc-lg') + '</h1>' +
     '<h2 style="font-size:17px;margin:0 0 6px">' + (two ? 'Enter your code' : 'Set up or reset your password') + '</h2>' +
     '<p class="sub" style="margin:0 0 14px">' + (two ? 'We emailed a 6-digit code to <b>' + h(email) + '</b>. It expires in 15 minutes. Check spam if you don’t see it.' : 'Enter the email address the office registered for you. We’ll email you a code.') + '</p>' +
@@ -306,11 +309,16 @@ function codeView(email, step, msg, okMsg) {
     (two ? '<input type="hidden" id="ce" value="' + h(email) + '"><div class="f"><label for="cc">Code</label><input id="cc" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>' +
       '<div class="f"><label for="c1">New password</label><input id="c1" type="password" autocomplete="new-password" minlength="10" required></div>' +
       '<div class="f"><label for="c2">Repeat new password</label><input id="c2" type="password" autocomplete="new-password" required></div>' +
-      '<p class="sub" style="font-size:12px;margin:0 0 12px">At least 10 characters with letters and numbers.</p>'
+      '<p class="sub" style="font-size:12px;margin:0 0 12px">At least 10 characters with letters and numbers.</p>' +
+      (need.indexOf('firstName') >= 0 ? '<div class="f"><label for="cfn">First name</label><input id="cfn" type="text" autocomplete="given-name" maxlength="50" required></div>' : '') +
+      (need.indexOf('lastName') >= 0 ? '<div class="f"><label for="cln">Last name</label><input id="cln" type="text" autocomplete="family-name" maxlength="50" required></div>' : '') +
+      (need.indexOf('phone') >= 0 ? '<div class="f"><label for="cph">Phone</label><input id="cph" type="tel" inputmode="tel" autocomplete="tel" placeholder="000-000-0000" required></div>' : '')
       : '<div class="f"><label for="ce">Email</label><input id="ce" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" value="' + h(email) + '" required></div>') +
     '<button class="btn" id="cb">' + (two ? 'Save password and sign in' : 'Email me a code') + '</button><div class="fine">' + (two ? '<a href="#" id="cr">Send a new code</a> · ' : '') + '<a href="#" id="cbk">Back to sign in</a></div></form></div>';
   qs('#cbk').onclick = function (e) { e.preventDefault(); loginView(); };
   if (qs('#cr')) qs('#cr').onclick = function (e) { e.preventDefault(); codeView(email); };
+  if (qs('#cph')) qs('#cph').oninput = function () { this.value = fmtPhone(this.value); };
+  if (two && codeView.keep) { qs('#cc').value = codeView.keep; codeView.keep = ''; }
   function unsupported(err) { return /unknown action/i.test(err.message) ? 'Password setup by email isn’t switched on yet. Ask Enrique to reset your password.' : err.message; }
   qs('#cf').onsubmit = function (e) {
     e.preventDefault(); var b = qs('#cb'), em = qs('#ce').value.trim().toLowerCase();
@@ -322,9 +330,18 @@ function codeView(email, step, msg, okMsg) {
     var p1 = qs('#c1').value;
     if (p1 !== qs('#c2').value) return codeView(em, 2, 'The new passwords do not match.');
     if (p1.length < 10 || !/[A-Za-z]/.test(p1) || !/\d/.test(p1)) return codeView(em, 2, 'Use at least 10 characters with letters and numbers.');
+    var body = { email: em, code: qs('#cc').value.trim(), newPassword: p1 };
+    if (qs('#cfn')) body.firstName = qs('#cfn').value.trim();
+    if (qs('#cln')) body.lastName = qs('#cln').value.trim();
+    if (qs('#cph')) { body.phone = qs('#cph').value.trim(); if (phoneDigits(body.phone).length !== 10) return codeView(em, 2, 'Enter a 10-digit phone number (000-000-0000).', '', need); }
+    if ((qs('#cfn') && !body.firstName) || (qs('#cln') && !body.lastName)) return codeView(em, 2, 'Enter your first and last name.', '', need);
     b.disabled = true; b.innerHTML = '<span class="spin"></span>Saving…';
-    api('resetPasswordWithCode', { email: em, code: qs('#cc').value.trim(), newPassword: p1 }).then(function (d) { storeToken(d.token); S.user = d.user; toast('Password saved. You’re signed in.'); location.hash = '#/'; render(); })
-      .catch(function (err) { codeView(em, 2, unsupported(err)); });
+    api('resetPasswordWithCode', body).then(function (d) { storeToken(d.token); S.user = d.user; toast('Password saved. You’re signed in.'); location.hash = '#/'; render(); })
+      .catch(function (err) {
+        // 1.4.4: first name, last name and phone are required; the code isn't used up, so keep it and ask for the missing details.
+        if (err.code === 'PROFILE_REQUIRED') { codeView.keep = body.code; return codeView(em, 2, err.message, '', err.fields || ['phone']); }
+        codeView(em, 2, unsupported(err), '', need);
+      });
   };
 }
 function passwordView(forced) {
@@ -366,7 +383,7 @@ function dashView() {
     var extra = [];
     if (c.leaseListings) extra.push(c.leaseListings + ' lease listings'); if (c.leases) extra.push(c.leases + ' leases'); if (c.referrals) extra.push(c.referrals + ' referrals'); if (c.Cancelled) extra.push(c.Cancelled + ' cancelled');
     var inner = '<div class="top"><div><h1>' + (S.scope === 'company' ? 'Company Transactions' : isTC() ? 'My TC Files' : 'My Transactions') + '</h1><p class="sub">' + h(S.scope === 'company' ? 'All agents' : isTC() ? uName(S.user) + ' · files you created or coordinate' : uName(S.user)) + ' · ' + d.transactions.length + ' files' + (extra.length ? ' · ' + extra.join(' · ') : '') + '</p></div>' +
-      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' + (isAdmin() ? '<div class="seg"><button data-s="personal" class="' + (S.scope === 'personal' ? 'on' : '') + '">Personal</button><button data-s="company" class="' + (S.scope === 'company' ? 'on' : '') + '">Company</button></div>' : '') + '<a class="btn" href="#/new">+ New Transaction</a></div></div>' +
+      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' + (isAdmin() ? '<div class="seg"><button data-s="personal" class="' + (S.scope === 'personal' ? 'on' : '') + '">Personal</button><button data-s="company" class="' + (S.scope === 'company' ? 'on' : '') + '">Company</button></div>' : '') + (canCreate() ? '<a class="btn" href="#/new">+ New Transaction</a>' : '') + '</div></div>' +
       (isAdmin() && S.badges.review ? '<a class="ok" href="#/review" style="display:block;text-decoration:none"><b>' + d.pendingReview + '</b> checklist item(s) waiting for review' + (d.cancelRequests ? ' · <b>' + d.cancelRequests + '</b> cancellation request(s)' : '') + ' → Open Review</a>' : '') +
       '<div class="stats">' + statDefs.map(function (s) { return '<button class="stat gb' + (S.filter === s[0] ? ' on' : '') + '" data-f="' + h(s[0]) + '"><b>' + (s[1] || 0) + '</b><span>' + s[2] + '</span></button>'; }).join('') + '</div>' +
       '<div class="vol gb"><div class="ttl">Closed in the last 12 months' + (S.scope === 'company' ? ' · company' : '') + '</div><div><span>Closed deals</span><b>' + st.closedCount + '</b></div><div><span>Seller volume (' + st.sellerSides + ')</span><b>' + moneyShort(st.sellerVolume) + '</b></div><div><span>Buyer volume (' + st.buyerSides + ')</span><b>' + moneyShort(st.buyerVolume) + '</b></div><div><span>Combined volume</span><b class="gt">' + moneyShort(st.combinedVolume) + '</b></div></div>' +
@@ -384,7 +401,7 @@ function drawTiles() {
     if (!f) return true; if (f === 'open') return t.status === 'Active' || t.status === 'In Escrow';
     if (f.indexOf('type:') === 0) return t.type === f.slice(5); return t.status === f;
   });
-  qs('#tiles').innerHTML = list.length ? list.map(tileHtml).join('') : '<div class="card gb"><b>No transactions here yet.</b><p class="sub" style="margin:6px 0 0">Start one with <a href="#/new">+ New Transaction</a>.</p></div>';
+  qs('#tiles').innerHTML = list.length ? list.map(tileHtml).join('') : '<div class="card gb"><b>No transactions here yet.</b>' + (canCreate() ? '<p class="sub" style="margin:6px 0 0">Start one with <a href="#/new">+ New Transaction</a>.</p>' : '') + '</div>';
 }
 
 /* ---------------- new transaction ---------------- */
@@ -538,7 +555,7 @@ function drawTab() {
     };
   } else {
     c.innerHTML = '<div class="split" style="grid-template-columns:1fr 1fr"><div class="card gb"><h3>Notes</h3><textarea id="nt" placeholder="Add a note for this file"></textarea><div class="actions" style="margin-top:8px"><button class="btn sm" id="ntb">Add note</button></div><div class="feed">' +
-      d.notes.slice().reverse().map(function (n) { var it = d.items.filter(function (x) { return x.id === n.itemId; })[0]; return '<div class="ev"><b>' + h(n.by) + '</b> ' + (n.kind === 'rejection' ? '<span class="rt">rejected</span> ' : n.kind === 'resubmit' ? '<span class="gt">resubmitted</span> ' : '') + (it ? '· ' + h(it.title) : '') + '<br>' + h(n.text) + '<small>' + h(fmtTs(n.createdAt)) + '</small></div>'; }).join('') + '</div></div>' +
+      d.notes.slice().reverse().map(function (n) { var it = d.items.filter(function (x) { return x.id === n.itemId; })[0]; return '<div class="ev"><b>' + h(n.by) + '</b> ' + (n.kind === 'rejection' ? '<span class="rt">rejected</span> ' : n.kind === 'resubmit' ? '<span class="gt">resubmitted</span> ' : n.kind === 'review_update' ? '<span class="gt">review update</span> ' : n.kind === 'review' ? '<span class="gt">approved</span> ' : '') + (it ? '· ' + h(it.title) : '') + '<br>' + h(n.text).replace(/\n/g, '<br>') + '<small>' + h(fmtTs(n.createdAt)) + '</small></div>'; }).join('') + '</div></div>' +
       '<div class="card gb"><h3>Activity</h3><div class="feed">' + d.activity.map(function (a) { return '<div class="ev">' + h(actLabel(a, d.txn)) + '<small>' + h(a.by) + ' · ' + h(fmtTs(a.ts)) + '</small></div>'; }).join('') + '</div></div></div>';
     qs('#ntb').onclick = function () { var v = qs('#nt').value.trim(); if (!v) return; api('addNote', { txnId: t.id, text: v }).then(function () { toast('Note added.'); refresh(); }).catch(function (e) { toast(e.message, 1); }); };
   }
@@ -785,7 +802,7 @@ function promptModal(title, help, btn, fn, single, val) {
 }
 function splitModal(existingDocId) {
   var items = S.txn.items.filter(function (x) { return x.active; });
-  var opt = '<option value="">Document Storage</option>' + items.map(function (x) { return '<option value="' + h(x.id) + '">' + h(x.title) + '</option>'; }).join('');
+  var opt = '<option value="">Not assigned (Documents)</option>' + items.map(function (x) { return '<option value="' + h(x.id) + '">' + h(x.title) + '</option>'; }).join('');
   var m = modal('<h2>Upload &amp; Split Packet</h2><p class="sub">Upload one signed PDF packet, then assign page ranges to checklist items. The full packet stays in Document Storage; nothing is deleted.</p><div id="se"></div>' +
     (existingDocId ? '' : '<label class="btn" id="spick">Choose PDF packet<input type="file" class="hidden" id="sfile" accept="' + UP_ACCEPT + '"></label>') + '<div id="sbody"></div>', true);
   var state = { bytes: null, name: '', pages: 0, srcId: existingDocId || '' };
@@ -901,6 +918,7 @@ function reviewView() {
   loading('review');
   api('reviewQueue').then(function (d) {
     S.badges.review = d.items.length + d.cancellations.length;
+    if (S.batchReview && d.groups) return batchQueue(d);
     var inner = '<h1>Review</h1><p class="sub">Admin only. Approve each submitted checklist item, or reject it with a note that goes back to the agent.</p>' +
       (d.cancellations.length ? '<h2>Cancellation requests</h2>' + d.cancellations.map(function (c) {
         var r = c.request || {};
@@ -933,6 +951,105 @@ function reviewView() {
           });
         };
       });
+    });
+  }).catch(function (e) { failView('review', e); });
+}
+
+/* ---------------- admin: batch review (backend 1.4.4+) ----------------
+   The queue lists transactions with uploads waiting. Opening one shows every waiting item with a preview; the admin marks
+   each approve or reject (draft only), then one Submit Review applies them all and sends ONE update email to the file's
+   agent and TC. Nothing is final until Submit Review. */
+S.reviewDraft = S.reviewDraft || {};
+function cancelCards(cs) {
+  return cs.length ? '<h2>Cancellation requests</h2>' + cs.map(function (c) {
+    var r = c.request || {};
+    return '<div class="rb card" style="padding:18px"><div class="top"><div><b>' + h(c.title) + '</b><p class="sub" style="margin:2px 0 0">' + h(c.typeLabel) + ' · ' + h(c.agentName) + ' · requested ' + h(fmtTs(r.requestedAt)) + '</p>' + (r.reason ? '<div class="note">Reason: ' + h(r.reason) + '</div>' : '') +
+      (r.relist === true ? '<div class="note"><b class="gt">Back on market: yes</b> · approving creates a new listing with the listing documents.</div>' : r.relist === false ? '<div class="note">Back on market: no</div>' : '') + '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="ub" href="#/t/' + h(c.txnId) + '">Open file</a><button class="btn sm cdec" data-id="' + h(c.txnId) + '" data-a="1">Approve</button><button class="btn red sm cdec" data-id="' + h(c.txnId) + '" data-a="">Deny</button></div></div></div>';
+  }).join('') : '';
+}
+function wireCancelCards() {
+  qsa('.cdec').forEach(function (b) {
+    b.onclick = function () {
+      var approve = !!b.getAttribute('data-a');
+      promptModal(approve ? 'Approve cancellation' : 'Deny cancellation', approve ? 'The file becomes Cancelled and is kept 7 years. Add a note for the record.' : 'Tell the agent why.', approve ? 'Approve' : 'Deny', function (txt) {
+        return api('decideCancel', { id: b.getAttribute('data-id'), approve: approve, note: txt }).then(function (r) { if (r && r.relistedId) setTimeout(function () { toast('Cancelled. A new listing was created.'); }, 400); });
+      });
+    };
+  });
+}
+function batchQueue(d) {
+  var inner = '<h1>Review</h1><p class="sub">Admin only. New uploads are grouped by transaction. Open one to review everything waiting on it, then submit once. The agent and TC get one email with all your decisions.</p>' +
+    cancelCards(d.cancellations) +
+    '<h2>Transactions waiting (' + d.groups.length + ')</h2>' +
+    (d.groups.length ? '<div class="gb" style="padding:4px 0">' + d.groups.map(function (g) {
+      var dr = S.reviewDraft[g.txnId] || {}, drafted = Object.keys(dr).filter(function (k) { return dr[k] && dr[k].decision; }).length;
+      return '<a class="row" href="#/review/' + h(g.txnId) + '" style="text-decoration:none;color:inherit"><div class="n"><b>' + h(g.txnTitle) + '</b><small>' + h(g.typeLabel) + ' · ' + h(g.agentName) + (g.tcName ? ' · TC ' + h(g.tcName) : '') + '</small>' +
+        '<div class="note">' + g.items.length + ' item' + (g.items.length === 1 ? '' : 's') + ' waiting · latest upload ' + h(fmtTs(g.newest)) + (drafted ? ' · <b>' + drafted + ' decision' + (drafted === 1 ? '' : 's') + ' drafted</b>' : '') + '</div></div>' +
+        '<div class="acts"><span class="btn sm">Review ' + g.items.length + '</span></div></a>';
+    }).join('') + '</div>' : '<div class="card gb">Nothing is waiting for review.</div>');
+  page('review', inner, wireCancelCards);
+}
+function batchReviewView(txnId) {
+  loading('review');
+  api('reviewQueue').then(function (d) {
+    S.badges.review = d.items.length + d.cancellations.length;
+    var g = (d.groups || []).filter(function (x) { return x.txnId === txnId; })[0];
+    if (!g) { page('review', '<p><a href="#/review">← Review</a></p><div class="card gb">Nothing is waiting for review on this transaction.</div>'); return; }
+    var dr = S.reviewDraft[txnId] = S.reviewDraft[txnId] || {};
+    var live = {}; g.items.forEach(function (it) { live[it.itemId] = 1; });
+    Object.keys(dr).forEach(function (k) { if (!live[k]) delete dr[k]; });
+    var inner = '<p style="margin:0 0 8px"><a href="#/review">← Review</a></p><div class="top"><div><h1 style="margin-bottom:2px">' + h(g.txnTitle) + '</h1><p class="sub" style="margin:0">' + h(g.typeLabel) + ' · ' + h(g.agentName) + (g.tcName ? ' · TC ' + h(g.tcName) : '') + ' · <a href="#/t/' + h(txnId) + '">Open file</a></p></div></div>' +
+      '<p class="sub">Mark each item Approve or Reject. These are drafts until you press <b>Submit Review</b>. Items you leave unmarked stay waiting.</p>' +
+      g.items.map(function (it) {
+        var x = dr[it.itemId] || {};
+        return '<div class="card gb bri" data-item="' + h(it.itemId) + '" style="margin-bottom:14px"><div class="top" style="align-items:flex-start;gap:14px;flex-wrap:wrap"><div style="flex:1;min-width:240px"><h3 style="margin:0">' + h(it.itemTitle) + '</h3><small>' + h(it.forms) + ' · submitted ' + h(fmtTs(it.submittedAt)) + '</small>' +
+          '<div class="docs">' + it.docs.map(function (doc, i) { return '<button class="dl pv' + (i === it.docs.length - 1 ? ' on' : '') + '" data-doc="' + h(doc.id) + '">' + h(doc.name) + (doc.pageRange ? ' (pages ' + h(doc.pageRange) + ')' : '') + '</button>'; }).join('') + '</div>' +
+          (it.notes || []).map(function (n) { return '<div class="note">' + (n.kind === 'rejection' ? '<span class="rt">Earlier rejection</span> ' : n.kind === 'resubmit' ? '<span class="gt">Resubmitted</span> ' : '') + h(n.by) + ': ' + h(n.text) + '</div>'; }).join('') + '</div>' +
+          '<div style="min-width:240px;display:flex;flex-direction:column;gap:8px"><div class="seg" role="radiogroup" aria-label="Decision"><button type="button" class="dec' + (x.decision === 'approve' ? ' on' : '') + '" data-d="approve">Approve</button><button type="button" class="dec' + (x.decision === 'reject' ? ' on' : '') + '" data-d="reject">Reject</button><button type="button" class="dec' + (!x.decision ? ' on' : '') + '" data-d="">Undecided</button></div>' +
+          '<textarea class="rn" placeholder="Note (optional; required to reject)" style="min-height:60px;margin:0">' + h(x.note || '') + '</textarea></div></div>' +
+          '<div class="pvw" style="margin-top:12px"><div class="loading"><span class="spin"></span>Loading preview…</div></div></div>';
+      }).join('') +
+      '<div class="card gb" style="position:sticky;bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span id="bsum" class="sub" style="margin:0"></span><button class="btn" id="bsub">Submit Review</button></div>';
+    page('review', inner, function () {
+      wireCancelCards();
+      var urls = [];
+      function sum() {
+        var a = 0, r = 0; Object.keys(dr).forEach(function (k) { if (dr[k].decision === 'approve') a++; else if (dr[k].decision === 'reject') r++; });
+        qs('#bsum').textContent = a + ' approve · ' + r + ' reject · ' + (g.items.length - a - r) + ' undecided';
+      }
+      function preview(card, docId) {
+        var box = qs('.pvw', card); box.innerHTML = '<div class="loading"><span class="spin"></span>Loading preview…</div>';
+        return getFileBytes(docId).then(function (f) {
+          var url = URL.createObjectURL(new Blob([f.bytes], { type: f.mime })); urls.push(url);
+          box.innerHTML = /^image/.test(f.mime) ? '<img src="' + url + '" alt="' + h(f.name) + '" style="max-width:100%;max-height:70vh;border-radius:10px">'
+            : /^application\/pdf/.test(f.mime) ? '<iframe src="' + url + '" title="' + h(f.name) + '" style="width:100%;height:60vh;border:1px solid rgba(0,0,7,.12);border-radius:10px;background:#FBFBFB"></iframe>'
+            : '<p class="sub">This file type can’t be previewed. <a href="' + url + '" download="' + h(f.name) + '">Download</a></p>';
+        }).catch(function (e) { box.innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
+      }
+      var cards = qsa('.bri');
+      cards.reduce(function (p, card) { var b = qs('.pv.on', card); return p.then(function () { if (b && document.body.contains(card)) return preview(card, b.getAttribute('data-doc')); }); }, Promise.resolve());
+      cards.forEach(function (card) {
+        var id = card.getAttribute('data-item');
+        qsa('.pv', card).forEach(function (b) { b.onclick = function () { qsa('.pv', card).forEach(function (o) { o.classList.remove('on'); }); b.classList.add('on'); preview(card, b.getAttribute('data-doc')); }; });
+        qsa('.dec', card).forEach(function (b) { b.onclick = function () { qsa('.dec', card).forEach(function (o) { o.classList.remove('on'); }); b.classList.add('on'); dr[id] = dr[id] || {}; dr[id].decision = b.getAttribute('data-d'); sum(); }; });
+        qs('.rn', card).oninput = function () { dr[id] = dr[id] || {}; dr[id].note = this.value; };
+      });
+      sum();
+      qs('#bsub').onclick = function () {
+        var list = [], bad = null;
+        g.items.forEach(function (it) { var x = dr[it.itemId]; if (x && x.decision) { var note = String(x.note || '').trim(); if (x.decision === 'reject' && !note && !bad) bad = it; list.push({ itemId: it.itemId, decision: x.decision, note: note }); } });
+        if (!list.length) { toast('Mark at least one item Approve or Reject.', 1); return; }
+        if (bad) { toast('Add a note for the rejection of ' + bad.itemTitle + ' so they know what to fix.', 1); var c = qs('.bri[data-item="' + bad.itemId + '"]'); if (c) { c.scrollIntoView({ block: 'center' }); qs('.rn', c).focus(); } return; }
+        var a = list.filter(function (x) { return x.decision === 'approve'; }).length;
+        if (!confirm('Submit ' + a + ' approval(s) and ' + (list.length - a) + ' rejection(s)? The agent' + (g.tcName ? ' and TC' : '') + ' get one email with all decisions.')) return;
+        var b = qs('#bsub'); b.disabled = true; b.innerHTML = '<span class="spin"></span>Submitting…';
+        api('submitReview', { txnId: txnId, decisions: list }).then(function (r) {
+          delete S.reviewDraft[txnId]; urls.forEach(function (u) { URL.revokeObjectURL(u); });
+          toast('Review submitted: ' + r.approved + ' approved, ' + r.rejected + ' rejected.' + (r.emailedTo && r.emailedTo.length ? ' Update emailed.' : r.emailError ? ' The email could not be sent.' : ''), !!r.emailError);
+          location.hash = '#/review';
+        }).catch(function (e) { b.disabled = false; b.textContent = 'Submit Review'; toast(e.message, 1); });
+      };
     });
   }).catch(function (e) { failView('review', e); });
 }
@@ -971,10 +1088,14 @@ function usersView() {
     page('users', inner, function () {
       qs('#nu').onclick = function () {
         var m = modal('<h2>' + (S.tcApi ? 'Add user' : 'Add agent') + '</h2><div id="ae"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="af" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="al" maxlength="50" required></div>' +
-          '<div class="f w2"><label>Email (their login)</label><input type="email" id="am" autocapitalize="none"></div><div class="f"><label>Phone</label><input type="tel" id="ap"></div>' + (S.tcApi ? rolePicker(['agent'], !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="ab">Create user</button></div>');
+          '<div class="f w2"><label>Email (their login) *</label><input type="email" id="am" autocapitalize="none" required></div><div class="f"><label>Phone *</label><input type="tel" id="ap" inputmode="tel" placeholder="000-000-0000" required></div>' + (S.tcApi ? rolePicker(['agent'], !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="ab">Create user</button></div>');
         if (S.tcApi) wireRolePicker(m);
+        qs('#ap', m).oninput = function () { this.value = fmtPhone(this.value); };
         qs('#ab', m).onclick = function () {
           var em = qs('#am', m).value.trim().toLowerCase(), fn = qs('#af', m).value.trim(), ln = qs('#al', m).value.trim(), ne = nameErr(fn, ln);
+          // First name, last name, email and phone are all required for every new user.
+          if (!ne && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) ne = 'Enter a valid email address.';
+          if (!ne && phoneDigits(qs('#ap', m).value).length !== 10) ne = 'Enter a 10-digit phone number (000-000-0000).';
           var roles = S.tcApi ? pickedRoles(m) : null;
           if (!ne && roles && !roles.length) ne = 'Choose at least one role.';
           if (ne) { qs('#ae', m).innerHTML = '<div class="err">' + h(ne) + '</div>'; return; }
@@ -993,11 +1114,12 @@ function usersView() {
         var u = users.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (!u) return; var nm = splitNm(u);
         var canRoles = S.tcApi && !u.owner && u.id !== S.user.id && (rolesOf(u)[0] !== 'admin' || S.user.owner);
         var m = modal('<h2>Edit user</h2><p class="sub">' + h(u.email || u.username) + '</p><div id="ee"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="ef" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="el" maxlength="50" required></div>' +
-          '<div class="f"><label>Phone</label><input type="tel" id="ep"></div>' + (canRoles ? rolePicker(rolesOf(u), !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="eb">Save</button></div>');
+          '<div class="f"><label>Phone *</label><input type="tel" id="ep" inputmode="tel" placeholder="000-000-0000" required></div>' + (canRoles ? rolePicker(rolesOf(u), !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="eb">Save</button></div>');
         qs('#ef', m).value = nm.f; qs('#el', m).value = nm.l; qs('#ep', m).value = u.phone || '';
         if (canRoles) wireRolePicker(m);
         qs('#eb', m).onclick = function () {
           var fn = qs('#ef', m).value.trim(), ln = qs('#el', m).value.trim(), ne = nameErr(fn, ln), roles = canRoles ? pickedRoles(m) : null;
+          if (!ne && phoneDigits(qs('#ep', m).value).length !== 10) ne = 'Enter a 10-digit phone number (000-000-0000).';
           if (!ne && roles && !roles.length) ne = 'Choose at least one role.';
           if (ne) { qs('#ee', m).innerHTML = '<div class="err">' + h(ne) + '</div>'; return; }
           var body = { userId: u.id, firstName: fn, lastName: ln, phone: qs('#ep', m).value.trim() };
@@ -1477,13 +1599,15 @@ function route() {
   var mm = hs.match(/^\/t\/([A-Za-z0-9_-]+)/);
   if (mm) return txnView(mm[1], false);
   S.txn = null;
-  if (hs === '/new') return newView('');
+  if (hs === '/new') { if (canCreate()) return newView(''); toast('Creating transaction files is switched off for your account.', 1); location.hash = '#/'; return; }
   if (hs === '/account') return passwordView(false);
   var mc = hs.match(/^\/crm\/c\/([A-Za-z0-9_-]+)$/);
   if (mc && canCrm()) return clientView(mc[1]);
   if (/^\/crm\/?$/.test(hs) && canCrm()) { CRM_UI.remPick = ''; return crmHome(); }
   if (hs === '/crm/lenders' && canCrm() && S.crmLender) return lendersView();
   if (hs === '/review' && isAdmin()) return reviewView();
+  var mr = hs.match(/^\/review\/([A-Za-z0-9_-]+)$/);
+  if (mr && isAdmin() && S.batchReview) return batchReviewView(mr[1]);
   if (hs === '/users' && isAdmin()) return usersView();
   if (hs === '/archive' && isAdmin()) return archiveView();
   return dashView();
@@ -1491,7 +1615,7 @@ function route() {
 function render() {
   if (S.tcApi === undefined) {   // feature detection: TC (1.3.0+) and CRM (1.4.0+) only when the backend says it has them
     S.tcApi = false;
-    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); S.crmLender = !!(d && d.features && d.features.indexOf('crm_lender') >= 0); }, function () { }).then(render);
+    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); S.crmLender = !!(d && d.features && d.features.indexOf('crm_lender') >= 0); S.batchReview = !!(d && d.features && d.features.indexOf('batch_review') >= 0); }, function () { }).then(render);
   }
   if (!S.token) return loginView();
   if (!S.user) {

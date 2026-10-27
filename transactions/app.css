@@ -323,3 +323,7 @@ nav.main a.crmtab.on:after{left:16px;right:16px;bottom:6px;height:2px;background
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media(min-width:761px){.ltbl th:nth-child(n){width:auto}.clist.wl .ctbl th:nth-child(1){width:17%}.clist.wl .ctbl th:nth-child(5){width:16%}}
 @media(max-width:760px){.lpick{grid-template-columns:1fr}.ltbl td.lact{text-align:left;padding-top:8px}}
+
+/* 1.4.4 batch review */
+.docs button.dl.pv.on{font-weight:700;text-decoration-thickness:2px}
+.bri .seg button{padding:8px 12px}
