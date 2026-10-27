@@ -67,3 +67,15 @@ input[disabled],select[disabled]{opacity:.55}
 @media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}.cal{height:480px}}
 @media (max-width:560px){header{padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top))}.brand img{height:30px}.brand .app{font-size:11px;padding-left:10px;letter-spacing:.14em}
  main{padding:20px 16px 80px}h1{font-size:25px}.card{padding:18px}.locs{grid-template-columns:minmax(0,1fr)}.cal{height:420px}.lochead .btn{width:100%}}
+/* Agent Hub way back: logo links to the Hub; pill sits at the header's right edge */
+.brand a{text-decoration:none;color:inherit}.ah-logo{display:block;flex:none}
+header .ah-back{margin:-7px 0 -7px auto;padding-left:10px}
+/* Back to Agent Hub (shown only when this page is the top window) */
+.ah-back{display:none;align-items:center;min-height:44px;min-width:44px;text-decoration:none;-webkit-tap-highlight-color:transparent;flex:none;cursor:pointer}
+.ah-top .ah-back{display:inline-flex}
+.ah-pill{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 15px 0 10px;border-radius:999px;background:linear-gradient(135deg,#EAD59E 0%,#D5BE87 100%);color:#000007;font:600 13px/1 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:.01em;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,7,.28),inset 0 1px 0 rgba(255,255,255,.4);transition:filter .15s,transform .1s}
+.ah-pill svg{width:14px;height:14px;flex:none}
+.ah-back:hover .ah-pill{filter:brightness(1.06)}
+.ah-back:active .ah-pill{transform:scale(.97)}
+.ah-back:focus{outline:none}.ah-back:focus-visible .ah-pill{outline:2px solid #D5BE87;outline-offset:3px}
+@media (max-width:560px){.ah-pill{font-size:12px;height:32px;padding:0 12px 0 8px;gap:4px}.ah-pill svg{width:13px;height:13px}header .ah-back{padding-left:8px}}

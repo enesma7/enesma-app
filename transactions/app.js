@@ -216,6 +216,9 @@ function titleMark(size) {
   return '<span class="tc-title ' + size + '" role="img" aria-label="' + h(APP_NAME) + '"><span class="tc-t1" aria-hidden="true">' + h(w.join(' ')) + '</span> <span class="tc-t2" aria-hidden="true">' + h(last) + '</span></span>';
 }
 document.title = APP_NAME;
+/* Way back to the Agent Hub: pill on sign-in screens, header mark links to the Hub (hidden when framed, see /ahb.js). */
+var HUB_URL = 'https://agent.enesmarealty.com';
+var HUB_BACK = '<a class="ah-back" href="https://agent.enesmarealty.com" target="_top" aria-label="Back to Agent Hub"><span class="ah-pill"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Agent Hub</span></a>';
 function shell(active, inner) {
   // No '+ New' tab: My Transactions has the '+ New Transaction' button; the new-transaction screen lights up Transactions.
   var nav = '<a href="#/" class="' + (active === 'dash' || active === 'new' ? 'on' : '') + '">Transactions</a>';
@@ -225,7 +228,7 @@ function shell(active, inner) {
   var tog = isDual() ? '<div class="rtog seg" role="group" aria-label="View as">' + [['agent', 'My Files'], ['tc', 'TC View']].map(function (x) { return '<button type="button" data-role="' + x[0] + '" class="' + (activeRole() === x[0] ? 'on' : '') + '" aria-pressed="' + (activeRole() === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' : '';
   return (DEMO ? '<div class="demo"><b>DEMO PREVIEW</b> · sample data only, nothing is saved · <a href="#" id="exitDemo" style="color:#FBFBFB">exit demo</a></div>' : '') +
     '<header id="hdr"><button class="nbtn" id="nbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><span></span><span></span><span></span></button>' +
-    '<a class="brand" href="#/" aria-label="Transaction Center home">' + titleMark('tc-sm') + '</a>' +
+    '<a class="brand" href="' + HUB_URL + '" target="_top" aria-label="Back to Agent Hub">' + titleMark('tc-sm') + '</a>' +
     '<nav class="main" id="mnav" aria-label="Main">' + nav + '</nav><div class="hspace"></div>' + tog +
     '<div class="search"><span>' + SEARCH_ICON + '</span><input id="q" type="search" placeholder="Search address, client, escrow #" autocomplete="off" aria-label="Search transactions"><div class="sres hidden" id="sres"></div></div>' +
     '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + h(roleLabel(S.user)) + (isDual() ? '<br><small>Now: ' + (isTC() ? 'TC View' : 'My Files') + '</small>' : '') + '</div><a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
@@ -281,7 +284,7 @@ function failView(active, e) { page(active, '<div class="err">' + h(e.message) +
 /* ---------------- login / password ---------------- */
 function loginView(msg) {
   var noApi = !CFG.API_URL && !DEMO;
-  $app.innerHTML = '<div class="login"><form class="box" id="lf" autocomplete="on"><h1 class="app">' + titleMark('tc-lg') + '</h1>' +
+  $app.innerHTML = '<div class="login">' + HUB_BACK + '<form class="box" id="lf" autocomplete="on"><h1 class="app">' + titleMark('tc-lg') + '</h1>' +
     (msg ? '<div class="err">' + h(msg) + '</div>' : '') +
     (noApi ? '<div class="ok">The secure backend is being connected. Sign-in opens as soon as setup is finished.<br><a href="?demo=1">Preview with sample data</a></div>' : '') +
     (DEMO ? '<div class="ok">Demo preview. Sign in as <b>admin@demo.test</b> or <b>agent@demo.test</b> with password <b>demo</b>.</div>' : '') +
@@ -299,7 +302,7 @@ function loginView(msg) {
 /* First sign-in and forgot password: a 6-digit code is emailed from Enrique's Apps Script account. */
 function codeView(email, step, msg, okMsg) {
   var two = step === 2;
-  $app.innerHTML = '<div class="login"><form class="box" id="cf" autocomplete="on"><h1 class="app">' + titleMark('tc-lg') + '</h1>' +
+  $app.innerHTML = '<div class="login">' + HUB_BACK + '<form class="box" id="cf" autocomplete="on"><h1 class="app">' + titleMark('tc-lg') + '</h1>' +
     '<h2 style="font-size:17px;margin:0 0 6px">' + (two ? 'Enter your code' : 'Set up or reset your password') + '</h2>' +
     '<p class="sub" style="margin:0 0 14px">' + (two ? 'We emailed a 6-digit code to <b>' + h(email) + '</b>. It expires in 15 minutes. Check spam if you don’t see it.' : 'Enter the email address the office registered for you. We’ll email you a code.') + '</p>' +
     (msg ? '<div class="err">' + h(msg) + '</div>' : '') + (okMsg ? '<div class="ok">' + h(okMsg) + '</div>' : '') +
@@ -334,7 +337,7 @@ function passwordView(forced) {
     '<div class="f" style="margin-bottom:12px"><label>New password</label><input type="password" id="p1" autocomplete="new-password" minlength="10" required></div>' +
     '<div class="f"><label>Repeat new password</label><input type="password" id="p2" autocomplete="new-password" required></div><div class="actions">' + (forced ? '<button type="button" class="ub" id="pout">Sign out</button>' : '') + '<button class="btn">Save password</button></div></form></div>';
   if (forced) {
-    $app.innerHTML = '<header><a class="brand">' + titleMark('tc-sm') + '</a></header><main>' + inner + '</main>';
+    $app.innerHTML = '<header><a class="brand" href="' + HUB_URL + '" target="_top" aria-label="Back to Agent Hub">' + titleMark('tc-sm') + '</a></header><main>' + inner + '</main>';
     qs('#pout').onclick = function () { api('logout').catch(function () { }); signOutLocal(); render(); };
   } else page('', inner);
   qs('#pf').onsubmit = function (e) {
