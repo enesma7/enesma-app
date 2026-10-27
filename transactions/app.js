@@ -955,7 +955,7 @@ function usersView() {
   api('listUsers').then(function (users) {
     var row = function (u, sec) {
       var rs = rolesOf(u), pills = rs[0] === 'admin' ? '<span class="pill p-ok">Admin</span>' : rs.map(function (r) { return '<span class="pill ' + (r === sec ? 'p-ok' : 'p-pend') + '">' + (r === 'tc' ? 'TC' : 'Agent') + '</span>'; }).join(' ');
-      return '<tr><td class="unm"><b class="un">' + h(uName(u)) + '</b></td><td class="uem" data-l="Email">' + (hasName(u) ? h(u.email || u.username) : '') + '</td><td data-l="Phone">' + h(u.phone || '') + '</td><td data-l="Role">' + pills + (u.owner ? ' <small>owner</small>' : '') + '</td>' +
+      return '<tr><td class="unm"><b class="un">' + h(uName(u)) + '</b></td><td class="uem" data-l="Email">' + (hasName(u) ? h(u.email || u.username) : '') + '</td><td data-l="Phone">' + h(u.phone || '') + '</td><td data-l="Role">' + pills + (u.owner ? ' <small>Owner</small>' : '') + '</td>' +
         '<td data-l="Status">' + (u.active ? (u.locked ? '<span class="pill p-rej">Locked</span>' : u.mustChange ? '<span class="pill p-miss">Password not set</span>' : '<span class="pill p-ok">Active</span>') : '<span class="pill p-miss">Disabled</span>') + '</td><td data-l="Last sign-in"><small>' + h(fmtTs(u.lastLogin)) + '</small></td>' +
         '<td class="uact">' + (u.owner && !S.user.owner ? '' : '<button class="link eu" data-id="' + h(u.id) + '">Edit</button> <button class="link rp" data-id="' + h(u.id) + '" data-n="' + h(uName(u)) + '">Reset password</button> ') + (u.owner || u.id === S.user.id ? '' : '<button class="link act" data-id="' + h(u.id) + '" data-a="' + (u.active ? '' : '1') + '">' + (u.active ? 'Disable' : 'Enable') + '</button>') + '</td></tr>';
     };
