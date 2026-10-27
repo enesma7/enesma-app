@@ -62,7 +62,7 @@ function storeToken(tok) {
   try { localStorage.removeItem('tc_t'); } catch (e) { /* clean up tokens saved by older versions */ }
   if (tok) sessionStorage.setItem('tc_t', tok);
 }
-function signOutLocal() { storeToken(null); S.user = null; S.crm = null; CRM_UI.agentId = ''; S.dash = null; S.txn = null; S.asRole = ''; sessionStorage.removeItem('tc_role'); }
+function signOutLocal() { storeToken(null); S.user = null; S.crm = null; CRM_UI.agentId = null; S.dash = null; S.txn = null; S.asRole = ''; sessionStorage.removeItem('tc_role'); }
 
 /* ---------------- intake definitions ---------------- */
 var TYPES = [
@@ -1034,7 +1034,9 @@ document.addEventListener('click', function (e) {
   var a = e.target && e.target.closest ? e.target.closest('a[data-ownfile]') : null;
   if (a && activeRole() === 'tc' && myRoles().indexOf('agent') >= 0) { S.asRole = 'agent'; sessionStorage.setItem('tc_role', 'agent'); S.scope = 'personal'; S.filter = ''; S.dash = null; S.txn = null; }
 });
-var CRM_UI = { q: '', status: '', type: '', tag: '', group: '', agentId: '', remTab: 'overdue', remPick: '', shown: 100 };
+// Every CRM (admins too) opens on the user's own clients; only admins can switch to another agent or All agents.
+function crmAg() { if (CRM_UI.agentId === null) CRM_UI.agentId = S.user ? S.user.id : ''; return CRM_UI.agentId; }
+var CRM_UI = { q: '', status: '', type: '', tag: '', group: '', agentId: null, remTab: 'overdue', remPick: '', shown: 100 };
 function dayPT(d) { return new Date(d).toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); }
 function remBucket(r) { var now = Date.now(), t = new Date(r.dueAt).getTime(); if (t < now) return 'overdue'; return dayPT(t) === dayPT(now) ? 'due' : 'upcoming'; }
 function cName(c) { return [c.firstName, c.lastName].filter(Boolean).join(' ') || '(no name)'; }
@@ -1086,7 +1088,7 @@ function wireRems(root, rems, clientsById, after) {
 
 function crmHome() {
   loading('crm');
-  api('crmBoot', isAdmin() ? { agentId: CRM_UI.agentId } : {}).then(function (d) {
+  api('crmBoot', isAdmin() ? { agentId: crmAg() } : {}).then(function (d) {
     S.crm = d;
     var byId = {}; d.clients.forEach(function (c) { byId[c.id] = c; c._s = [cName(c), c.phone, String(c.phone || '').replace(/\D/g, ''), c.email, c.address, c.source, (c.tags || []).join(' '), c.ownerName || '', c.lenderName || '', c.lenderCompany || ''].join(' ').toLowerCase(); });
     var LO = lendOn(d);
@@ -1148,7 +1150,7 @@ function crmHome() {
 
 function clientView(id) {
   loading('crm');
-  var bootP = S.crm ? Promise.resolve(S.crm) : api('crmBoot', isAdmin() ? { agentId: CRM_UI.agentId } : {}).then(function (d) { S.crm = d; return d; });
+  var bootP = S.crm ? Promise.resolve(S.crm) : api('crmBoot', isAdmin() ? { agentId: crmAg() } : {}).then(function (d) { S.crm = d; return d; });
   Promise.all([api('crmGetClient', { id: id }), bootP]).then(function (res) {
     var g = res[0], d = res[1], c = g.client;
     var gName = {}; d.groups.forEach(function (x) { gName[x.id] = x.name; });
@@ -1317,7 +1319,7 @@ function exportModal(d) {
   var m = modal('<h2>Export clients</h2><p class="sub">Downloads a CSV of ' + h(scope) + '. A private copy is also saved in Drive' + (d.admin ? ' (your CRM folder)' : ' (your CRM folder)') + '. Cells that start with = + - @ get a leading apostrophe so spreadsheets never run them as formulas.</p><div id="xe"></div><div class="actions"><button class="btn" id="xb">Download CSV</button></div>');
   qs('#xb', m).onclick = function () {
     var b = this; b.disabled = true;
-    api('crmExport', d.admin ? { agentId: CRM_UI.agentId } : {}).then(function (r) { crmDownload(r.fileName, r.csv, 'text/csv;charset=utf-8'); m.close(); toast(r.count + ' clients exported.'); })
+    api('crmExport', d.admin ? { agentId: crmAg() } : {}).then(function (r) { crmDownload(r.fileName, r.csv, 'text/csv;charset=utf-8'); m.close(); toast(r.count + ' clients exported.'); })
       .catch(function (e) { b.disabled = false; qs('#xe', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
   };
 }
@@ -1395,7 +1397,7 @@ function lenderErr(L) {
 }
 function lendersView() {
   loading('crm');
-  api('crmBoot', isAdmin() ? { agentId: CRM_UI.agentId } : {}).then(function (d) {
+  api('crmBoot', isAdmin() ? { agentId: crmAg() } : {}).then(function (d) {
     S.crm = d;
     if (!lendOn(d)) { location.hash = '#/crm'; return; }
     var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(l) + '</option>'; };
