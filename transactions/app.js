@@ -1280,7 +1280,7 @@ function clientView(id) {
     var kv = function (l, v) { return '<div><span>' + h(l) + '</span><b>' + (v || '—') + '</b></div>'; };
     var inner = '<a class="link cback" href="#/crm">← All clients</a><div class="top"><div><div class="pills">' + crmStatusPill(c.status) + '<span class="pill p-pend">' + h(d.types[c.type] || c.type) + '</span></div><h1>' + h(cName(c)) + '</h1></div>' +
       '<div class="cact"><button class="btn" id="cEdit">Edit</button><button class="ub red" id="cDel">Delete</button></div></div>' +
-      '<div class="card gb"><div class="kv">' + kv('Phone', h(c.phone)) + kv('Email', h(c.email)) + kv('Address', h(c.address)) + kv('Source', h(c.source)) +
+      '<div class="card gb"><div class="kv">' + kv('Phone', h(c.phone)) + kv('Email', h(c.email)) + kv('Address', h(c.address)) + (S.crmBday ? kv('Birthday', h(bdayLabel(c.birthday))) : '') + kv('Source', h(c.source)) +
       kv('Tags', (c.tags || []).map(function (t) { return '<span class="ctag">' + h(t) + '</span>'; }).join('')) + kv('Groups', (c.groups || []).map(function (x) { return h(gName[x] || ''); }).filter(Boolean).join(', ')) +
       (c.ownerName !== undefined ? kv('Agent', h(c.ownerName)) : '') +
       (lendOn(d) ? kv('Lender', g.lender ? lenderLabel(g.lender.name, g.lender.company) + ([g.lender.phone, g.lender.email, g.lender.nmls ? 'NMLS #' + g.lender.nmls : ''].filter(Boolean).length ? '<small class="lco">' + h([g.lender.phone, g.lender.email, g.lender.nmls ? 'NMLS #' + g.lender.nmls : ''].filter(Boolean).join(' · ')) + '</small>' : '') : '') : '') +
@@ -1338,13 +1338,37 @@ function wirePhone(el) {
   });
 }
 
+/* 1.4.5 (feature crm_birthday): optional client birthday, stored 'MM-DD' or 'YYYY-MM-DD'. */
+var BD_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function bdayLabel(b) {
+  var m = String(b || '').match(/^(?:(\d{4})-)?(\d{2})-(\d{2})$/); if (!m) return '';
+  return BD_MONTHS[parseInt(m[2], 10) - 1] + ' ' + parseInt(m[3], 10) + (m[1] ? ', ' + m[1] : '');
+}
+function bdayFields(b) {
+  var m = String(b || '').match(/^(?:(\d{4})-)?(\d{2})-(\d{2})$/) || [], cm = m[2] ? parseInt(m[2], 10) : 0, cd = m[3] ? parseInt(m[3], 10) : 0, i, o = '';
+  o += '<div class="f w3"><label for="cfBm">Birthday <small class="cmuted">(optional, year optional)</small></label><div class="bday"><select id="cfBm" aria-label="Birthday month"><option value="">Month</option>';
+  for (i = 1; i <= 12; i++) o += '<option value="' + i + '"' + (i === cm ? ' selected' : '') + '>' + BD_MONTHS[i - 1] + '</option>';
+  o += '</select><select id="cfBd" aria-label="Birthday day"><option value="">Day</option>';
+  for (i = 1; i <= 31; i++) o += '<option value="' + i + '"' + (i === cd ? ' selected' : '') + '>' + i + '</option>';
+  o += '</select><input type="text" id="cfBy" inputmode="numeric" maxlength="4" placeholder="Year" aria-label="Birthday year" value="' + h(m[1] || '') + '"></div></div>';
+  return o;
+}
+function bdayValue(m) {
+  var mo = qs('#cfBm', m).value, d = qs('#cfBd', m).value, y = qs('#cfBy', m).value.trim(), p2 = function (n) { n = parseInt(n, 10); return (n < 10 ? '0' : '') + n; };
+  if (!mo && !d && !y) return { v: '' };
+  if (!mo || !d) return { err: 'Choose both a month and a day for the birthday (or clear it).' };
+  if (y && !/^\d{4}$/.test(y)) return { err: 'Birthday year must be 4 digits, or leave it blank.' };
+  var max = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][parseInt(mo, 10) - 1];
+  if (parseInt(d, 10) > max) return { err: 'That birthday date does not exist.' };
+  return { v: (y ? y + '-' : '') + p2(mo) + '-' + p2(d) };
+}
 function clientForm(c, d, linked, curLender) {
   var isNew = !c; c = c || { type: '', status: 'New Lead', tags: [], groups: [], txnIds: [] };
   var ownerId = c.ownerId || (d.admin ? (CRM_UI.agentId || S.user.id) : S.user.id);
   var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(l) + '</option>'; };
   var inp = function (id, l, v, type, extra) { return '<div class="f' + (extra || '') + '"><label for="' + id + '">' + l + '</label><input type="' + (type || 'text') + '" id="' + id + '" value="' + h(v || '') + '"' + (type === 'email' ? ' autocapitalize="none" spellcheck="false"' : '') + '></div>'; };
   var m = modal('<h2>' + (isNew ? 'Add client' : 'Edit client') + '</h2><div id="ce"></div><form id="cf" novalidate><div class="fgrid">' +
-    inp('cfF', 'First name', c.firstName) + inp('cfL', 'Last name', c.lastName) + '<div class="f"><label for="cfP">Phone</label><input type="tel" id="cfP" inputmode="tel" autocomplete="tel-national" placeholder="000-000-0000" maxlength="12" value="' + h(c.phone || '') + '"></div>' + inp('cfE', 'Email', c.email, 'email', ' w2') + inp('cfA', 'Address', c.address, 'text', ' w3') +
+    inp('cfF', 'First name', c.firstName) + inp('cfL', 'Last name', c.lastName) + '<div class="f"><label for="cfP">Phone</label><input type="tel" id="cfP" inputmode="tel" autocomplete="tel-national" placeholder="000-000-0000" maxlength="12" value="' + h(c.phone || '') + '"></div>' + inp('cfE', 'Email', c.email, 'email', ' w2') + inp('cfA', 'Address', c.address, 'text', ' w3') + (S.crmBday ? bdayFields(c.birthday) : '') +
     '<div class="f"><label for="cfT">Client type <span class="req">*</span></label><select id="cfT">' + opt('', 'Choose…', c.type) + Object.keys(d.types).map(function (k) { return opt(k, d.types[k], c.type); }).join('') + '</select></div>' +
     '<div class="f"><label for="cfS">Status</label><select id="cfS">' + d.statuses.map(function (s) { return opt(s, s, c.status); }).join('') + '</select></div>' +
     '<div class="f"><label for="cfSo">Source</label><input type="text" id="cfSo" list="cfSoL" maxlength="60" value="' + h(c.source || '') + '"><datalist id="cfSoL">' + d.sources.map(function (s) { return '<option value="' + h(s) + '">'; }).join('') + '</datalist></div>' +
@@ -1420,7 +1444,8 @@ function clientForm(c, d, linked, curLender) {
     var v = function (id) { return qs(id, m) ? qs(id, m).value.trim() : ''; };
     var client = { firstName: v('#cfF'), lastName: v('#cfL'), phone: v('#cfP'), email: v('#cfE'), address: v('#cfA'), type: v('#cfT'), status: v('#cfS'), source: v('#cfSo'), tags: v('#cfTg'), groups: sel.g, txnIds: sel.x };
     if (LO) client.lenderId = sel.l;   // only sent when lenders are on, so older backends never see it
-    var err = !client.firstName && !client.lastName ? 'Enter a first or last name.' : !client.type ? 'Choose a client type.' : !phoneOk(client.phone) ? PHONE_ERR : (client.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(client.email)) ? 'Email address is not valid.' : '';
+    var bdv = S.crmBday ? bdayValue(m) : null; if (bdv) client.birthday = bdv.v;
+    var err = bdv && bdv.err ? bdv.err : !client.firstName && !client.lastName ? 'Enter a first or last name.' : !client.type ? 'Choose a client type.' : !phoneOk(client.phone) ? PHONE_ERR : (client.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(client.email)) ? 'Email address is not valid.' : '';
     if (err) { qs('#ce', m).innerHTML = '<div class="err">' + h(err) + '</div>'; return; }
     if (isNew) client.note = v('#cfN');
     var b = qs('#cfB', m); b.disabled = true;
@@ -1615,7 +1640,7 @@ function route() {
 function render() {
   if (S.tcApi === undefined) {   // feature detection: TC (1.3.0+) and CRM (1.4.0+) only when the backend says it has them
     S.tcApi = false;
-    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); S.crmLender = !!(d && d.features && d.features.indexOf('crm_lender') >= 0); S.batchReview = !!(d && d.features && d.features.indexOf('batch_review') >= 0); }, function () { }).then(render);
+    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); S.crmLender = !!(d && d.features && d.features.indexOf('crm_lender') >= 0); S.crmBday = !!(d && d.features && d.features.indexOf('crm_birthday') >= 0); S.batchReview = !!(d && d.features && d.features.indexOf('batch_review') >= 0); }, function () { }).then(render);
   }
   if (!S.token) return loginView();
   if (!S.user) {

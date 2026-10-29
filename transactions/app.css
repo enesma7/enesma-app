@@ -327,3 +327,5 @@ nav.main a.crmtab.on:after{left:16px;right:16px;bottom:6px;height:2px;background
 /* 1.4.4 batch review */
 .docs button.dl.pv.on{font-weight:700;text-decoration-thickness:2px}
 .bri .seg button{padding:8px 12px}
+/* 1.4.5 client birthday: month / day / optional year on one row */
+.bday{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;max-width:420px}.bday input{min-width:0}
