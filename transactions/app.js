@@ -77,7 +77,7 @@ var TYPES = [
 var TYPE_LABEL = { listing: 'Listing', purchase: 'Purchase', lease_listing: 'Lease Listing', lease: 'Lease', referral: 'Referral' };
 var PROP_TYPES = ['Single Family', 'Condo', 'Townhome', '2-4 Units', '5+ Units', 'Manufactured / Mobile', 'Land', 'Commercial'];
 var PROPERTY = [
-  { k: 'address', l: 'Property address', r: 1, w: 2 }, { k: 'city', l: 'City', r: 1 }, { k: 'zip', l: 'ZIP', r: 1 },
+  { k: 'address', l: 'Street address', r: 1, w: 2 }, { k: 'unit', l: 'Apt / Unit # (optional)' }, { k: 'city', l: 'City', r: 1 }, { k: 'state', l: 'State', ph: 'CA' }, { k: 'zip', l: 'ZIP', r: 1 },
   { k: 'apn', l: 'APN' }, { k: 'propertyType', l: 'Property type', opts: PROP_TYPES }, { k: 'yearBuilt', l: 'Year built', t: 'number' }, { k: 'mlsNumber', l: 'MLS #' }
 ];
 var F = {
@@ -392,7 +392,7 @@ function statusPill(st) {
 function tileHtml(t) {
   var p = t.progress || {}, pct = p.required ? Math.round(p.approved / p.required * 100) : 0;
   var pills = statusPill(t.status) + (p.rejected ? '<span class="pill p-rej">' + p.rejected + ' Rejected</span>' : '') + (p.pending ? '<span class="pill p-pend">' + p.pending + ' Pending</span>' : '') + (t.cancelPending ? '<span class="pill p-rej">Cancel requested</span>' : '');
-  return '<a class="tile ' + (p.rejected || t.cancelPending ? 'rb' : 'gb') + '" href="#/t/' + h(t.id) + '"><div class="pills">' + pills + '</div><h3>' + h(t.title) + '</h3><p>' + h(t.typeLabel) + ' · ' + h(t.keyDate) + '</p><p>' + h(t.clients) + '</p>' +
+  return '<a class="tile ' + (p.rejected || t.cancelPending ? 'rb' : 'gb') + '" href="#/t/' + h(t.id) + '"><div class="pills">' + pills + '</div>' + addrHtml(t, 'h3', 'tline') + '<p>' + h(t.typeLabel) + ' · ' + h(t.keyDate) + '</p><p>' + h(t.clients) + '</p>' +
     ((isAdmin() && S.scope === 'company') || isTC() ? '<p>Agent: ' + h(t.agentName) + '</p>' : '') + (t.tcName && !isTC() ? '<p>TC: ' + h(t.tcName) + '</p>' : '') + '<div class="grow"></div><div class="bar"><i style="width:' + pct + '%"></i></div><p>' + (p.approved || 0) + '/' + (p.required || 0) + ' required docs approved</p></a>';
 }
 function dashView() {
@@ -474,6 +474,21 @@ function txnView(id, keep) {
   api('getTransaction', { id: id }).then(function (d) { page.keepScroll = !!keep; S.txn = d; drawTxn(); }).catch(function (e) { failView('dash', e); });
 }
 function canEdit() { var t = S.txn.txn; return isAdmin() || (t.status !== 'Closed' && t.status !== 'Cancelled'); }
+/* Two-line address: [street + unit, "City, ST ZIP"]. Uses intake fields when present, else parses the title string ("street, city[, ST] [zip]"). */
+function addrLines(t) {
+  var i = (t && t.intake) || {}, street = i.address || t.address || '', city = i.city || t.city || '', st = i.state || '', zip = i.zip || t.zip || '', unit = i.unit || '';
+  if (!street && t.title) {
+    if (/^Referral/.test(t.title)) return [t.title, ''];
+    var parts = String(t.title).split(/\s*,\s*/); street = parts.shift() || '';
+    var rest = parts.join(', '), m = rest.match(/\s*(\d{5}(?:-\d{4})?)\s*$/); if (m) { zip = zip || m[1]; rest = rest.slice(0, m.index); }
+    var sm = rest.match(/,?\s*([A-Z]{2})\s*$/); if (sm) { st = sm[1]; rest = rest.slice(0, sm.index); }
+    city = city || rest.trim();
+  }
+  if (unit) street += (/^(apt|unit|ste|suite|#)/i.test(unit) ? ' ' : ' #') + unit;
+  var l2 = city ? city + ', ' + (st || 'CA').toUpperCase() + (zip ? ' ' + zip : '') : (zip ? (st || 'CA') + ' ' + zip : '');
+  return [street, l2];
+}
+function addrHtml(t, tag, cls) { var a = addrLines(t); return '<' + tag + ' class="' + cls + '" title="' + h(a.join(', ')) + '">' + h(a[0]) + '</' + tag + '>' + (a[1] ? '<div class="addr2" title="' + h(a[1]) + '">' + h(a[1]) + '</div>' : ''); }
 function names(arr) { return (arr || []).map(function (x) { return x.name; }).join(', '); }
 function drawTxn() {
   var d = S.txn, t = d.txn, i = t.intake || {}, p = t.progress, pct = p.required ? Math.round(p.approved / p.required * 100) : 0;
@@ -506,7 +521,7 @@ function drawTxn() {
   if (t.childId) banner += '<div class="ok">Relisted as a new file: <a href="#/t/' + h(t.childId) + '">open the new listing</a>.</div>';
   if (t.parentId) banner += '<div class="ok">Relisted from a cancelled file: <a href="#/t/' + h(t.parentId) + '">open the previous file</a>.</div>';
   var docCount = d.documents.filter(function (x) { return !x.removed; }).length;
-  var inner = '<div class="top"><div><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + statusPill(t.status) + '<span class="pill p-pend">' + h(t.typeLabel) + '</span>' + (t.convertedFrom ? '<span class="pill p-miss">' + (t.convertedFrom === 'listing' ? 'Accepted Contract · from Listing' : 'Converted from ' + h(TYPE_LABEL[t.convertedFrom] || t.convertedFrom)) + '</span>' : '') + '</div><h1 class="taddr" title="' + h(t.title + (t.zip ? ' ' + t.zip : '')) + '">' + h(t.title) + (t.zip ? ' ' + h(t.zip) : '') + '</h1>' +
+  var inner = '<div class="top"><div><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + statusPill(t.status) + '<span class="pill p-pend">' + h(t.typeLabel) + '</span>' + (t.convertedFrom ? '<span class="pill p-miss">' + (t.convertedFrom === 'listing' ? 'Accepted Contract · from Listing' : 'Converted from ' + h(TYPE_LABEL[t.convertedFrom] || t.convertedFrom)) + '</span>' : '') + '</div>' + addrHtml(t, 'h1', 'taddr') + '' +
     (who.length ? '<dl class="tmeta gb">' + who.map(function (x) { return '<div><dt>' + h(x[0]) + '</dt><dd>' + h(x[1]) + '</dd></div>'; }).join('') + '</dl>' : '') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + acts + '</div></div>' + banner +
     '<div class="tabs">' + [['checklist', 'Checklist'], ['storage', 'Document Storage (' + docCount + ')'], ['details', 'Details'], ['activity', 'Notes & Activity']].map(function (x) { return '<button data-tab="' + x[0] + '" class="' + (S.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div><div id="tabc"></div>' +
     '<div class="pbar"><div class="in"><b>' + p.approved + ' of ' + p.required + ' required approved</b><div class="bar"><i style="width:' + pct + '%"></i></div><b class="gt">' + pct + '%</b></div></div>';
@@ -569,6 +584,7 @@ function drawTab() {
     c.innerHTML = '<div class="card gb dsec"><div class="kv">' + defs.map(function (f) {
       if (f.h) { var hh = (secOpen ? '</div>' : '') + '<h3 class="dh">' + h(f.h === 'Other Agent' ? oaLabel(t.type, t.side) : f.h) + '</h3><div class="kv">'; secOpen = true; return hh; }
       var v = ii[f.k];
+      if (f.k === 'state' && !v && ii.address) v = 'CA';
       if (f.oa && !v && t.side !== 'both') return '<div><span>' + h(f.l) + '</span><b class="miss">Missing · required</b></div>';
       if (f.people) v = (v || []).map(function (pp) { return [pp.name, pp.phone, pp.email].filter(Boolean).join(' · '); }).join('\n');
       else if (f.radio) v = (f.radio.filter(function (o) { return o[0] === (f.k === 'side' ? t.side : v); })[0] || [])[1];

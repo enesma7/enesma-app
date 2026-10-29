@@ -344,3 +344,9 @@ nav.main a.crmtab.on:after{left:16px;right:16px;bottom:6px;height:2px;background
 .dsec h3.dh:first-of-type{margin-top:0}
 .dsec>.kv:first-child:empty{display:none}
 .kv b.miss{color:#EF0207;font-weight:600}
+
+/* Two-line address (v26) */
+h1.taddr{margin-bottom:2px}
+.addr2{color:var(--soft);font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;margin:0 0 4px}
+.tile h3.tline{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:0}.tile .addr2{font-size:13px;margin-bottom:4px}
+@media(max-width:700px){h1.taddr{font-size:clamp(18px,6.4vw,26px)}.addr2{font-size:14px}}
