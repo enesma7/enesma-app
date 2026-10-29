@@ -477,7 +477,7 @@ function txnView(id, keep) {
 function canEdit() { var t = S.txn.txn; return isAdmin() || (t.status !== 'Closed' && t.status !== 'Cancelled'); }
 /* Two-line address: [street + unit, "City, ST ZIP"]. Uses intake fields when present, else parses the title string ("street, city[, ST] [zip]"). */
 function addrLines(t) {
-  var i = (t && t.intake) || {}, street = i.address || t.address || '', city = i.city || t.city || '', st = i.state || '', zip = i.zip || t.zip || '', unit = i.unit || '';
+  var i = (t && t.intake) || {}, street = i.address || t.address || '', city = i.city || t.city || '', st = i.state || t.state || '', zip = i.zip || t.zip || '', unit = i.unit || t.unit || '';
   if (!street && t.title) {
     if (/^Referral/.test(t.title)) return [t.title, ''];
     var parts = String(t.title).split(/\s*,\s*/); street = parts.shift() || '';
