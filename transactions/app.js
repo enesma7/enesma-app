@@ -458,12 +458,15 @@ function drawTxn() {
   var d = S.txn, t = d.txn, i = t.intake || {}, p = t.progress, pct = p.required ? Math.round(p.approved / p.required * 100) : 0;
   var sideTxt = { buyer: 'Buyer side', seller: 'Seller side', both: 'Both sides', tenant: 'Tenant side', landlord: 'Landlord side' }[t.side] || '';
   var who = [];
-  if (i.sellers && i.sellers.length) who.push('Sellers: ' + names(i.sellers));
-  if (i.buyers && i.buyers.length) who.push('Buyers: ' + names(i.buyers));
-  if (i.landlords && i.landlords.length) who.push('Landlords: ' + names(i.landlords));
-  if (i.tenants && i.tenants.length) who.push('Tenants: ' + names(i.tenants));
-  if (i.clientName) who.push('Client: ' + i.clientName);
-  if (i.escrowNumber) who.push('Escrow #' + i.escrowNumber);
+  if (sideTxt) who.push(['Side', sideTxt.replace(/ side$/, '')]);
+  if (i.sellers && i.sellers.length) who.push(['Sellers', names(i.sellers)]);
+  if (i.buyers && i.buyers.length) who.push(['Buyers', names(i.buyers)]);
+  if (i.landlords && i.landlords.length) who.push(['Landlords', names(i.landlords)]);
+  if (i.tenants && i.tenants.length) who.push(['Tenants', names(i.tenants)]);
+  if (i.clientName) who.push(['Client', i.clientName]);
+  if (i.escrowNumber) who.push(['Escrow #', i.escrowNumber]);
+  if ((isAdmin() || isTC()) && t.agentName) who.push(['Agent', t.agentName]);
+  if (t.tcName) who.push(['TC', t.tcName]);
   var open = t.status === 'Active' || t.status === 'In Escrow';
   var cr = t.cancelRequest, crPending = cr && cr.state === 'pending';
   var acts = '';
@@ -477,8 +480,8 @@ function drawTxn() {
   if (t.childId) banner += '<div class="ok">Relisted as a new file: <a href="#/t/' + h(t.childId) + '">open the new listing</a>.</div>';
   if (t.parentId) banner += '<div class="ok">Relisted from a cancelled file: <a href="#/t/' + h(t.parentId) + '">open the previous file</a>.</div>';
   var docCount = d.documents.filter(function (x) { return !x.removed; }).length;
-  var inner = '<div class="top"><div><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + statusPill(t.status) + '<span class="pill p-pend">' + h(t.typeLabel) + '</span>' + (t.convertedFrom ? '<span class="pill p-miss">' + (t.convertedFrom === 'listing' ? 'Accepted Contract · from Listing' : 'Converted from ' + h(TYPE_LABEL[t.convertedFrom] || t.convertedFrom)) + '</span>' : '') + '</div><h1>' + h(t.title) + (t.zip ? ' ' + h(t.zip) : '') + '</h1>' +
-    '<p class="sub">' + h([sideTxt].concat(who).filter(Boolean).join(' · ')) + (isAdmin() || isTC() ? ' · Agent: ' + h(t.agentName) : '') + (t.tcName ? ' · TC: ' + h(t.tcName) : '') + '</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">' + acts + '</div></div>' + banner +
+  var inner = '<div class="top"><div><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + statusPill(t.status) + '<span class="pill p-pend">' + h(t.typeLabel) + '</span>' + (t.convertedFrom ? '<span class="pill p-miss">' + (t.convertedFrom === 'listing' ? 'Accepted Contract · from Listing' : 'Converted from ' + h(TYPE_LABEL[t.convertedFrom] || t.convertedFrom)) + '</span>' : '') + '</div><h1 class="taddr" title="' + h(t.title + (t.zip ? ' ' + t.zip : '')) + '">' + h(t.title) + (t.zip ? ' ' + h(t.zip) : '') + '</h1>' +
+    (who.length ? '<dl class="tmeta gb">' + who.map(function (x) { return '<div><dt>' + h(x[0]) + '</dt><dd>' + h(x[1]) + '</dd></div>'; }).join('') + '</dl>' : '') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + acts + '</div></div>' + banner +
     '<div class="tabs">' + [['checklist', 'Checklist'], ['storage', 'Document Storage (' + docCount + ')'], ['details', 'Details'], ['activity', 'Notes & Activity']].map(function (x) { return '<button data-tab="' + x[0] + '" class="' + (S.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div><div id="tabc"></div>' +
     '<div class="pbar"><div class="in"><b>' + p.approved + ' of ' + p.required + ' required approved</b><div class="bar"><i style="width:' + pct + '%"></i></div><b class="gt">' + pct + '%</b></div></div>';
   page('dash', inner, function () {
