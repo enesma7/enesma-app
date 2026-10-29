@@ -98,10 +98,15 @@ var F = {
     { k: 'commission', l: 'Our commission', r: 1, comm: 1 }, { k: 'financing', l: 'Financing', opts: ['Conventional', 'FHA', 'VA', 'Cash', 'Other'] },
     { h: 'Buyers' }, { k: 'buyers', l: 'Buyers', people: 1, r: 1 },
     { h: 'Sellers' }, { k: 'sellers', l: 'Sellers', people: 1, r: 1 },
-    { h: 'Escrow, title & lender' },
+    { h: 'Other Agent' },
+    { k: 'otherAgentName', l: 'Agent name', r: 1, oa: 1 }, { k: 'otherAgentBrokerage', l: 'Brokerage name', r: 1, oa: 1 }, { k: 'otherAgentDre', l: 'DRE # (optional)' },
+    { k: 'otherAgentPhone', l: 'Phone (optional)', t: 'tel' }, { k: 'otherAgentEmail', l: 'Email (optional)', t: 'email' },
+    { h: 'Escrow' },
     { k: 'escrowCompany', l: 'Escrow company', r: 1 }, { k: 'escrowNumber', l: 'Escrow #' }, { k: 'escrowOfficer', l: 'Escrow officer · phone · email' },
-    { k: 'titleCompany', l: 'Title company' }, { k: 'lender', l: 'Lender' }, { k: 'loanOfficer', l: 'Loan officer · phone · email' },
-    { k: 'otherAgent', l: 'Other agent · brokerage · phone', w: 3 },
+    { h: 'Title' },
+    { k: 'titleCompany', l: 'Title company' }, { k: 'titleOfficer', l: 'Title officer · phone · email', w: 2 },
+    { h: 'Lender' },
+    { k: 'lender', l: 'Lender (company)' }, { k: 'loanOfficer', l: 'Loan officer · phone · email', w: 2 },
     { h: 'Notes' }, { k: 'notes', l: 'Notes for the office', ta: 1, w: 3 }]),
   lease_listing: [
     { h: 'Property' }].concat(PROPERTY).concat([
@@ -119,6 +124,9 @@ var F = {
     { k: 'commission', l: 'Our commission', r: 1, comm: 1 },
     { h: 'Landlords' }, { k: 'landlords', l: 'Landlords', people: 1, r: 1 },
     { h: 'Tenants' }, { k: 'tenants', l: 'Tenants', people: 1, r: 1 },
+    { h: 'Other Agent' },
+    { k: 'otherAgentName', l: 'Agent name', r: 1, oa: 1 }, { k: 'otherAgentBrokerage', l: 'Brokerage name', r: 1, oa: 1 }, { k: 'otherAgentDre', l: 'DRE # (optional)' },
+    { k: 'otherAgentPhone', l: 'Phone (optional)', t: 'tel' }, { k: 'otherAgentEmail', l: 'Email (optional)', t: 'email' },
     { h: 'Notes' }, { k: 'notes', l: 'Notes for the office', ta: 1, w: 3 }]),
   referral: [
     { h: 'Referral' },
@@ -162,7 +170,7 @@ function fieldHtml(f, v, pre, all) {
     var t = f.t === 'money' ? 'text' : (f.t || 'text');
     inner = '<input id="' + id + '" type="' + t + '"' + (f.t === 'money' ? ' inputmode="decimal" placeholder="$"' : '') + (f.ph ? ' placeholder="' + h(f.ph) + '"' : '') + ' value="' + h(v) + '"' + (f.k === 'zip' ? ' inputmode="numeric" maxlength="10"' : '') + '>';
   }
-  return '<div class="' + cls + '" data-k="' + f.k + '" data-r="' + (f.r ? 1 : '') + '"><label for="' + id + '">' + h(f.l) + req + '</label>' + inner + '</div>';
+  return '<div class="' + cls + '" data-k="' + f.k + '" data-r="' + (f.r ? 1 : '') + '"' + (f.oa ? ' data-oa="1"' : '') + '><label for="' + id + '">' + h(f.l) + req + '</label>' + inner + '</div>';
 }
 function personRow(p) {
   p = p || {};
@@ -188,6 +196,18 @@ function wireForm(root) {
     if (e.target.type === 'radio' && e.target.closest('.seg')) { var ci = qs('input[type=text]', e.target.closest('.comm')); if (ci) ci.placeholder = e.target.value === 'amount' ? 'Amount' : 'Rate'; }
   });
 }
+/* Other Agent: required unless we represent both sides. Legacy free-text 'otherAgent' (name · brokerage · phone) prefills the new keys. */
+function oaBoth(root) { var c = root.querySelector('.f[data-k="side"] input:checked'); var sd = c ? c.value : (root.getAttribute('data-side') || ''); return sd === 'both'; }
+function oaLabel(type, side) { if (type === 'purchase') return side === 'buyer' ? 'Listing Agent' : side === 'seller' ? "Buyer's Agent" : 'Other Agent'; if (type === 'lease') return side === 'tenant' ? 'Listing Agent' : side === 'landlord' ? "Tenant's Agent" : 'Other Agent'; return 'Other Agent'; }
+function oaLegacy(ii) {
+  var o = {}; Object.keys(ii || {}).forEach(function (k) { o[k] = ii[k]; });
+  if (o.otherAgent && !o.otherAgentName && !o.otherAgentBrokerage) {
+    var parts = String(o.otherAgent).split(/\s*[·,|\/]\s*|\s+-\s+/).filter(Boolean);
+    o.otherAgentName = parts[0] || ''; o.otherAgentBrokerage = parts[1] || '';
+    parts.slice(2).forEach(function (x) { if (/@/.test(x)) o.otherAgentEmail = o.otherAgentEmail || x; else if (/\d{3}/.test(x)) o.otherAgentPhone = o.otherAgentPhone || x; });
+  }
+  return o;
+}
 function readForm(root) {
   var out = {}, missing = [];
   qsa('.f[data-k]', root).forEach(function (el) {
@@ -202,6 +222,7 @@ function readForm(root) {
     else { var inp = qs('input,select,textarea', el); v = inp ? inp.value.trim() : ''; }
     out[k] = v;
     var bad = el.getAttribute('data-r') && (Array.isArray(v) ? !v.length : !v);
+    if (bad && el.getAttribute('data-oa') && oaBoth(root)) bad = false;
     el.classList.toggle('bad', !!bad); if (bad) missing.push(qs('label', el).textContent.replace(/\s*\*.*$/, '').replace(/ · name.*$/, ''));
   });
   if (out.listingDate && out.expirationDate && out.expirationDate <= out.listingDate) missing.push('Expiration must be after the listing contract date');
@@ -467,6 +488,8 @@ function drawTxn() {
   if (i.landlords && i.landlords.length) who.push(['Landlords', names(i.landlords)]);
   if (i.tenants && i.tenants.length) who.push(['Tenants', names(i.tenants)]);
   if (i.clientName) who.push(['Client', i.clientName]);
+  var oa = oaLegacy(i);
+  if (oa.otherAgentName || oa.otherAgentBrokerage) who.push([oaLabel(t.type, t.side), [oa.otherAgentName, oa.otherAgentBrokerage].filter(Boolean).join(' · ')]);
   if (i.escrowNumber) who.push(['Escrow #', i.escrowNumber]);
   if ((isAdmin() || isTC()) && t.agentName) who.push(['Agent', t.agentName]);
   if (t.tcName) who.push(['TC', t.tcName]);
@@ -542,20 +565,23 @@ function drawTab() {
     qsa('.rm', c).forEach(function (b) { b.onclick = function () { promptModal('Remove document (admin)', 'The file leaves the checklist but stays in the Drive archive, flagged for Enrique. Nothing is deleted. Give a reason.', 'Remove', function (txt) { return api('removeDocument', { docId: b.getAttribute('data-doc'), reason: txt }); }); }; });
     qsa('.rst', c).forEach(function (b) { b.onclick = function () { api('restoreDocument', { docId: b.getAttribute('data-doc') }).then(function () { toast('Restored.'); refresh(); }).catch(function (e) { toast(e.message, 1); }); }; });
   } else if (S.tab === 'details') {
-    var ii = t.intake || {}, defs = F[t.type].filter(function (f) { return !f.h; });
-    c.innerHTML = '<div class="card gb"><div class="kv">' + defs.map(function (f) {
+    var ii = oaLegacy(t.intake), defs = F[t.type], secOpen = false, secTitle = '';
+    c.innerHTML = '<div class="card gb dsec"><div class="kv">' + defs.map(function (f) {
+      if (f.h) { var hh = (secOpen ? '</div>' : '') + '<h3 class="dh">' + h(f.h === 'Other Agent' ? oaLabel(t.type, t.side) : f.h) + '</h3><div class="kv">'; secOpen = true; return hh; }
       var v = ii[f.k];
+      if (f.oa && !v && t.side !== 'both') return '<div><span>' + h(f.l) + '</span><b class="miss">Missing · required</b></div>';
       if (f.people) v = (v || []).map(function (pp) { return [pp.name, pp.phone, pp.email].filter(Boolean).join(' · '); }).join('\n');
       else if (f.radio) v = (f.radio.filter(function (o) { return o[0] === (f.k === 'side' ? t.side : v); })[0] || [])[1];
       else if (f.t === 'date') v = fmtDate(v); else if (f.t === 'money' && v) v = money(v); else if (f.comm) v = fmtComm(v, ii[f.k + 'Type']);
       return '<div' + (f.w === 3 || f.people ? ' style="grid-column:1/-1"' : '') + '><span>' + h(f.l) + '</span><b style="white-space:pre-line">' + (v ? h(v) : '—') + '</b></div>';
-    }).join('') + (ii.finalPrice ? '<div><span>Final sales price</span><b>' + money(ii.finalPrice) + '</b></div>' : '') + (t.closedAt ? '<div><span>Closed</span><b>' + fmtDate(t.closedAt) + '</b></div>' : '') +
+    }).join('') + (secOpen ? '</div><h3 class="dh">File</h3><div class="kv">' : '') + (ii.otherAgent && t.intake && t.intake.otherAgent ? '<div style="grid-column:1/-1"><span>Other agent (original entry)</span><b>' + h(t.intake.otherAgent) + '</b></div>' : '') + (ii.finalPrice ? '<div><span>Final sales price</span><b>' + money(ii.finalPrice) + '</b></div>' : '') + (t.closedAt ? '<div><span>Closed</span><b>' + fmtDate(t.closedAt) + '</b></div>' : '') +
       (t.retentionUntil ? '<div><span>Keep records until</span><b>' + fmtDate(t.retentionUntil) + '</b></div>' : '') + (S.tcApi ? '<div><span>Transaction coordinator</span><b>' + (t.tcName ? h(t.tcName) : 'None') + '</b></div>' : '') + '<div><span>File ID</span><b>' + h(t.id) + '</b></div></div>' +
       (canEdit() ? '<div class="actions">' + (S.tcApi && t.canAssignTc ? '<button class="ub" id="editTc">' + (t.tcName ? 'Change TC' : 'Add TC') + '</button>' : '') + '<button class="ub" id="editI">Edit intake</button></div>' : '') + '</div>';
     if (qs('#editTc')) qs('#editTc').onclick = tcModal;
     if (qs('#editI')) qs('#editI').onclick = function () {
       c.innerHTML = '<form id="ef" novalidate><div id="ee"></div>' + formHtml(t.type, ii, 'e', { side: 1 }) + '<div class="actions"><button type="button" class="ub" id="ecan">Cancel</button><button class="btn">Save intake</button></div></form>';
-      var f = qs('#ef'); wireForm(f); qs('#ecan').onclick = drawTab;
+      var f = qs('#ef'); f.setAttribute('data-side', t.side || ''); wireForm(f); qs('#ecan').onclick = drawTab;
+      qsa('.f[data-oa]', f).forEach(function (el) { var x = qs('input', el); if (!x.value && t.side !== 'both') el.classList.add('bad'); });
       f.onsubmit = function (e) { e.preventDefault(); var r = readForm(f); if (r.missing.length) { qs('#ee').innerHTML = '<div class="err">Please complete: ' + h(r.missing.join(', ')) + '</div>'; return; }
         api('updateIntake', { id: t.id, intake: r.intake }).then(function () { toast('Saved.'); refresh(); }).catch(function (err) { qs('#ee').innerHTML = '<div class="err">' + h(err.message) + '</div>'; }); };
     };

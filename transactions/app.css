@@ -338,3 +338,9 @@ nav.main a.crmtab.on:after{left:16px;right:16px;bottom:6px;height:2px;background
 .bri .seg button{padding:8px 12px}
 /* 1.4.5 client birthday: month / day / optional year on one row */
 .bday{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;max-width:420px}.bday input{min-width:0}
+
+/* Details tab sections (v25) */
+.dsec h3.dh{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--k);margin:22px 0 12px;padding-bottom:8px;background:var(--gold) left bottom/100% 2px no-repeat}
+.dsec h3.dh:first-of-type{margin-top:0}
+.dsec>.kv:first-child:empty{display:none}
+.kv b.miss{color:#EF0207;font-weight:600}
