@@ -459,6 +459,9 @@ function drawTxn() {
   var sideTxt = { buyer: 'Buyer side', seller: 'Seller side', both: 'Both sides', tenant: 'Tenant side', landlord: 'Landlord side' }[t.side] || '';
   var who = [];
   if (sideTxt) who.push(['Side', sideTxt.replace(/ side$/, '')]);
+  var pv = function (v) { return Number(String(v == null ? '' : v).replace(/[$,\s]/g, '')) > 0; };
+  if (pv(i.monthlyRent)) who.push(['Rent', money(i.monthlyRent) + '/mo']);
+  else if (pv(i.purchasePrice) || pv(i.salePrice) || pv(i.price) || pv(i.listPrice)) who.push(['Price', money([i.purchasePrice, i.salePrice, i.price, i.listPrice].filter(pv)[0])]);
   if (i.sellers && i.sellers.length) who.push(['Sellers', names(i.sellers)]);
   if (i.buyers && i.buyers.length) who.push(['Buyers', names(i.buyers)]);
   if (i.landlords && i.landlords.length) who.push(['Landlords', names(i.landlords)]);
