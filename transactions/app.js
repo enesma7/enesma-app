@@ -543,7 +543,7 @@ function drawTab() {
     var html = '', lastPhase = null, groups = 0;
     d.items.filter(function (it) { return it.active; }).forEach(function (it) {
       var ph = phaseLabel(it.phase);
-      if (ph !== lastPhase) { if (groups++) html += '</div>'; html += '<div class="gb" style="padding:4px 0;margin-bottom:16px"><div class="phase">' + h(ph) + ' Checklist</div>'; lastPhase = ph; }
+      if (ph !== lastPhase) { if (groups++) html += '</div><div class="phsep" role="separator" aria-hidden="true"></div>'; html += '<div class="gb" style="padding:4px 0;margin-bottom:16px"><div class="phase">' + h(ph) + ' Checklist</div>'; lastPhase = ph; }
       var docs = docsOf(it.id), notes = d.notes.filter(function (n) { return n.itemId === it.id && n.kind !== 'rejection'; }).slice(-3);
       html += '<div class="row" id="it_' + h(it.id) + '"><div class="n"><b>' + h(it.title) + (it.req ? '<span class="req-dot" title="Required"></span>' : '') + '</b><small>' + h(it.forms) + '</small>' +
         (it.status === 'Rejected' && it.reviewNote ? '<div class="note rt">Admin note: ' + h(it.reviewNote) + '</div>' : '') +
