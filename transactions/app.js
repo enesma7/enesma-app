@@ -467,7 +467,8 @@ function newView(type) {
 
 /* ---------------- transaction view ---------------- */
 function itemPill(s) { return '<span class="pill ' + ({ Approved: 'p-ok', Rejected: 'p-rej', Pending: 'p-pend', Missing: 'p-miss' }[s] || 'p-miss') + '">' + ({ Pending: 'Uploaded – Pending Review' }[s] || h(s)) + '</span>'; }
-var PHASE_LABEL = { listing: 'Listing', purchase: 'Purchase', lease_listing: 'Lease Listing', lease: 'Lease', referral: 'Referral' };
+var PHASE_LABEL = { listing: 'Listing', purchase: 'Purchase', purchase_buyer: 'Purchase', purchase_seller: 'Purchase', lease_listing: 'Lease Listing', lease: 'Lease', lease_landlord: 'Lease', lease_tenant: 'Lease', referral: 'Referral' };
+function phaseLabel(p) { p = String(p || ''); return PHASE_LABEL[p] || p.replace(/_(buyer|seller|landlord|tenant|both)$/, '').split('_').map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join(' '); }
 function txnView(id, keep) {
   if (!keep) S.tab = 'checklist';
   if (!S.txn || S.txn.txn.id !== id) loading('dash');
@@ -541,8 +542,8 @@ function drawTab() {
   if (S.tab === 'checklist') {
     var html = '', lastPhase = null, groups = 0;
     d.items.filter(function (it) { return it.active; }).forEach(function (it) {
-      var ph = PHASE_LABEL[it.phase] || it.phase;
-      if (ph !== lastPhase) { if (groups++) html += '</div>'; html += '<div class="gb" style="padding:4px 0;margin-bottom:16px"><div class="phase">' + h(ph) + ' checklist</div>'; lastPhase = ph; }
+      var ph = phaseLabel(it.phase);
+      if (ph !== lastPhase) { if (groups++) html += '</div>'; html += '<div class="gb" style="padding:4px 0;margin-bottom:16px"><div class="phase">' + h(ph) + ' Checklist</div>'; lastPhase = ph; }
       var docs = docsOf(it.id), notes = d.notes.filter(function (n) { return n.itemId === it.id && n.kind !== 'rejection'; }).slice(-3);
       html += '<div class="row" id="it_' + h(it.id) + '"><div class="n"><b>' + h(it.title) + (it.req ? '<span class="req-dot" title="Required"></span>' : '') + '</b><small>' + h(it.forms) + '</small>' +
         (it.status === 'Rejected' && it.reviewNote ? '<div class="note rt">Admin note: ' + h(it.reviewNote) + '</div>' : '') +
