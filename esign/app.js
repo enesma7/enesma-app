@@ -43,6 +43,8 @@
   };
   var FT = { signature: ['Signature', I.sig], initials: ['Initials', I.ini], date: ['Date signed', I.date], name: ['Name', I.name], email: ['Email', I.mail], company: ['Company', I.org], title: ['Title', I.badge], text: ['Text', I.text], checkbox: ['Checkbox', I.check] };
   var INPUT_T = { text: 1, company: 1, title: 1 };
+  var REQ_DEF = { signature: 1, initials: 1, date: 1, name: 1, email: 1, company: 1, title: 1, text: 1 };
+  function isReq(f) { return f.required === undefined || f.required === null ? !!REQ_DEF[f.type] : !!f.required; }
   var STATUS = { sent: 'Out for signature', viewed: 'Viewed', finalizing: 'Finishing up', completed: 'Completed', declined: 'Declined', voided: 'Voided', created: 'Waiting turn', waiting: 'Waiting turn', signed: 'Signed' };
   function badge(st) { return h('span', { class: 'badge ' + st }, STATUS[st] || st); }
   function toast(msg) { $toast.textContent = msg; $toast.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(function () { $toast.classList.add('hidden'); }, 3800); }
@@ -344,7 +346,7 @@
   var fseq = 1;
   /** Drag-and-drop field placement over a rendered PDF. who = [{key,label}] (signers or roles). */
   function Editor(opts) {
-    var E = { fields: (opts.fields || []).map(function (f) { return Object.assign({ _id: 'f' + (fseq++) }, f); }), who: opts.who, cur: opts.who[0] && opts.who[0].key, sel: null, pages: [] };
+    var E = { fields: (opts.fields || []).map(function (f) { var o = Object.assign({ _id: 'f' + (fseq++) }, f); o.required = isReq(o); return o; }), who: opts.who, cur: opts.who[0] && opts.who[0].key, sel: null, pages: [] };
     var docEl = h('div', { class: 'ed-doc' }), pagesEl = h('div', { class: 'pages' }), whoEl = h('div', { class: 'who-list' }), selEl = h('div'), palEl = h('div', { class: 'palette' });
     docEl.appendChild(pagesEl);
     function colorOf(key) { var i = E.who.map(function (w) { return w.key; }).indexOf(key); return 'c' + ((i < 0 ? 0 : i) % 5); }
@@ -365,8 +367,16 @@
     function sizeFor(type, pi) { var pt = DEF_PT[type], p = E.pages[pi]; return { w: pt[0] / p.w, h: pt[1] / p.h }; }
     function addField(type, pi, cx, cy) {
       if (!E.cur) return toast('Add a signer first.');
-      var s = sizeFor(type, pi), f = { _id: 'f' + (fseq++), type: type, recipient: E.cur, page: pi + 1, w: s.w, h: s.h, x: clamp(cx - s.w / 2, 0, 1 - s.w), y: clamp(cy - s.h / 2, 0, 1 - s.h), required: type !== 'checkbox', label: '' };
-      E.fields.push(f); place(f); select(f); drawWho(); changed();
+      var s = sizeFor(type, pi), f = { _id: 'f' + (fseq++), type: type, recipient: E.cur, page: pi + 1, w: s.w, h: s.h, x: clamp(cx - s.w / 2, 0, 1 - s.w), y: clamp(cy - s.h / 2, 0, 1 - s.h), required: !!REQ_DEF[type], label: '' };
+      E.fields.push(f); place(f);
+      if (type === 'signature') {   // auto-place a matching "Date signed" (independent once created)
+        var p = E.pages[pi], ds = sizeFor('date', pi), gap = 8 / p.w, d = { _id: 'f' + (fseq++), type: 'date', recipient: E.cur, page: pi + 1, w: ds.w, h: ds.h, required: true, label: '' };
+        if (f.x + f.w + gap + ds.w <= 1) { d.x = f.x + f.w + gap; d.y = clamp(f.y + f.h - ds.h, 0, 1 - ds.h); }
+        else if (f.y + f.h + 4 / p.h + ds.h <= 1) { d.x = f.x; d.y = f.y + f.h + 4 / p.h; }
+        else { d.x = f.x; d.y = clamp(f.y - 4 / p.h - ds.h, 0, 1 - ds.h); }
+        E.fields.push(d); place(d);
+      }
+      select(f); drawWho(); changed();
     }
     function addAtVisible(type) {
       var vis = 0, best = -1, dr = docEl.getBoundingClientRect();
@@ -402,7 +412,8 @@
       }
       if (f._el.parentNode !== p.el) p.el.appendChild(f._el);
       f._el.className = 'fld ' + colorOf(f.recipient) + (E.sel === f ? ' sel' : '');
-      f._el.querySelector('.lbl').textContent = label(f);
+      f._el.querySelector('.lbl').textContent = label(f) + (isReq(f) ? '' : ' (optional)');
+      f._el.classList.toggle('optional', !isReq(f));
       Object.assign(f._el.style, { left: f.x * 100 + '%', top: f.y * 100 + '%', width: f.w * 100 + '%', height: f.h * 100 + '%' });
     }
     function startMove(e, f, resize) {
@@ -428,7 +439,8 @@
       var who = h('select', { onchange: function () { f.recipient = who.value; place(f); drawWho(); changed(); } }, E.who.map(function (w, i) { return h('option', { value: w.key, selected: w.key === f.recipient }, (i + 1) + '. ' + w.label); }));
       var box = h('div', { class: 'selbox' }, h('b', null, FT[f.type][0] + ' field'), h('div', { class: 'f' }, h('label', null, 'Filled by'), who));
       if (f.type === 'text') { var lb = h('input', { type: 'text', value: f.label || '', maxlength: 60, placeholder: 'e.g. Phone number', oninput: function () { f.label = lb.value; place(f); changed(); } }); box.appendChild(h('div', { class: 'f' }, h('label', null, 'Label shown to signer'), lb)); }
-      if (INPUT_T[f.type] || f.type === 'checkbox') box.appendChild(h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!f.required, onchange: function (e) { f.required = e.target.checked; changed(); } }), 'Required'));
+      box.appendChild(h('div', { class: 'f' }, h('label', null, 'Signer must complete'), h('div', { class: 'seg reqseg' }, [[true, 'Required'], [false, 'Optional']].map(function (o) {
+        return h('button', { type: 'button', class: isReq(f) === o[0] ? 'on' : '', 'aria-pressed': String(isReq(f) === o[0]), 'data-req': String(o[0]), onclick: function (e) { f.required = o[0]; Array.prototype.forEach.call(e.currentTarget.parentNode.children, function (b) { var on = b === e.currentTarget; b.className = on ? 'on' : ''; b.setAttribute('aria-pressed', String(on)); }); place(f); changed(); } }, o[1]); }))));
       box.appendChild(h('button', { class: 'link danger', type: 'button', onclick: function () { remove(f); } }, 'Remove field'));
       selEl.appendChild(box);
     }
@@ -453,7 +465,7 @@
       E.fields.filter(function (f) { return keys.indexOf(f.recipient) < 0; }).forEach(function (f) { if (f._el) f._el.remove(); });
       E.fields = E.fields.filter(function (f) { return keys.indexOf(f.recipient) >= 0; }); E.fields.forEach(place); drawWho();
     };
-    E.out = function () { return E.fields.map(function (f) { return { type: f.type, recipient: f.recipient, page: f.page, x: +f.x.toFixed(4), y: +f.y.toFixed(4), w: +f.w.toFixed(4), h: +f.h.toFixed(4), required: f.required, label: f.label || '' }; }); };
+    E.out = function () { return E.fields.map(function (f) { return { type: f.type, recipient: f.recipient, page: f.page, x: +f.x.toFixed(4), y: +f.y.toFixed(4), w: +f.w.toFixed(4), h: +f.h.toFixed(4), required: isReq(f), label: f.label || '' }; }); };
     E.missing = function () { return E.who.filter(function (w) { return !E.fields.some(function (f) { return f.recipient === w.key && (f.type === 'signature' || f.type === 'initials'); }); }); };
     E.panel = h('div', { class: 'ed-panel' }, opts.top || null, h('div', null, h('h3', null, opts.whoTitle || 'Signers'), whoEl, h('p', { class: 'hint', style: { margin: '6px 0 0' } }, 'Pick who fills the next field you add.')), h('div', null, h('h3', null, 'Fields'), palEl), h('div', { class: 'grp-hide' }, selEl), opts.foot || null);
     E.el = h('div', { class: 'ed' }, E.panel, docEl);
@@ -604,7 +616,7 @@
         msg, h('div', { class: 'actions' }, h('button', { class: 'btn plain', type: 'button', onclick: function () { W.step = 2; draw(); } }, 'Back'), h('span', { class: 'sp' }), btn)]);
       async function submit() {
         clear(msg); busy(btn, true, T ? 'Saving…' : 'Sending…');
-        var fields = W.fields.map(function (f) { return { type: f.type, recipient: f.recipient, page: f.page, x: +f.x.toFixed(4), y: +f.y.toFixed(4), w: +f.w.toFixed(4), h: +f.h.toFixed(4), required: f.required, label: f.label || '' }; });
+        var fields = W.fields.map(function (f) { return { type: f.type, recipient: f.recipient, page: f.page, x: +f.x.toFixed(4), y: +f.y.toFixed(4), w: +f.w.toFixed(4), h: +f.h.toFixed(4), required: isReq(f), label: f.label || '' }; });
         try {
           if (T) {
             var p = { id: W.id || undefined, name: W.name, description: W.description, category: W.category, shared: W.shared, orderMode: W.orderMode, subject: W.subject, message: W.message, pages: W.pages, fields: fields,
@@ -713,7 +725,7 @@
           var m = await mergePdfs(bytes), fields = [];
           full.forEach(function (t, ti) {
             var keyOf = {}; t.roles.forEach(function (r) { keyOf[r.key] = who[r.label.trim().toLowerCase()].key; });
-            t.fields.forEach(function (f) { fields.push({ type: f.type, recipient: keyOf[f.recipient], page: f.page + m.offsets[ti], x: f.x, y: f.y, w: f.w, h: f.h, required: f.required, label: f.label || '' }); });
+            t.fields.forEach(function (f) { fields.push({ type: f.type, recipient: keyOf[f.recipient], page: f.page + m.offsets[ti], x: f.x, y: f.y, w: f.w, h: f.h, required: isReq(f), label: f.label || '' }); });
           });
           var seq = full.some(function (t) { return t.orderMode === 'sequential'; });
           busy(btn, true, 'Sending…');
@@ -788,7 +800,7 @@
       $app.appendChild(h('div', { class: 'consent card' }, h('img', { src: 'assets/esign-logo-light.svg', alt: 'ENESMA E-Sign', style: { width: '180px', display: 'block', marginBottom: '16px' } }),
         h('h1', { style: { fontSize: '22px' } }, X.envelope.name), h('p', { class: 'sub' }, X.envelope.sender + ' (' + X.envelope.senderEmail + ') sent you documents to review and sign.'),
         X.envelope.message ? h('div', { class: 'ok', style: { whiteSpace: 'pre-wrap' } }, X.envelope.message) : null,
-        h('p', { class: 'hint' }, 'Signing as ', h('b', null, X.signer.name + ' · ' + X.signer.email), '. ' + X.fields.length + ' field' + (X.fields.length === 1 ? '' : 's') + ' to complete.'),
+        h('p', { class: 'hint' }, 'Signing as ', h('b', null, X.signer.name + ' · ' + X.signer.email), '. ' + X.fields.filter(isReq).length + ' required field' + (X.fields.filter(isReq).length === 1 ? '' : 's') + ' to complete.'),
         h('label', { class: 'check', for: 'cons', style: { margin: '16px 0' } }, cb, h('span', null, 'I agree to use electronic records and signatures for these documents, and that my electronic signature is the legal equivalent of my handwritten signature (ESIGN Act / UETA). I can download a copy, and I may ask the sender for a paper copy.')),
         go2, h('p', { style: { textAlign: 'center', marginTop: '14px' } }, h('button', { class: 'link', type: 'button', onclick: decline }, 'Decline to sign'))));
     }
@@ -805,26 +817,34 @@
         h('div', { class: 'sdoc' }, pagesEl), h('div', { class: 'sfoot' }, prog, nextB, fin)]);
       var els = [];
       renderPdf(bytesFromB64(X.pdf), pagesEl).then(function (pages) {
-        X.fields.forEach(function (f) { var p = pages[f.page - 1]; if (!p) return; var el = h('div', { class: 'sfld', style: { left: f.x * 100 + '%', top: f.y * 100 + '%', width: f.w * 100 + '%', height: f.h * 100 + '%' } }); el._f = f; p.el.appendChild(el); els.push(el); paint(el); });
+        X.fields.forEach(function (f) { var p = pages[f.page - 1]; if (!p) return; var el = h('div', { class: 'sfld', onclick: function (e) { tapField(el, e); }, style: { left: f.x * 100 + '%', top: f.y * 100 + '%', width: f.w * 100 + '%', height: f.h * 100 + '%' } }); el._f = f; p.el.appendChild(el); els.push(el); paint(el); });
         update();
       }).catch(function (e) { pagesEl.appendChild(errBox('Could not open the document: ' + e.message)); });
-      function need(f) { return f.type === 'signature' || f.type === 'initials' || ((INPUT_T[f.type] || f.type === 'checkbox') && f.required); }
-      function filled(f) { if (f.type === 'signature' || f.type === 'initials') return !!adopted[f.type]; if (f.type === 'date' || f.type === 'name' || f.type === 'email') return true; if (f.type === 'checkbox') return !!vals[f.id]; return !!String(vals[f.id] || '').trim(); }
+      function need(f) { return isReq(f); }
+      function filled(f) { if (f.type === 'signature' || f.type === 'initials') return !!adopted[f.type] && (need(f) || !!vals[f.id]); if (f.type === 'date' || f.type === 'name' || f.type === 'email') return true; if (f.type === 'checkbox') return !!vals[f.id]; return !!String(vals[f.id] || '').trim(); }
       function paint(el) {
         var f = el._f; clear(el); el.className = 'sfld ' + (filled(f) ? 'done' : need(f) ? 'need' : 'opt');
+        if (!need(f) && !filled(f)) el.appendChild(h('span', { class: 'optl' }, 'Optional'));
         if (f.type === 'signature' || f.type === 'initials') {
-          el.appendChild(h('button', { class: 'sg', type: 'button', 'aria-label': FT[f.type][0], onclick: function () { adopt(f.type); } }, adopted[f.type] ? h('img', { src: adopted[f.type], alt: FT[f.type][0] }) : (f.type === 'signature' ? 'Sign here' : 'Initial')));
+          el.appendChild(h('button', { class: 'sg', type: 'button', 'aria-label': FT[f.type][0] + (need(f) ? '' : ' (optional)') }, filled(f) ? h('img', { src: adopted[f.type], alt: FT[f.type][0] }) : (f.type === 'signature' ? 'Sign here' : 'Initial')));
         } else if (f.type === 'date') el.appendChild(h('span', { class: 'auto' }, today));
         else if (f.type === 'name') el.appendChild(h('span', { class: 'auto' }, X.signer.name));
         else if (f.type === 'email') el.appendChild(h('span', { class: 'auto' }, X.signer.email));
-        else if (f.type === 'checkbox') el.appendChild(h('input', { type: 'checkbox', 'aria-label': f.label || 'Checkbox', checked: !!vals[f.id], onchange: function (e) { vals[f.id] = e.target.checked; el.className = 'sfld ' + (filled(f) ? 'done' : need(f) ? 'need' : 'opt'); update(); } }));
+        else if (f.type === 'checkbox') el.appendChild(h('input', { type: 'checkbox', 'aria-label': f.label || 'Checkbox', checked: !!vals[f.id], onclick: function (e) { e.stopPropagation(); }, onchange: function (e) { vals[f.id] = e.target.checked; el.className = 'sfld ' + (filled(f) ? 'done' : need(f) ? 'need' : 'opt'); update(); } }));
         else { var inp = h('input', { type: 'text', maxlength: 300, value: vals[f.id] || '', placeholder: f.label || (f.type !== 'text' ? FT[f.type][0] : f.required ? 'Required' : 'Optional'), 'aria-label': f.label || FT[f.type][0], oninput: function () { vals[f.id] = inp.value; el.className = 'sfld ' + (filled(f) ? 'done' : need(f) ? 'need' : 'opt'); update(); } }); el.appendChild(inp); }
       }
       function todo() { return els.filter(function (el) { return need(el._f) && !filled(el._f); }); }
       function update() { var t = todo(), n = els.filter(function (el) { return need(el._f); }).length; prog.textContent = t.length ? (n - t.length) + ' of ' + n + ' required fields done' : 'All set — tap Finish to sign.'; nextB.classList.toggle('hidden', !t.length); fin.disabled = !!t.length; }
       function nextField() { var t = todo()[0]; if (!t) return; els.forEach(function (e) { e.classList.remove('cur'); }); t.classList.add('cur'); t.scrollIntoView({ behavior: 'smooth', block: 'center' }); var i = t.querySelector('input,button'); if (i) setTimeout(function () { i.focus({ preventScroll: true }); }, 350); }
-      function adopt(kind) {
-        signaturePad(kind, X.signer.name, function (png) { adopted[kind] = png; els.forEach(function (el) { if (el._f.type === kind) paint(el); }); update(); });
+      // Mouse / tap anywhere on a field acts on it (not only keyboard).
+      function tapField(el, e) {
+        var f = el._f; els.forEach(function (x) { x.classList.remove('cur'); });
+        if (f.type === 'signature' || f.type === 'initials') { e.preventDefault(); if (adopted[f.type] && !need(f) && !vals[f.id]) { vals[f.id] = '1'; paint(el); update(); } else adopt(f.type, f); }
+        else if (f.type === 'checkbox') { if (e.target.tagName === 'INPUT') return; vals[f.id] = !vals[f.id]; paint(el); update(); }
+        else { var i = el.querySelector('input'); if (i && e.target !== i) i.focus(); }
+      }
+      function adopt(kind, f0) {
+        signaturePad(kind, X.signer.name, function (png) { adopted[kind] = png; if (f0 && !need(f0)) vals[f0.id] = '1'; els.forEach(function (el) { if (el._f.type === kind) paint(el); }); update(); });
       }
       function finish() {
         if (todo().length) return nextField();

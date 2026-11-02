@@ -245,3 +245,8 @@ body.signing .ah-back{display:none}
 .card.connect h1 { margin: 6px 0 8px; }
 .connect-list { margin: 12px 0 18px 18px; padding: 0; line-height: 1.6; }
 .mailerr a { color: inherit; text-decoration: underline; }
+.fld.optional{border-style:dashed}
+.reqseg button{flex:1}
+.sfld{cursor:pointer}
+.sfld .optl{position:absolute;top:-14px;left:0;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#555;pointer-events:none;white-space:nowrap}
+.sfld.opt .sg{opacity:.7}
