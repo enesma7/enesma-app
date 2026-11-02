@@ -3,7 +3,7 @@
   'use strict';
   var CFG = window.ES_CONFIG || {}, API = String(CFG.API_URL || '').trim();
   var $app = document.getElementById('app'), $modal = document.getElementById('modal'), $toast = document.getElementById('toast');
-  var S = { token: '', user: null, testMode: false, dirty: false, route: '' };
+  var S = { token: '', user: null, testMode: false, dirty: false, route: '', gmail: null };
   try { S.token = localStorage.getItem('es_token') || ''; S.user = JSON.parse(localStorage.getItem('es_user') || 'null'); } catch (e) { }
   if (window.pdfjsLib) { pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js'; }
 
@@ -36,10 +36,14 @@
     x: '<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
     arrowUp: '<path d="M12 19V5m0 0l-6 6m6-6l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
     arrowDn: '<path d="M12 5v14m0 0l-6-6m6 6l6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    mail: '<rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 7l9 6 9-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+    org: '<path d="M4 21V5h10v16M14 9h6v12M7 9h3M7 13h3M7 17h3M2 21h20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    badge: '<rect x="4" y="3" width="16" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 15h8M8 18h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/>',
     tick: '<path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#000007" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'
   };
-  var FT = { signature: ['Signature', I.sig], initials: ['Initials', I.ini], date: ['Date signed', I.date], name: ['Name', I.name], text: ['Text', I.text], checkbox: ['Checkbox', I.check] };
-  var STATUS = { sent: 'Out for signature', viewed: 'Viewed', finalizing: 'Finishing up', completed: 'Completed', declined: 'Declined', voided: 'Voided', created: 'Waiting', signed: 'Signed' };
+  var FT = { signature: ['Signature', I.sig], initials: ['Initials', I.ini], date: ['Date signed', I.date], name: ['Name', I.name], email: ['Email', I.mail], company: ['Company', I.org], title: ['Title', I.badge], text: ['Text', I.text], checkbox: ['Checkbox', I.check] };
+  var INPUT_T = { text: 1, company: 1, title: 1 };
+  var STATUS = { sent: 'Out for signature', viewed: 'Viewed', finalizing: 'Finishing up', completed: 'Completed', declined: 'Declined', voided: 'Voided', created: 'Waiting turn', waiting: 'Waiting turn', signed: 'Signed' };
   function badge(st) { return h('span', { class: 'badge ' + st }, STATUS[st] || st); }
   function toast(msg) { $toast.textContent = msg; $toast.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(function () { $toast.classList.add('hidden'); }, 3800); }
   function errBox(msg) { return h('div', { class: 'err', role: 'alert' }, msg); }
@@ -83,6 +87,7 @@
         var j; try { j = JSON.parse(t); } catch (e) { throw Object.assign(new Error('E-Sign returned an unexpected response. Please try again.'), { code: 'BAD' }); }
         if (!j.ok) {
           var err = Object.assign(new Error(j.error || 'Something went wrong.'), { code: j.code });
+          if (j.code === 'GMAIL' && action !== 'gmailConnect') { S.gmail = null; }
           if (j.code === 'AUTH' && action !== 'login' && !/^sign/.test(action)) { setSession(null); S.afterLogin = location.hash; go('#/login'); }
           throw err;
         }
@@ -145,6 +150,7 @@
   $user.addEventListener('click', function (e) {
     e.stopPropagation(); var old = document.querySelector('.menu'); if (old) return old.remove();
     var m = h('div', { class: 'menu' }, h('div', { class: 'me' }, h('b', null, S.user.name), S.user.email, h('div', null, h('span', { class: 'pill' + (isAdmin() ? ' dark' : '') }, isAdmin() ? 'Admin' : 'Agent'))),
+      h('button', { type: 'button', onclick: function () { m.remove(); go('#/profile'); } }, 'Profile & email' + (S.gmail && !S.gmail.connected ? ' · connect' : '')),
       h('button', { type: 'button', onclick: function () { m.remove(); api('logout').catch(function () { }); setSession(null); go('#/login'); } }, 'Sign out'));
     document.body.appendChild(m); setTimeout(function () { document.addEventListener('click', function z(ev) { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('click', z); } }); });
   });
@@ -168,6 +174,8 @@
     if (!API) { S.section = ''; chrome(); return comingSoon(); }
     if (r.name === 'sign') { S.section = ''; chrome(); return ROUTES.sign(r); }
     if (!S.token || r.name === 'login') { S.section = ''; S.route = 'login'; chrome(); if (S.token && r.name === 'login') return go('#/'); return ROUTES.login(r); }
+    if (S.gmail === null && (r.name === 'new' || r.name === 'onboarding' || r.name === 'connect' || r.name === 'profile')) { loading(); return refreshMe().then(render, function (er) { fatal(er, render); }); }
+    if ((r.name === 'new' || r.name === 'onboarding') && S.gmail && !S.gmail.connected) { S.section = 'envelopes'; S.afterConnect = location.hash; chrome(); return ROUTES.connect({ q: { blocked: '1' } }); }
     var fn = ROUTES[r.name || 'envelopes'] || ROUTES.envelopes;
     S.section = { '': 'envelopes', envelopes: 'envelopes', envelope: 'envelopes', 'new': 'envelopes', templates: 'templates', template: 'templates', onboarding: 'onboarding', documents: 'documents' }[r.name] || 'envelopes';
     chrome(); fn(r);
@@ -194,7 +202,7 @@
       if (!emailOk(em.value) || !pw.value) return msg.appendChild(errBox('Enter your email and password.'));
       busy(btn, true, 'Signing in…');
       api('login', { email: em.value.trim(), password: pw.value }).then(function (d) {
-        pw.value = ''; setSession(d.token, d.user); var to = S.afterLogin && !/login/.test(S.afterLogin) ? S.afterLogin : '#/'; S.afterLogin = ''; go(to);
+        pw.value = ''; setSession(d.token, d.user); S.gmail = d.gmail || null; var to = S.afterLogin && !/login/.test(S.afterLogin) ? S.afterLogin : '#/'; S.afterLogin = ''; if (S.gmail && !S.gmail.connected) { S.afterConnect = to; to = '#/connect'; } go(to);
       }).catch(function (err) { busy(btn, false); msg.appendChild(errBox(err.message)); });
     } }, h('div', { class: 'f' }, h('label', { for: 'em' }, 'Email'), em), h('div', { class: 'f' }, h('label', { for: 'pw' }, 'Password'), pw), msg, btn);
     $app.appendChild(h('div', { class: 'auth' }, h('div', { class: 'card' }, h('img', { class: 'logo', src: 'assets/esign-logo-light.svg', alt: 'ENESMA E-Sign' }),
@@ -203,7 +211,49 @@
     setTimeout(function () { em.focus(); }, 30);
   };
 
-  function refreshMe() { return api('me').then(function (d) { S.user = d.user; S.testMode = !!d.testMode; try { localStorage.setItem('es_user', JSON.stringify(d.user)); } catch (e) { } chrome(); }); }
+  function refreshMe() { return api('me').then(function (d) { S.user = d.user; S.testMode = !!d.testMode; S.gmail = d.gmail || null; try { localStorage.setItem('es_user', JSON.stringify(d.user)); } catch (e) { } chrome(); }); }
+
+  /* ---------- Google email connection (per-user OAuth, gmail.send only) ---------- */
+  function gmailStart(btn) {
+    busy(btn, true, 'Opening Google…');
+    api('gmailStart').then(function (d) { try { sessionStorage.setItem('es_after_connect', S.afterConnect || '#/'); } catch (e) { } location.href = d.url; })
+      .catch(function (er) { busy(btn, false); toast(er.message); });
+  }
+  function gmailCard(blocked) {
+    var g = S.gmail || {}, btn = h('button', { class: 'btn red wide', type: 'button', id: 'connectBtn', onclick: function (ev) { gmailStart(ev.currentTarget); } }, g.error ? 'Reconnect your Google email' : 'Connect your Google email');
+    return h('div', { class: 'card connect' }, h('span', { class: 'rule' }), h('h1', null, blocked ? 'Connect your email to send' : 'Connect your Google email'),
+      h('p', { class: 'sub' }, 'Invitations, reminders and completion emails go out from your own Gmail — ', h('b', null, S.user.email), ' — so clients see you as the sender and replies come straight to you.'),
+      g.error ? errBox('Your connection stopped working: ' + g.error) : null,
+      g.configured === false ? errBox('Google sign-in is not set up yet. Ask the admin to finish the OAuth setup.') : null,
+      h('ul', { class: 'hint connect-list' }, h('li', null, 'Sign in with ', h('b', null, S.user.email), ' on the Google screen.'), h('li', null, 'E-Sign asks only for permission to send email. It cannot read your inbox.'),
+        h('li', null, 'Signed PDFs and certificates are stored in ENESMA’s business Drive, never in your Drive.')),
+      btn, h('p', { class: 'hint', style: { textAlign: 'center', marginTop: '12px' } }, h('a', { href: '#/' }, blocked ? 'Back to envelopes' : 'Do this later'), ' · you can’t send envelopes until it’s connected.'));
+  }
+  ROUTES.connect = function (r) { add($app, [h('div', { class: 'auth' }, gmailCard(r && r.q && r.q.blocked))]); };
+  ROUTES.profile = function () {
+    var g = S.gmail || {};
+    var status = g.connected ? h('div', { class: 'ok', id: 'gstatus' }, h('b', null, 'Connected'), ' · sending as ' + g.email + (g.connectedAt ? ' · since ' + fmtDate(g.connectedAt) : ''))
+      : h('div', { class: 'err', id: 'gstatus' }, h('b', null, g.error ? 'Needs reconnecting' : 'Not connected'), g.error ? ' · ' + g.error : ' · you can’t send envelopes yet');
+    var acts = h('div', { class: 'actions' }, h('button', { class: 'btn ' + (g.connected ? 'ghost' : 'red'), type: 'button', id: 'reconnectBtn', onclick: function (ev) { S.afterConnect = '#/profile'; gmailStart(ev.currentTarget); } }, g.connected || g.error ? 'Reconnect' : 'Connect your Google email'),
+      g.connected ? h('button', { class: 'btn plain', type: 'button', onclick: function (ev) { if (!confirm('Disconnect your Gmail? You won’t be able to send until you connect again.')) return; var b = ev.currentTarget; busy(b, true); api('gmailDisconnect').then(function (d) { S.gmail = d; render(); }).catch(function (er) { busy(b, false); toast(er.message); }); } }, 'Disconnect') : null);
+    add($app, [h('div', { class: 'head' }, h('div', null, h('span', { class: 'rule' }), h('h1', null, 'Profile'))),
+      h('div', { class: 'card', style: { maxWidth: '640px' } }, h('h2', null, S.user.name), h('p', { class: 'hint' }, S.user.email + ' · ' + (isAdmin() ? 'Admin' : 'Agent')),
+        h('h2', { style: { marginTop: '18px' } }, 'Sending email'), status,
+        h('p', { class: 'hint' }, 'Every invitation, resend and completion email is sent through Gmail from your own address. E-Sign only has permission to send — it can’t read your mail. Files stay in ENESMA’s business Drive.'), acts)]);
+  };
+  function fmtDate(iso) { try { return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (e) { return iso; } }
+  function handleOAuthReturn() {
+    var q = new URLSearchParams(location.search); if (!q.get('state') || !(q.get('code') || q.get('error'))) return false;
+    var back = '#/'; try { back = sessionStorage.getItem('es_after_connect') || '#/'; sessionStorage.removeItem('es_after_connect'); } catch (e) { }
+    S.afterConnect = back;
+    history.replaceState(null, '', location.pathname + '#/connect');
+    if (!S.token) { render(); return true; }
+    if (q.get('error')) { toast(q.get('error') === 'access_denied' ? 'Google connection was cancelled.' : 'Google sign-in failed: ' + q.get('error')); render(); return true; }
+    loading('Connecting your Google email…');
+    api('gmailConnect', { code: q.get('code'), state: q.get('state') }).then(function (d) { S.gmail = d; toast('Connected — emails now go out from ' + d.email + '.'); history.replaceState(null, '', location.pathname + back); render(); })
+      .catch(function (er) { refreshMe().catch(function () { }).then(function () { render(); clear($app); $app.appendChild(h('div', { class: 'auth' }, h('div', null, errBox(er.message), gmailCard(false)))); }); });
+    return true;
+  }
 
   /* ---------- envelopes ---------- */
   ROUTES.envelopes = function () {
@@ -250,11 +300,13 @@
       clear($app);
       if (e.status === 'finalizing' && polls < 20) { polls++; setTimeout(function () { if (S.route === 'envelope' && parseRoute().arg === id) load(); }, 6000); }
       var acts = h('div', { class: 'actions', style: { marginTop: 0 } });
-      if (e.status === 'completed') acts.appendChild(h('button', { class: 'btn red', type: 'button', onclick: function (ev) { dl(ev.currentTarget, true); } }, 'Download signed PDF'));
+      if (e.status === 'completed') { acts.appendChild(h('button', { class: 'btn red', type: 'button', onclick: function (ev) { dl(ev.currentTarget, true); } }, 'Download signed PDF'));
+        acts.appendChild(h('button', { class: 'btn ghost', type: 'button', onclick: function (ev) { dl(ev.currentTarget, 'cert'); } }, 'Certificate PDF')); }
       acts.appendChild(h('button', { class: 'btn ghost', type: 'button', onclick: function (ev) { dl(ev.currentTarget, false); } }, 'Original PDF'));
       if (e.status === 'sent') acts.appendChild(h('button', { class: 'btn plain', type: 'button', onclick: voidIt }, 'Void'));
+      if (e.status === 'completed' && e.mailError) acts.appendChild(h('button', { class: 'btn', type: 'button', onclick: function (ev) { var b = ev.currentTarget; busy(b, true, 'Sending…'); api('resendCompletion', { id: id }).then(function () { toast('Completion email sent from your Gmail.'); load(); }).catch(function (er) { busy(b, false); toast(er.message); }); } }, 'Resend completion email'));
       if (e.status === 'finalizing' && e.finalizeError) acts.appendChild(h('button', { class: 'btn', type: 'button', onclick: function (ev) { var b = ev.currentTarget; busy(b, true); api('retryFinalize', { id: id }).then(function (d) { toast('Finishing up… this takes a minute.'); draw(d.envelope); }).catch(function (er) { busy(b, false); toast(er.message); }); } }, 'Retry finishing'));
-      function dl(btn, final) { busy(btn, true, 'Preparing…'); api('getEnvelopePdf', { id: id, final: final }).then(function (d) { busy(btn, false); downloadPdf(d.name + (final ? ' - signed' : ''), d.pdf); }).catch(function (er) { busy(btn, false); toast(er.message); }); }
+      function dl(btn, final) { busy(btn, true, 'Preparing…'); api('getEnvelopePdf', { id: id, final: final === true, certificate: final === 'cert' }).then(function (d) { busy(btn, false); downloadPdf(d.name + (final === 'cert' ? ' - Certificate' : final ? ' - Signed' : ''), d.pdf); }).catch(function (er) { busy(btn, false); toast(er.message); }); }
       function voidIt() {
         var reason = h('input', { type: 'text', maxlength: 200, placeholder: 'e.g. Sent the wrong version' }), msg = h('div');
         var b = h('button', { class: 'btn red', type: 'button', onclick: function () { if (!reason.value.trim()) return reason.focus(); busy(b, true); api('voidEnvelope', { id: id, reason: reason.value.trim() }).then(function (d) { closeModal(); toast('Envelope voided. Signing links no longer work.'); draw(d.envelope); }).catch(function (er) { busy(b, false); clear(msg).appendChild(errBox(er.message)); }); } }, 'Void envelope');
@@ -262,11 +314,13 @@
       }
       var signers = h('div', null, e.recipients.map(function (rc) {
         var evs = (rc.events || []).filter(function (x) { return x.t !== 'viewed' || x === (rc.events || []).filter(function (y) { return y.t === 'viewed'; })[0]; });
-        var canFix = e.status === 'sent' && rc.status !== 'signed';
-        return h('div', { class: 'signer' }, h('div', { class: 'top' }, h('div', { style: { minWidth: 0 } }, h('div', { class: 'who' }, (e.orderMode === 'sequential' ? rc.order + '. ' : '') + rc.name), h('div', { class: 'em' }, rc.email + (rc.roleLabel ? ' · ' + rc.roleLabel : ''))), badge(rc.status)),
+        var canFix = e.status === 'sent' && rc.status !== 'signed' && rc.status !== 'declined';
+        var st = rc.state || rc.status, ts = [['Sent', rc.sentAt], ['Viewed', rc.viewedAt], ['Signed', rc.signedAt], ['Declined', rc.declinedAt]].filter(function (x) { return x[1]; });
+        return h('div', { class: 'signer', 'data-rid': rc.id, 'data-state': st }, h('div', { class: 'top' }, h('div', { style: { minWidth: 0 } }, h('div', { class: 'who' }, (e.orderMode === 'sequential' ? rc.order + '. ' : '') + rc.name), h('div', { class: 'em' }, rc.email + (rc.roleLabel ? ' · ' + rc.roleLabel : ''))), badge(st)),
+          h('div', { class: 'ts em' }, ts.length ? ts.map(function (x) { return x[0] + ' ' + fmt(x[1]); }).join(' · ') : (st === 'waiting' ? 'Invitation goes out when it’s their turn' : '')),
           h('ul', { class: 'ev' }, evs.map(function (x) { return h('li', null, ({ sent: 'Invited', resent: 'Invite resent', viewed: 'First viewed', signed: 'Signed', declined: 'Declined', corrected: 'Email corrected', completed: 'Completed copy sent' }[x.t] || x.t) + ' · ' + fmt(x.at)); }),
             rc.declineReason ? h('li', null, 'Reason: ' + rc.declineReason) : null),
-          canFix ? h('div', { class: 'acts' }, rc.status !== 'created' ? h('button', { class: 'link', type: 'button', onclick: function (ev) { var b = ev.currentTarget; b.disabled = true; api('resendInvite', { id: id, recipientId: rc.id }).then(function (d) { toast('Invite resent to ' + rc.email); draw(d.envelope); }).catch(function (er) { b.disabled = false; toast(er.message); }); } }, 'Resend invite') : null,
+          canFix ? h('div', { class: 'acts' }, (st === 'sent' || st === 'viewed') ? h('button', { class: 'link resend', type: 'button', onclick: function (ev) { var b = ev.currentTarget; b.disabled = true; api('resendInvite', { id: id, recipientId: rc.id }).then(function (d) { toast('Invite resent to ' + rc.email); draw(d.envelope); }).catch(function (er) { b.disabled = false; toast(er.message); }); } }, 'Resend') : null,
             h('button', { class: 'link', type: 'button', onclick: function () { fix(rc); } }, 'Fix name / email')) : null);
       }));
       function fix(rc) {
@@ -278,6 +332,7 @@
         h('dt', null, 'Sent'), h('dd', null, fmt(e.sentAt)), e.completedAt ? [h('dt', null, 'Completed'), h('dd', null, fmt(e.completedAt))] : null, e.voidedAt ? [h('dt', null, 'Voided'), h('dd', null, fmt(e.voidedAt) + (e.voidReason ? ' · ' + e.voidReason : ''))] : null,
         h('dt', null, 'Pages'), h('dd', null, e.pages + ' · ' + e.fields + ' fields'), h('dt', null, 'Original SHA-256'), h('dd', { class: 'hash' }, e.originalHash), e.finalHash ? [h('dt', null, 'Signed SHA-256'), h('dd', { class: 'hash' }, e.finalHash)] : null);
       add($app, [h('a', { class: 'back', href: '#/' }, '‹ Envelopes'), h('div', { class: 'head' }, h('div', { style: { minWidth: 0 } }, h('span', { class: 'rule' }), h('h1', { style: { wordBreak: 'break-word' } }, e.name), h('p', { class: 'sub' }, badge(e.status), ' ', e.subject)), acts),
+        e.mailError ? h('div', { class: 'err mailerr' }, 'An email could not be sent from your Gmail: ' + e.mailError + ' — check ', h('a', { href: '#/profile' }, 'your Google connection'), ', then use Resend.') : null,
         e.status === 'finalizing' ? h('div', { class: 'ok' }, e.finalizeError ? 'Finishing the signed copy hit a problem: ' + e.finalizeError : 'Everyone signed. The signed PDF and certificate are being prepared and emailed to all parties — usually within a minute.') : null,
         h('div', { class: 'detail' }, h('div', { class: 'card' }, h('h2', null, 'Signers'), signers), h('div', { class: 'card' }, h('h2', null, 'Details'), info, e.message ? h('p', { class: 'hint', style: { marginTop: '14px', whiteSpace: 'pre-wrap' } }, e.message) : null))]);
     }
@@ -285,7 +340,7 @@
   };
 
   /* ---------- field editor ---------- */
-  var DEF_PT = { signature: [170, 40], initials: [64, 34], date: [100, 20], name: [150, 20], text: [150, 20], checkbox: [16, 16] };
+  var DEF_PT = { signature: [170, 40], initials: [64, 34], date: [100, 20], name: [150, 20], email: [180, 20], company: [150, 20], title: [130, 20], text: [150, 20], checkbox: [16, 16] };
   var fseq = 1;
   /** Drag-and-drop field placement over a rendered PDF. who = [{key,label}] (signers or roles). */
   function Editor(opts) {
@@ -373,7 +428,7 @@
       var who = h('select', { onchange: function () { f.recipient = who.value; place(f); drawWho(); changed(); } }, E.who.map(function (w, i) { return h('option', { value: w.key, selected: w.key === f.recipient }, (i + 1) + '. ' + w.label); }));
       var box = h('div', { class: 'selbox' }, h('b', null, FT[f.type][0] + ' field'), h('div', { class: 'f' }, h('label', null, 'Filled by'), who));
       if (f.type === 'text') { var lb = h('input', { type: 'text', value: f.label || '', maxlength: 60, placeholder: 'e.g. Phone number', oninput: function () { f.label = lb.value; place(f); changed(); } }); box.appendChild(h('div', { class: 'f' }, h('label', null, 'Label shown to signer'), lb)); }
-      if (f.type === 'text' || f.type === 'checkbox') box.appendChild(h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!f.required, onchange: function (e) { f.required = e.target.checked; changed(); } }), 'Required'));
+      if (INPUT_T[f.type] || f.type === 'checkbox') box.appendChild(h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!f.required, onchange: function (e) { f.required = e.target.checked; changed(); } }), 'Required'));
       box.appendChild(h('button', { class: 'link danger', type: 'button', onclick: function () { remove(f); } }, 'Remove field'));
       selEl.appendChild(box);
     }
@@ -544,7 +599,7 @@
       btn = h('button', { class: 'btn red', type: 'button', onclick: submit }, T ? 'Save template' : 'Send for signature');
       add($app, [h('a', { class: 'back', href: 'javascript:void 0', onclick: function () { W.step = 2; draw(); } }, '‹ Place fields'), h('span', { class: 'rule' }), h('h1', null, W.name || 'Untitled'), stepsBar(), testBar(),
         h('div', { class: 'detail' }, h('div', { class: 'card' }, h('h2', null, T ? 'Default email' : 'Email to signers'), h('div', { class: 'f' }, h('label', null, 'Subject'), subj), h('div', { class: 'f' }, h('label', null, 'Message'), note),
-          h('p', { class: 'hint' }, T ? 'Used when this template is sent. It can be changed each time.' : 'Each signer gets a private link — no account needed. When everyone has signed, all parties get the signed PDF with its Certificate of Completion.')),
+          h('p', { class: 'hint' }, T ? 'Used when this template is sent. It can be changed each time.' : 'Each signer gets a private link — no account needed. When everyone has signed, all parties get the signed PDF and its Certificate of Completion (a separate PDF).')),
           h('div', { class: 'card' }, h('h2', null, T ? 'Roles' : 'Signers'), h('p', { class: 'hint', style: { marginTop: '-6px' } }, W.orderMode === 'sequential' ? 'In order — each person is emailed after the one before signs.' : 'Everyone is emailed at once.'), byWho, h('p', { class: 'hint' }, W.pages + ' page' + (W.pages === 1 ? '' : 's') + ' · ' + W.fields.length + ' fields'))),
         msg, h('div', { class: 'actions' }, h('button', { class: 'btn plain', type: 'button', onclick: function () { W.step = 2; draw(); } }, 'Back'), h('span', { class: 'sp' }), btn)]);
       async function submit() {
@@ -722,8 +777,9 @@
     function route() { if (X.signer.status === 'signed' || X.completed) return doneView(); consentView(); }
     function hero(title, text, extra) { clear($app); $app.appendChild(h('div', { class: 'done-hero' }, h('div', { class: 'tick' }, svg(I.tick)), h('h1', null, title), h('p', { class: 'sub' }, text), extra || null)); }
     function doneView(justSigned, all) {
-      var dl = h('button', { class: 'btn red', type: 'button', onclick: function () { busy(dl, true, 'Preparing…'); api('signDownload', { token: token }).then(function (d) { busy(dl, false); downloadPdf(d.name + ' - signed', d.pdf); }).catch(function (e) { busy(dl, false); toast(e.message); }); } }, 'Download signed PDF');
-      if (X.completed) return hero('All signed', '“' + X.envelope.name + '” is complete. Download the signed copy with its Certificate of Completion.', dl);
+      var dl = h('button', { class: 'btn red', type: 'button', onclick: function () { busy(dl, true, 'Preparing…'); api('signDownload', { token: token }).then(function (d) { busy(dl, false); downloadPdf(d.name + ' - Signed', d.pdf); }).catch(function (e) { busy(dl, false); toast(e.message); }); } }, 'Download signed PDF');
+      var dc = h('button', { class: 'btn ghost', type: 'button', onclick: function () { busy(dc, true, 'Preparing…'); api('signDownload', { token: token, certificate: true }).then(function (d) { busy(dc, false); downloadPdf(d.name + ' - Certificate', d.pdf); }).catch(function (e) { busy(dc, false); toast(e.message); }); } }, 'Certificate PDF');
+      if (X.completed) return hero('All signed', '“' + X.envelope.name + '” is complete. Download the signed copy and its Certificate of Completion.', h('div', { class: 'acts-row' }, dl, dc));
       hero(justSigned ? 'Thank you, ' + X.signer.name.split(' ')[0] + '!' : 'You already signed', all ? 'Everyone has signed. You’ll get an email with the signed PDF and Certificate of Completion in a minute or two.' : 'Your signature is saved. When everyone has signed, you’ll get an email with the final signed PDF.');
     }
     function consentView() {
@@ -752,16 +808,17 @@
         X.fields.forEach(function (f) { var p = pages[f.page - 1]; if (!p) return; var el = h('div', { class: 'sfld', style: { left: f.x * 100 + '%', top: f.y * 100 + '%', width: f.w * 100 + '%', height: f.h * 100 + '%' } }); el._f = f; p.el.appendChild(el); els.push(el); paint(el); });
         update();
       }).catch(function (e) { pagesEl.appendChild(errBox('Could not open the document: ' + e.message)); });
-      function need(f) { return f.type === 'signature' || f.type === 'initials' || ((f.type === 'text' || f.type === 'checkbox') && f.required); }
-      function filled(f) { if (f.type === 'signature' || f.type === 'initials') return !!adopted[f.type]; if (f.type === 'date' || f.type === 'name') return true; if (f.type === 'checkbox') return !!vals[f.id]; return !!String(vals[f.id] || '').trim(); }
+      function need(f) { return f.type === 'signature' || f.type === 'initials' || ((INPUT_T[f.type] || f.type === 'checkbox') && f.required); }
+      function filled(f) { if (f.type === 'signature' || f.type === 'initials') return !!adopted[f.type]; if (f.type === 'date' || f.type === 'name' || f.type === 'email') return true; if (f.type === 'checkbox') return !!vals[f.id]; return !!String(vals[f.id] || '').trim(); }
       function paint(el) {
         var f = el._f; clear(el); el.className = 'sfld ' + (filled(f) ? 'done' : need(f) ? 'need' : 'opt');
         if (f.type === 'signature' || f.type === 'initials') {
           el.appendChild(h('button', { class: 'sg', type: 'button', 'aria-label': FT[f.type][0], onclick: function () { adopt(f.type); } }, adopted[f.type] ? h('img', { src: adopted[f.type], alt: FT[f.type][0] }) : (f.type === 'signature' ? 'Sign here' : 'Initial')));
         } else if (f.type === 'date') el.appendChild(h('span', { class: 'auto' }, today));
         else if (f.type === 'name') el.appendChild(h('span', { class: 'auto' }, X.signer.name));
+        else if (f.type === 'email') el.appendChild(h('span', { class: 'auto' }, X.signer.email));
         else if (f.type === 'checkbox') el.appendChild(h('input', { type: 'checkbox', 'aria-label': f.label || 'Checkbox', checked: !!vals[f.id], onchange: function (e) { vals[f.id] = e.target.checked; el.className = 'sfld ' + (filled(f) ? 'done' : need(f) ? 'need' : 'opt'); update(); } }));
-        else { var inp = h('input', { type: 'text', maxlength: 300, value: vals[f.id] || '', placeholder: f.label || (f.required ? 'Required' : 'Optional'), 'aria-label': f.label || 'Text', oninput: function () { vals[f.id] = inp.value; el.className = 'sfld ' + (filled(f) ? 'done' : need(f) ? 'need' : 'opt'); update(); } }); el.appendChild(inp); }
+        else { var inp = h('input', { type: 'text', maxlength: 300, value: vals[f.id] || '', placeholder: f.label || (f.type !== 'text' ? FT[f.type][0] : f.required ? 'Required' : 'Optional'), 'aria-label': f.label || FT[f.type][0], oninput: function () { vals[f.id] = inp.value; el.className = 'sfld ' + (filled(f) ? 'done' : need(f) ? 'need' : 'opt'); update(); } }); el.appendChild(inp); }
       }
       function todo() { return els.filter(function (el) { return need(el._f) && !filled(el._f); }); }
       function update() { var t = todo(), n = els.filter(function (el) { return need(el._f); }).length; prog.textContent = t.length ? (n - t.length) + ' of ' + n + ' required fields done' : 'All set — tap Finish to sign.'; nextB.classList.toggle('hidden', !t.length); fin.disabled = !!t.length; }
@@ -819,6 +876,5 @@
   }
 
   /* ---------- boot ---------- */
-  if (!location.hash) history.replaceState(null, '', '#/');
-  render();
+  if (!handleOAuthReturn()) { if (!location.hash) history.replaceState(null, '', '#/'); render(); }
 })();
