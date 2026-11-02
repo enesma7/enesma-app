@@ -158,8 +158,10 @@ a.item:hover{background:var(--tint)}
 .fld.c4{background:rgba(154,0,7,.07);border:1.5px dashed #9A0007;color:#9A0007}
 .fld.sel{box-shadow:0 0 0 2px var(--w),0 0 0 4px #000007;z-index:3}
 .fld .rz{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;border-radius:50%;background:var(--k);border:2px solid var(--w);cursor:nwse-resize;touch-action:none}
-.fld .x{position:absolute;right:-10px;top:-10px;width:20px;height:20px;border-radius:50%;background:var(--k);color:var(--w);border:0;font-size:12px;line-height:20px;padding:0;cursor:pointer;display:none}
-.fld.sel .x{display:block}
+.fld .x{position:absolute;right:-11px;top:-11px;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#EF0207,#9A0007);color:#fff;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,7,.35);font-size:14px;font-weight:700;line-height:18px;padding:0;cursor:pointer;display:none;z-index:4;touch-action:manipulation}
+.fld:hover .x,.fld.sel .x,.fld:focus-within .x{display:block}
+.fld .x:hover,.fld .x:focus-visible{filter:brightness(1.12);outline:2px solid #000007;outline-offset:1px}
+@media (hover:none),(pointer:coarse){.fld .x{display:block;width:26px;height:26px;right:-13px;top:-13px;line-height:22px;font-size:16px}}
 .dragghost{position:fixed;z-index:60;pointer-events:none;opacity:.85}
 .selbox{padding:12px;border-radius:12px;background:var(--tint);display:flex;flex-direction:column;gap:10px}
 .selbox .f{margin:0}

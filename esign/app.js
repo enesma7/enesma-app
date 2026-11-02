@@ -339,10 +339,10 @@
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
     function label(f) { return (f.type === 'text' && f.label ? f.label : FT[f.type][0]) + ' · ' + numOf(f.recipient); }
     function place(f) {
-      var p = E.pages[f.page - 1]; if (!p) return;
+      var p = E.pages[f.page - 1]; if (!p || E.fields.indexOf(f) < 0) return;
       if (!f._el) {
-        f._el = h('div', { class: 'fld', tabindex: '0', 'data-type': f.type }, h('span', { class: 'lbl' }), h('button', { class: 'x', type: 'button', 'aria-label': 'Remove field', onpointerdown: function (e) { e.stopPropagation(); }, onclick: function (e) { e.stopPropagation(); remove(f); } }, '×'), h('span', { class: 'rz' }));
-        f._el.addEventListener('pointerdown', function (e) { startMove(e, f, e.target.classList.contains('rz')); });
+        f._el = h('div', { class: 'fld', tabindex: '0', 'data-type': f.type }, h('span', { class: 'lbl' }), h('button', { class: 'x', type: 'button', 'aria-label': 'Remove field', title: 'Remove field', onpointerdown: function (e) { e.stopPropagation(); }, onmousedown: function (e) { e.stopPropagation(); }, ontouchstart: function (e) { e.stopPropagation(); }, onclick: function (e) { e.preventDefault(); e.stopPropagation(); remove(f); } }, '×'), h('span', { class: 'rz' }));
+        f._el.addEventListener('pointerdown', function (e) { if (e.target.closest('.x')) return; startMove(e, f, e.target.classList.contains('rz')); });
         f._el.addEventListener('keydown', function (e) { if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); remove(f); } });
       }
       if (f._el.parentNode !== p.el) p.el.appendChild(f._el);
@@ -366,7 +366,7 @@
       function up() { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); changed(); }
       document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
     }
-    function remove(f) { E.fields = E.fields.filter(function (x) { return x !== f; }); if (f._el) f._el.remove(); if (E.sel === f) select(null); drawWho(); changed(); }
+    function remove(f) { if (E.sel === f) select(null); E.fields = E.fields.filter(function (x) { return x !== f; }); if (f._el) f._el.remove(); f._el = null; drawWho(); changed(); }
     function select(f) {
       var prev = E.sel; E.sel = f; if (prev && prev._el) place(prev); if (f) { place(f); f._el.focus({ preventScroll: true }); }
       clear(selEl); if (!f) return selEl.appendChild(h('p', { class: 'hint', style: { margin: 0 } }, 'Drag a field onto the page (or tap it to drop it on the page you’re viewing). Drag to move, use the dot to resize.'));
@@ -378,6 +378,13 @@
       selEl.appendChild(box);
     }
     docEl.addEventListener('pointerdown', function (e) { if (!e.target.closest('.fld')) select(null); });
+    document.addEventListener('keydown', function onDel(e) {
+      if (!document.contains(E.el)) return document.removeEventListener('keydown', onDel);
+      if ((e.key !== 'Delete' && e.key !== 'Backspace') || !E.sel || e.defaultPrevented) return;
+      var t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (!document.querySelector('#modal.hidden') && document.querySelector('#modal')) return;
+      e.preventDefault(); remove(E.sel);
+    });
     function changed() { S.dirty = true; if (opts.onChange) opts.onChange(); }
     E.load = async function (bytes) {
       clear(pagesEl); pagesEl.appendChild(h('div', { class: 'loading' }, 'Opening document…'));
