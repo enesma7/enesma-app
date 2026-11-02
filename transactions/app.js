@@ -439,7 +439,6 @@ function dashView() {
       qsa('[data-f]').forEach(function (b) { b.onclick = function () { var f = b.getAttribute('data-f'); S.filter = (S.filter === f && b.classList.contains('stat')) ? '' : f; qsa('[data-f]').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-f') === S.filter); }); drawTiles(); }; });
       qsa('.seg button[data-s]').forEach(function (b) { b.onclick = function () { S.scope = b.getAttribute('data-s'); S.filter = ''; dashView(); }; });
       if (qs('#teamF')) qs('#teamF').onchange = function () { S.teamId = this.value; S.filter = ''; dashView(); };
-      if (qs('#setGoals')) qs('#setGoals').onclick = function () { goalsModal(); };
     });
   }).catch(function (e) { failView('dash', e); });
 }
@@ -1774,11 +1773,11 @@ function itemNotesModal(itemId) {
     api('addNote', { txnId: d.txn.id, itemId: itemId, text: v }).then(function () { m.close(); toast('Note added.'); refresh(); }).catch(function (e) { qs('#mb', m).disabled = false; qs('#me', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
   };
 }
+function goalsYear(g) { return String((window.TC_CONFIG || {}).GOALS_YEAR || (g && g.year) || new Date().getFullYear()); }
 function goalBars(g) {
-  var row = function (lbl, have, goal, pct) { return '<div class="gl"><div class="glh"><span>' + lbl + '</span><b>' + have + (goal ? ' <small>of ' + goal + '</small>' : '') + '</b></div><div class="bar"><i style="width:' + pct + '%"></i></div><small>' + (goal ? pct + '%' : 'No goal set') + '</small></div>'; };
-  return '<div class="goals gb"><div class="ttl">' + h(g.year) + ' goals<button class="link" id="setGoals">' + (g.units || g.volume ? 'Edit goals' : 'Set goals') + '</button></div>' +
-    row('Units closed', g.closedUnits, g.units ? String(g.units) : '', g.unitsPct) + row('Volume closed', moneyShort(g.closedVolume), g.volume ? moneyShort(g.volume) : '', g.volumePct) +
-    '<div class="rank"><span>Rank</span><b class="gt">#' + g.rank + '</b><small>of ' + g.rankOf + ' agents by closed volume</small></div></div>';
+  var row = function (lbl, have, goal, pct) { return '<div class="gl"><div class="glh"><span>' + lbl + '</span><b>' + have + (goal ? ' <small>/ ' + goal + ' · ' + pct + '%</small>' : ' <small>· no goal</small>') + '</b></div><div class="bar"><i style="width:' + pct + '%"></i></div></div>'; };
+  return '<div class="goals gb"><div class="ttl">' + h(goalsYear(g)) + ' Goals<span class="rank">Rank <b class="gt">#' + h(g.rank) + '</b></span></div>' +
+    row('Units closed', g.closedUnits, g.units ? String(g.units) : '', g.unitsPct) + row('Volume closed', moneyShort(g.closedVolume), g.volume ? moneyShort(g.volume) : '', g.volumePct) + '</div>';
 }
 function teamTable(tm) {
   return '<div class="gb tbl tprod"><div class="ttl">' + h(tm.name) + ' · ' + h(tm.year) + ' production</div><table><thead><tr><th>Agent</th><th>Open</th><th>Units</th><th>Volume</th><th>Units goal</th><th>Volume goal</th><th>Rank</th></tr></thead><tbody>' +
@@ -1789,7 +1788,7 @@ function goalsModal() {
   var m = modal('<h2>Goals</h2><div id="ge"><div class="loading"><span class="spin"></span>Loading…</div></div>');
   api('getGoals').then(function (r) {
     var g = r.goals || {};
-    qs('#ge', m).innerHTML = '<p class="sub">Your ' + h(g.year || '') + ' goals. Closed units count each side you represent; volume is the sales price per side.</p><div id="gx"></div><div class="fgrid"><div class="f"><label for="gu">Units (closed sides)</label><input type="text" inputmode="numeric" id="gu" value="' + (g.units || '') + '" placeholder="e.g. 12"></div><div class="f w2"><label for="gv">Volume ($)</label><input type="text" inputmode="numeric" id="gv" value="' + (g.volume ? money(g.volume) : '') + '" placeholder="e.g. $10,000,000"></div></div><div class="actions"><button class="btn" id="gb">Save goals</button></div>';
+    qs('#ge', m).innerHTML = '<p class="sub">Your ' + h(goalsYear(g)) + ' goals. Closed units count each side you represent; volume is the sales price per side.</p><div id="gx"></div><div class="fgrid"><div class="f"><label for="gu">Units (closed sides)</label><input type="text" inputmode="numeric" id="gu" value="' + (g.units || '') + '" placeholder="e.g. 12"></div><div class="f w2"><label for="gv">Volume ($)</label><input type="text" inputmode="numeric" id="gv" value="' + (g.volume ? money(g.volume) : '') + '" placeholder="e.g. $10,000,000"></div></div><div class="actions"><button class="btn" id="gb">Save goals</button></div>';
     qs('#gv', m).onblur = function () { var n = Number(this.value.replace(/[$,\s]/g, '')); if (n) this.value = money(n); };
     qs('#gb', m).onclick = function () {
       var u = qs('#gu', m).value.replace(/[,\s]/g, ''), v = qs('#gv', m).value.replace(/[$,\s]/g, '');

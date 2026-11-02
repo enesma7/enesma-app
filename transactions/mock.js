@@ -472,7 +472,7 @@ A.dashboard = function (b, u) {
   var tx = list.slice().sort(function (a, c) { return (isFinal(a) ? 1 : 0) - (isFinal(c) ? 1 : 0) || String(c.updatedAt).localeCompare(String(a.updatedAt)); }).map(summary);
   var pr = 0, cr = 0;
   if (u.role === 'admin') { DB.items.forEach(function (i) { if (i.active && i.status === 'Pending') pr++; }); DB.txns.forEach(function (t) { if (t.cancelRequest && t.cancelRequest.state === 'pending') cr++; }); }
-  return { scope: scope, counts: counts, stats: st, transactions: tx, pendingReview: pr, cancelRequests: cr };
+  return { scope: scope, counts: counts, stats: st, transactions: tx, pendingReview: pr, cancelRequests: cr, goals: scope === 'personal' ? { year: '2027', units: 12, volume: 10000000, closedUnits: 5, closedVolume: 4200000, unitsPct: 42, volumePct: 42, rank: 1, rankOf: 2 } : undefined };
 };
 A.search = function (b, u) {
   var q = String(b.q || '').toLowerCase().trim(); if (q.length < 2) return { results: [] };
