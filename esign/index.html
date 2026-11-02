@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://api.ipify.org; object-src 'none'; base-uri 'self'; form-action 'none'">
+<title>ENESMA E-Sign</title>
+<meta name="description" content="ENESMA Realty electronic signatures.">
+<meta name="theme-color" content="#000007">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="E-Sign">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+<link rel="stylesheet" href="app.css?v=2">
+</head>
+<body>
+<header id="top">
+  <a class="brand" href="#/" aria-label="ENESMA E-Sign home"><img src="assets/esign-logo-dark.svg" alt="ENESMA E-Sign" width="216" height="100"></a>
+  <nav id="nav" class="hidden" aria-label="Main">
+    <a href="#/" data-r="envelopes">Envelopes</a><a href="#/templates" data-r="templates">Templates</a><a href="#/onboarding" data-r="onboarding">Onboarding</a><a href="#/documents" data-r="documents">Documents</a>
+  </nav>
+  <div class="hdr-r"><a id="newBtn" class="btn sm red hidden" href="#/new">New envelope</a><button id="userBtn" class="userbtn hidden" type="button" aria-haspopup="true"></button>
+    <a class="ah-back" href="https://agent.enesmarealty.com" target="_top">Agent Hub</a></div>
+</header>
+<main id="app"><div class="loading">Loading…</div></main>
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true"></div>
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+<noscript><p style="padding:24px">ENESMA E-Sign needs JavaScript.</p></noscript>
+<script src="/ahb.js?v=1"></script>
+<script src="config.js?v=1"></script>
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="app.js?v=2"></script>
+</body>
+</html>
