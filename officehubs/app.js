@@ -15,7 +15,6 @@ var LOCATIONS = [{
   spaces: [
     { id: 'rc-desk1', label: 'Desk 1', group: 'Private Office' },
     { id: 'rc-desk2', label: 'Desk 2', group: 'Private Office' },
-    { id: 'rc-desk3', label: 'Desk 3', group: 'Private Office' },
     { id: 'rc-conf', label: 'Conference Room', group: 'Conference Room' }
   ]
 }];
