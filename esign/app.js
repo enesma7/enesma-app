@@ -202,7 +202,7 @@
       if (!emailOk(em.value) || !pw.value) return msg.appendChild(errBox('Enter your email and password.'));
       busy(btn, true, 'Signing in…');
       api('login', { email: em.value.trim(), password: pw.value }).then(function (d) {
-        pw.value = ''; setSession(d.token, d.user); S.gmail = d.gmail || null; var to = S.afterLogin && !/login/.test(S.afterLogin) ? S.afterLogin : '#/'; S.afterLogin = ''; if (S.gmail && !S.gmail.connected) { S.afterConnect = to; to = '#/connect'; } go(to);
+        pw.value = ''; setSession(d.token, d.user); S.gmail = d.gmail || { connected: true, legacy: true }; var to = S.afterLogin && !/login/.test(S.afterLogin) ? S.afterLogin : '#/'; S.afterLogin = ''; if (S.gmail && !S.gmail.connected) { S.afterConnect = to; to = '#/connect'; } go(to);
       }).catch(function (err) { busy(btn, false); msg.appendChild(errBox(err.message)); });
     } }, h('div', { class: 'f' }, h('label', { for: 'em' }, 'Email'), em), h('div', { class: 'f' }, h('label', { for: 'pw' }, 'Password'), pw), msg, btn);
     $app.appendChild(h('div', { class: 'auth' }, h('div', { class: 'card' }, h('img', { class: 'logo', src: 'assets/esign-logo-light.svg', alt: 'ENESMA E-Sign' }),
@@ -211,7 +211,7 @@
     setTimeout(function () { em.focus(); }, 30);
   };
 
-  function refreshMe() { return api('me').then(function (d) { S.user = d.user; S.testMode = !!d.testMode; S.gmail = d.gmail || null; try { localStorage.setItem('es_user', JSON.stringify(d.user)); } catch (e) { } chrome(); }); }
+  function refreshMe() { return api('me').then(function (d) { S.user = d.user; S.testMode = !!d.testMode; S.gmail = d.gmail || { connected: true, legacy: true }; try { localStorage.setItem('es_user', JSON.stringify(d.user)); } catch (e) { } chrome(); }); }
 
   /* ---------- Google email connection (per-user OAuth, gmail.send only) ---------- */
   function gmailStart(btn) {
