@@ -180,13 +180,15 @@ function formHtml(type, intake, pre, skip) {
   var out = '', open = false;
   F[type].forEach(function (f) {
     if (skip && skip[f.k]) return;
-    if (f.h) { if (open) out += '</div></div>'; out += '<div class="card gb" data-h="' + h(f.h) + '"><h3>' + h(f.h) + '</h3><div class="fgrid">'; open = true; return; }
+    if (f.h) { if (open) out += '</div></div>'; var oh = f.h === 'Other Agent'; out += '<div class="card gb" data-h="' + h(f.h) + '"><h3' + (oh ? ' class="oah"' : '') + '>' + h(oh ? oaLabel(type, (intake || {}).side) : f.h) + '</h3><div class="fgrid">'; open = true; return; }
     out += fieldHtml(f, (intake || {})[f.k], pre, intake);
   });
   if (open) out += '</div></div>';
   return out.replace(/<div class="card gb" data-h="[^"]*"><h3>[^<]*<\/h3><div class="fgrid"><\/div><\/div>/g, '');
 }
 function wireForm(root) {
+  if (qs('.oah', root)) oaRelabel(root);
+  root.addEventListener('change', function (e) { if (e.target.closest && e.target.closest('.f[data-k="side"]')) oaRelabel(root); });
   root.addEventListener('click', function (e) {
     if (e.target.classList.contains('addp')) { var l = e.target.closest('.people').querySelector('.plist'); l.insertAdjacentHTML('beforeend', personRow()); }
     if (e.target.classList.contains('x') && e.target.closest('.prow')) { var pl = e.target.closest('.plist'); if (pl.children.length > 1) e.target.closest('.prow').remove(); else qsa('input', e.target.closest('.prow')).forEach(function (i) { i.value = ''; }); }
@@ -198,7 +200,24 @@ function wireForm(root) {
 }
 /* Other Agent: required unless we represent both sides. Legacy free-text 'otherAgent' (name · brokerage · phone) prefills the new keys. */
 function oaBoth(root) { var c = root.querySelector('.f[data-k="side"] input:checked'); var sd = c ? c.value : (root.getAttribute('data-side') || ''); return sd === 'both'; }
-function oaLabel(type, side) { if (type === 'purchase') return side === 'buyer' ? 'Listing Agent' : side === 'seller' ? "Buyer's Agent" : 'Other Agent'; if (type === 'lease') return side === 'tenant' ? 'Listing Agent' : side === 'landlord' ? "Tenant's Agent" : 'Other Agent'; return 'Other Agent'; }
+/* 1.5.0: agents are always titled by role, "Listing Agent" or "Buyer's Agent" (never "Agent" / "Other Agent").
+   Leases use the same two titles (tenant's agent = Buyer's Agent). The other side's agent stays mandatory. */
+function oaLabel(type, side) {
+  if (side === 'buyer' || side === 'tenant') return 'Listing Agent';
+  if (side === 'seller' || side === 'landlord') return "Buyer's Agent";
+  return "Listing Agent / Buyer's Agent";
+}
+function agentRole(t) {
+  var ty = t.type, sd = t.side;
+  if (ty === 'listing' || ty === 'lease_listing') return 'Listing Agent';
+  if (ty === 'purchase' || ty === 'lease') return sd === 'both' ? "Listing & Buyer's Agent" : (sd === 'seller' || sd === 'landlord') ? 'Listing Agent' : "Buyer's Agent";
+  return 'Referring Agent';
+}
+function oaRelabel(root) {
+  var c = root.querySelector('.f[data-k="side"] input:checked'), sd = c ? c.value : (root.getAttribute('data-side') || ''), lb = oaLabel(root.getAttribute('data-type') || '', sd);
+  qsa('.oah', root).forEach(function (x) { x.textContent = lb + (sd === 'both' ? ' (optional: you represent both sides)' : ''); });
+  qsa('.f[data-k="otherAgentName"] > label', root).forEach(function (x) { var r = qs('.req', x); x.textContent = lb.replace(/ \/ .*/, '') + ' name'; if (r) { x.appendChild(document.createTextNode(' ')); x.appendChild(r); } });
+}
 function oaLegacy(ii) {
   var o = {}; Object.keys(ii || {}).forEach(function (k) { o[k] = ii[k]; });
   if (o.otherAgent && !o.otherAgentName && !o.otherAgentBrokerage) {
@@ -251,7 +270,7 @@ function shell(active, inner) {
     '<a class="brand" href="#/" aria-label="Transaction Center home">' + titleMark('tc-sm') + '</a>' +
     '<nav class="main" id="mnav" aria-label="Main">' + nav + '</nav><div class="hspace"></div>' + tog +
     '<div class="search"><span>' + SEARCH_ICON + '</span><input id="q" type="search" placeholder="Search address, client, escrow #" autocomplete="off" aria-label="Search transactions"><div class="sres hidden" id="sres"></div></div>' +
-    '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + h(roleLabel(S.user)) + (isDual() ? '<br><small>Now: ' + (isTC() ? 'TC View' : 'My Files') + '</small>' : '') + '</div><a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
+    '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + h(roleLabel(S.user)) + (isDual() ? '<br><small>Now: ' + (isTC() ? 'TC View' : 'My Files') + '</small>' : '') + '</div>' + (canGoals() ? '<a href="#/" id="goalsLnk">Goals</a>' : '') + '<a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
     '<main>' + inner + '</main>';
 }
 var docClickBound = false;
@@ -285,6 +304,7 @@ function wireShell() {
     qsa('#mnav a').forEach(function (a) { a.addEventListener('click', function () { setNav(false); }); });
   }
   qsa('.rtog button').forEach(function (b) { b.onclick = function () { if (b.getAttribute('data-role') !== activeRole()) setRole(b.getAttribute('data-role')); }; });
+  var gl = qs('#goalsLnk'); if (gl) gl.onclick = function (e) { e.preventDefault(); qs('#udrop').classList.add('hidden'); goalsModal(); };
   var so = qs('#signout'); if (so) so.onclick = function () { api('logout').catch(function () { }); signOutLocal(); location.hash = '#/'; render(); };
   var ex = qs('#exitDemo'); if (ex) ex.onclick = function (e) { e.preventDefault(); sessionStorage.removeItem('tc_demo'); signOutLocal(); location.href = location.pathname; };
 }
@@ -391,29 +411,35 @@ function statusPill(st) {
 }
 function tileHtml(t) {
   var p = t.progress || {}, pct = p.required ? Math.round(p.approved / p.required * 100) : 0;
-  var pills = statusPill(t.status) + (p.rejected ? '<span class="pill p-rej">' + p.rejected + ' Rejected</span>' : '') + (p.pending ? '<span class="pill p-pend">' + p.pending + ' Pending</span>' : '') + (t.cancelPending ? '<span class="pill p-rej">Cancel requested</span>' : '');
+  var pills = statusPill(t.status) + (p.rejected ? '<span class="pill p-rej"><span class="rt">' + p.rejected + ' Rejected</span></span>' : '') + (p.pending ? '<span class="pill p-pend">' + p.pending + ' Pending</span>' : '') + (t.cancelPending ? '<span class="pill p-rej"><span class="rt">Cancel requested</span></span>' : '');
   return '<a class="tile ' + (p.rejected || t.cancelPending ? 'rb' : 'gb') + '" href="#/t/' + h(t.id) + '"><div class="pills">' + pills + '</div>' + addrHtml(t, 'h3', 'tline') + '<p>' + h(t.typeLabel) + ' · ' + h(t.keyDate) + '</p><p>' + h(t.clients) + '</p>' +
-    ((isAdmin() && S.scope === 'company') || isTC() ? '<p>Agent: ' + h(t.agentName) + '</p>' : '') + (t.tcName && !isTC() ? '<p>TC: ' + h(t.tcName) + '</p>' : '') + '<div class="grow"></div><div class="bar"><i style="width:' + pct + '%"></i></div><p>' + (p.approved || 0) + '/' + (p.required || 0) + ' required docs approved</p></a>';
+    ((isAdmin() && S.scope === 'company') || isTC() || S.scope === 'team' ? '<p>' + h(agentRole(t)) + ': ' + h(t.agentName) + '</p>' : '') + (t.tcName && !isTC() ? '<p>TC: ' + h(t.tcName) + '</p>' : '') + '<div class="grow"></div><div class="bar"><i style="width:' + pct + '%"></i></div><p>' + (p.approved || 0) + '/' + (p.required || 0) + ' required docs approved</p></a>';
 }
 function dashView() {
   loading('dash');
-  api('dashboard', { scope: S.scope }).then(function (d) {
+  if (S.scope === 'team' && !isLeader()) S.scope = 'personal';
+  api('dashboard', { scope: S.scope, teamId: isAdmin() && S.scope === 'company' && S.teamId ? S.teamId : undefined }).then(function (d) {
     S.dash = d; if (isAdmin()) S.badges.review = (d.pendingReview || 0) + (d.cancelRequests || 0);
     var c = d.counts, st = d.stats;
     var statDefs = [['type:listing', c.listings, 'Listings'], ['type:purchase', c.purchases, 'Purchases'], ['Active', c.Active, 'Active'], ['In Escrow', c['In Escrow'], 'In Escrow'], ['Closed', c.Closed, 'Closed'], ['Expired Contract', c['Expired Contract'], 'Expired']];
     var extra = [];
     if (c.leaseListings) extra.push(c.leaseListings + ' lease listings'); if (c.leases) extra.push(c.leases + ' leases'); if (c.referrals) extra.push(c.referrals + ' referrals'); if (c.Cancelled) extra.push(c.Cancelled + ' cancelled');
-    var inner = '<div class="top"><div><h1>' + (S.scope === 'company' ? 'Company Transactions' : isTC() ? 'My TC Files' : 'My Transactions') + '</h1><p class="sub">' + h(S.scope === 'company' ? 'All agents' : isTC() ? uName(S.user) + ' · files you created or coordinate' : uName(S.user)) + ' · ' + d.transactions.length + ' files' + (extra.length ? ' · ' + extra.join(' · ') : '') + '</p></div>' +
-      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' + (isAdmin() ? '<div class="seg"><button data-s="personal" class="' + (S.scope === 'personal' ? 'on' : '') + '">Personal</button><button data-s="company" class="' + (S.scope === 'company' ? 'on' : '') + '">Company</button></div>' : '') + (canCreate() ? '<a class="btn" href="#/new">+ New Transaction</a>' : '') + '</div></div>' +
+    var inner = '<div class="top"><div><h1>' + (S.scope === 'company' ? 'Company Transactions' : S.scope === 'team' ? 'My Team' : isTC() ? 'My TC Files' : 'My Transactions') + '</h1><p class="sub">' + h(S.scope === 'company' ? (d.team ? d.team.name : 'All agents') : S.scope === 'team' ? (d.team ? d.team.name : 'Team') + ' · ' + (d.team ? d.team.agents.length : 0) + ' agents' : isTC() ? uName(S.user) + ' · files you created or coordinate' : uName(S.user)) + ' · ' + d.transactions.length + ' files' + (extra.length ? ' · ' + extra.join(' · ') : '') + '</p></div>' +
+      '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' + (isAdmin() ? '<div class="seg"><button data-s="personal" class="' + (S.scope === 'personal' ? 'on' : '') + '">Personal</button><button data-s="company" class="' + (S.scope === 'company' ? 'on' : '') + '">Company</button></div>' : '') +
+      (isAdmin() && S.scope === 'company' && d.teams && d.teams.length ? '<select id="teamF" class="teamf" aria-label="Filter by team"><option value="">All teams</option>' + d.teams.map(function (x) { return '<option value="' + h(x.id) + '"' + (x.id === S.teamId ? ' selected' : '') + '>' + h(x.name) + '</option>'; }).join('') + '</select>' : '') +
+      (isLeader() && !isTC() ? '<div class="seg"><button data-s="personal" class="' + (S.scope === 'personal' ? 'on' : '') + '">My Transactions</button><button data-s="team" class="' + (S.scope === 'team' ? 'on' : '') + '">My Team</button></div>' : '') + (canCreate() ? '<a class="btn" href="#/new">+ New Transaction</a>' : '') + '</div></div>' +
       (isAdmin() && S.badges.review ? '<a class="ok" href="#/review" style="display:block;text-decoration:none"><b>' + d.pendingReview + '</b> checklist item(s) waiting for review' + (d.cancelRequests ? ' · <b>' + d.cancelRequests + '</b> cancellation request(s)' : '') + ' → Open Review</a>' : '') +
       '<div class="stats">' + statDefs.map(function (s) { return '<button class="stat gb' + (S.filter === s[0] ? ' on' : '') + '" data-f="' + h(s[0]) + '"><b>' + (s[1] || 0) + '</b><span>' + s[2] + '</span></button>'; }).join('') + '</div>' +
       '<div class="vol gb"><div class="ttl">Closed in the last 12 months' + (S.scope === 'company' ? ' · company' : '') + '</div><div><span>Closed deals</span><b>' + st.closedCount + '</b></div><div><span>Seller volume (' + st.sellerSides + ')</span><b>' + moneyShort(st.sellerVolume) + '</b></div><div><span>Buyer volume (' + st.buyerSides + ')</span><b>' + moneyShort(st.buyerVolume) + '</b></div><div><span>Combined volume</span><b class="gt">' + moneyShort(st.combinedVolume) + '</b></div></div>' +
+      (d.goals && S.scope === 'personal' && !isTC() ? goalBars(d.goals) : '') + (d.team ? teamTable(d.team) : '') +
       '<div class="chips">' + [['', 'All'], ['open', 'Open'], ['type:listing', 'Listings'], ['type:purchase', 'Purchases'], ['type:lease_listing', 'Lease Listings'], ['type:lease', 'Leases'], ['type:referral', 'Referrals'], ['Active', 'Active'], ['In Escrow', 'In Escrow'], ['Closed', 'Closed'], ['Expired Contract', 'Expired'], ['Cancelled', 'Cancelled']].map(function (x) { return '<button class="chip' + (S.filter === x[0] ? ' on' : '') + '" data-f="' + h(x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' +
       '<div class="grid" id="tiles"></div>';
     page('dash', inner, function () {
       drawTiles();
       qsa('[data-f]').forEach(function (b) { b.onclick = function () { var f = b.getAttribute('data-f'); S.filter = (S.filter === f && b.classList.contains('stat')) ? '' : f; qsa('[data-f]').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-f') === S.filter); }); drawTiles(); }; });
       qsa('.seg button[data-s]').forEach(function (b) { b.onclick = function () { S.scope = b.getAttribute('data-s'); S.filter = ''; dashView(); }; });
+      if (qs('#teamF')) qs('#teamF').onchange = function () { S.teamId = this.value; S.filter = ''; dashView(); };
+      if (qs('#setGoals')) qs('#setGoals').onclick = function () { goalsModal(); };
     });
   }).catch(function (e) { failView('dash', e); });
 }
@@ -452,7 +478,7 @@ function newView(type) {
     page('new', inner, function () {
       qsa('.type').forEach(function (b) { b.onclick = function () { newView(b.getAttribute('data-t')); }; });
       var form = qs('#nf'); if (!form) return;
-      wireForm(form);
+      form.setAttribute('data-type', type); wireForm(form);
       form.onsubmit = function (e) {
         e.preventDefault(); var r = readForm(form);
         if (tcMode && qs('#agentId') && !qs('#agentId').value) r.missing.unshift('Agent');
@@ -466,7 +492,7 @@ function newView(type) {
 }
 
 /* ---------------- transaction view ---------------- */
-function itemPill(s) { return '<span class="pill ' + ({ Approved: 'p-ok', Rejected: 'p-rej', Pending: 'p-pend', Missing: 'p-miss' }[s] || 'p-miss') + '">' + ({ Pending: 'Uploaded – Pending Review' }[s] || h(s)) + '</span>'; }
+function itemPill(s) { return '<span class="pill ' + ({ Approved: 'p-ok', Rejected: 'p-rej', Pending: 'p-pend', Missing: 'p-miss' }[s] || 'p-miss') + '">' + (s === 'Rejected' ? '<span class="rt">Rejected</span>' : ({ Pending: 'Uploaded – Pending Review' }[s] || h(s))) + '</span>'; }
 var PHASE_LABEL = { listing: 'Listing', purchase: 'Purchase', purchase_buyer: 'Purchase', purchase_seller: 'Purchase', lease_listing: 'Lease Listing', lease: 'Lease', lease_landlord: 'Lease', lease_tenant: 'Lease', referral: 'Referral' };
 function phaseLabel(p) { p = String(p || ''); return PHASE_LABEL[p] || p.replace(/_(buyer|seller|landlord|tenant|both)$/, '').split('_').map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join(' '); }
 function txnView(id, keep) {
@@ -474,7 +500,7 @@ function txnView(id, keep) {
   if (!S.txn || S.txn.txn.id !== id) loading('dash');
   api('getTransaction', { id: id }).then(function (d) { page.keepScroll = !!keep; S.txn = d; drawTxn(); }).catch(function (e) { failView('dash', e); });
 }
-function canEdit() { var t = S.txn.txn; return isAdmin() || (t.status !== 'Closed' && t.status !== 'Cancelled'); }
+function canEdit() { var t = S.txn.txn; if (t.readOnly) return false; return isAdmin() || (t.status !== 'Closed' && t.status !== 'Cancelled'); }
 /* Two-line address: [street + unit, "City, ST ZIP"]. Uses intake fields when present, else parses the title string ("street, city[, ST] [zip]"). */
 function addrLines(t) {
   var i = (t && t.intake) || {}, street = i.address || t.address || '', city = i.city || t.city || '', st = i.state || t.state || '', zip = i.zip || t.zip || '', unit = i.unit || t.unit || '';
@@ -507,18 +533,19 @@ function drawTxn() {
   var oa = oaLegacy(i);
   if (oa.otherAgentName || oa.otherAgentBrokerage) who.push([oaLabel(t.type, t.side), [oa.otherAgentName, oa.otherAgentBrokerage].filter(Boolean).join(' · ')]);
   if (i.escrowNumber) who.push(['Escrow #', i.escrowNumber]);
-  if ((isAdmin() || isTC()) && t.agentName) who.push(['Agent', t.agentName]);
+  if ((isAdmin() || isTC() || t.readOnly) && t.agentName) who.push([agentRole(t), t.agentName]);
   if (t.tcName) who.push(['TC', t.tcName]);
   var open = t.status === 'Active' || t.status === 'In Escrow';
   var cr = t.cancelRequest, crPending = cr && cr.state === 'pending';
   var acts = '';
   if (canEdit()) acts += '<button class="btn" id="aSplit">Upload &amp; Split Packet</button>';
-  if (open && (t.type === 'listing' || t.type === 'lease_listing') && !crPending) acts += '<button class="ub" id="aConv">' + (t.type === 'listing' ? 'Accepted Contract' : 'Convert to Lease') + '</button>';
-  if (open && !crPending) acts += '<button class="ub red" id="aCancel">Request cancellation</button>';
+  if (open && !t.readOnly && (t.type === 'listing' || t.type === 'lease_listing') && !crPending) acts += '<button class="ub" id="aConv">' + (t.type === 'listing' ? 'Accepted Contract' : 'Convert to Lease') + '</button>';
+  if (open && !crPending && !t.readOnly) acts += '<button class="ub red" id="aCancel">Request cancellation</button>';
   if (isAdmin()) acts += '<button class="ub" id="aStatus">Set status</button>';
   var banner = '';
   if (crPending) banner = '<div class="err"><b>Cancellation requested</b> by ' + h(cr.requestedByName) + ' on ' + h(fmtTs(cr.requestedAt)) + (cr.reason ? ' · “' + h(cr.reason) + '”' : '') + (cr.relist === true ? ' · Going back on the market (a new listing is created on approval)' : cr.relist === false ? ' · Not going back on the market' : '') + '. Waiting for admin approval.' + (isAdmin() ? ' <a href="#/review">Decide in Review</a>' : '') + '</div>';
   else if (cr && cr.state === 'denied') banner = '<div class="ok">Cancellation request was denied' + (cr.note ? ': “' + h(cr.note) + '”' : '') + '.</div>';
+  if (t.readOnly) banner += '<div class="ok">Team view · ' + h(t.agentName) + '’s file. You can read the checklist, notes and documents; only ' + h(t.agentName) + ', their TC or an admin can change it.</div>';
   if (t.childId) banner += '<div class="ok">Relisted as a new file: <a href="#/t/' + h(t.childId) + '">open the new listing</a>.</div>';
   if (t.parentId) banner += '<div class="ok">Relisted from a cancelled file: <a href="#/t/' + h(t.parentId) + '">open the previous file</a>.</div>';
   var docCount = d.documents.filter(function (x) { return !x.removed; }).length;
@@ -540,27 +567,39 @@ function refresh() { txnView(S.txn.txn.id, true); }
 function drawTab() {
   var d = S.txn, c = qs('#tabc'), t = d.txn;
   if (S.tab === 'checklist') {
-    var html = '', lastPhase = null, groups = 0;
+    /* 1.5.0: categories are section subtitles; admins toggle Required per item; notes open in a popup; admins can delete attachments. */
+    var html = '', lastPhase = null, lastCat = null, groups = 0, v15 = !!S.v150;
     d.items.filter(function (it) { return it.active; }).forEach(function (it) {
       var ph = phaseLabel(it.phase);
-      if (ph !== lastPhase) { if (groups++) html += '</div><div class="phsep" role="separator" aria-hidden="true"></div>'; html += '<div class="gb" style="padding:4px 0;margin-bottom:16px"><div class="phase">' + h(ph) + ' Checklist</div>'; lastPhase = ph; }
-      var docs = docsOf(it.id), notes = d.notes.filter(function (n) { return n.itemId === it.id && n.kind !== 'rejection'; }).slice(-3);
-      html += '<div class="row" id="it_' + h(it.id) + '"><div class="n"><b>' + h(it.title) + (it.req ? '<span class="req-dot" title="Required"></span>' : '') + '</b><small>' + h(it.forms) + '</small>' +
+      if (ph !== lastPhase) { if (groups++) html += '</div><div class="phsep" role="separator" aria-hidden="true"></div>'; html += '<div class="gb" style="padding:4px 0;margin-bottom:16px"><div class="phase">' + h(ph) + ' Checklist</div>'; lastPhase = ph; lastCat = null; }
+      var cat = v15 ? itemCat(it) : '', rest = v15 ? formsRest(it) : it.forms;
+      if (v15 && cat && cat !== lastCat) { html += '<div class="cat">' + h(cat) + '</div>'; lastCat = cat; }
+      var docs = docsOf(it.id), allNotes = d.notes.filter(function (n) { return n.itemId === it.id; }), notes = allNotes.filter(function (n) { return n.kind !== 'rejection'; }).slice(-3);
+      var untitled = needsMiscTitle(it);
+      html += '<div class="row" id="it_' + h(it.id) + '"><div class="n"><b>' + h(it.title) + (it.req ? '<span class="req-dot" title="Required"></span>' : '') + '</b>' + (rest ? '<small>' + h(rest) + '</small>' : '') +
+        (untitled && v15 ? '<small class="mhint">Enter a title when you upload or assign a document</small>' : '') +
         (it.status === 'Rejected' && it.reviewNote ? '<div class="note rt">Admin note: ' + h(it.reviewNote) + '</div>' : '') +
-        notes.map(function (n) { return '<div class="note">' + h(n.by) + ': ' + h(n.text) + '</div>'; }).join('') +
-        (docs.length ? '<div class="docs">' + docs.map(function (x) { return '<button class="dl" data-doc="' + h(x.id) + '">' + h(x.name) + (x.pageRange ? ' (pages ' + h(x.pageRange) + ')' : '') + '</button>'; }).join('') + '</div>' : '') + '</div>' +
+        (v15 ? '' : notes.map(function (n) { return '<div class="note">' + h(n.by) + ': ' + h(n.text) + '</div>'; }).join('')) +
+        (docs.length ? '<div class="docs">' + docs.map(function (x) { return '<span class="dwrap"><button class="dl" data-doc="' + h(x.id) + '">' + h(x.name) + (x.pageRange ? ' (pages ' + h(x.pageRange) + ')' : '') + '</button>' + (v15 && isAdmin() ? '<button class="dx" data-doc="' + h(x.id) + '" data-n="' + h(x.name) + '" title="Delete attachment" aria-label="Delete ' + h(x.name) + '">×</button>' : '') + '</span>'; }).join('') + '</div>' : '') + '</div>' +
         itemPill(it.status) + '<div class="acts">' +
+        (v15 && isAdmin() && !it.cancel ? '<button class="rq' + (it.req ? ' on' : '') + '" data-item="' + h(it.id) + '" data-r="' + (it.req ? '1' : '') + '" aria-pressed="' + (it.req ? 'true' : 'false') + '" title="Switch between Required and Not Required for this file">' + (it.req ? 'Required' : 'Not Required') + '</button>' : '') +
         (canEdit() ? '<label class="ub">' + (it.status === 'Rejected' ? 'Re-upload' : 'Upload') + '<input type="file" class="hidden up" data-item="' + h(it.id) + '" accept="' + UP_ACCEPT + '"></label>' : '') +
         (it.status === 'Rejected' && canEdit() ? '<button class="ub red resub" data-item="' + h(it.id) + '">Add note &amp; resubmit</button>' : '') +
-        (it.misc && canEdit() ? '<button class="link ren" data-item="' + h(it.id) + '" data-t="' + h(it.title) + '">Rename</button>' : '') +
-        '<button class="link addn" data-item="' + h(it.id) + '">Note</button></div></div>';
+        (it.misc && canEdit() ? '<button class="link ren" data-item="' + h(it.id) + '" data-t="' + h(it.customTitle || '') + '">' + (untitled ? 'Title' : 'Rename') + '</button>' : '') +
+        (v15 ? '<button class="nind' + (allNotes.length ? ' has' : '') + '" data-item="' + h(it.id) + '" title="' + (allNotes.length ? 'Read notes' : 'Add a note') + '" aria-label="Notes (' + allNotes.length + ')"><span class="ico" aria-hidden="true"></span>' + (allNotes.length ? allNotes.length : '+') + '</button>'
+          : (t.readOnly ? '' : '<button class="link addn" data-item="' + h(it.id) + '">Note</button>')) + '</div></div>';
     });
     if (groups) html += '</div>';
-    c.innerHTML = html + '<p class="sub"><span class="req-dot"></span> Required for compliance. Agents can upload but cannot delete; only an admin can remove a document, and it stays in the archive.</p>';
-    qsa('.up', c).forEach(function (inp) { inp.onchange = function () { if (inp.files[0]) uploadFile(inp.files[0], inp.getAttribute('data-item')); }; });
+    c.innerHTML = html + '<p class="sub"><span class="req-dot"></span> Required for compliance. Agents can upload but cannot delete; only an admin can remove a document, and it stays in the archive.' + (v15 ? ' The note bubble on each item shows how many notes it has; tap it to read or add notes.' : '') + '</p>';
+    qsa('.up', c).forEach(function (inp) { inp.onchange = function () { var f = inp.files[0], id = inp.getAttribute('data-item'); inp.value = ''; if (!f) return; var it = d.items.filter(function (x) { return x.id === id; })[0];
+      if (S.v150 && needsMiscTitle(it)) return titleModal(it, function (mt) { return uploadFile(f, id, false, mt); });
+      uploadFile(f, id); }; });
     qsa('.resub', c).forEach(function (b) { b.onclick = function () { promptModal('Resubmit for review', 'Explain what you fixed. Re-upload first if a corrected document is needed.', 'Resubmit', function (txt) { return api('resubmit', { itemId: b.getAttribute('data-item'), note: txt }); }); }; });
-    qsa('.ren', c).forEach(function (b) { b.onclick = function () { promptModal('Rename Misc item', 'Name it after the document it holds.', 'Save', function (txt) { return api('renameMisc', { itemId: b.getAttribute('data-item'), title: txt }); }, true, b.getAttribute('data-t')); }; });
+    qsa('.ren', c).forEach(function (b) { b.onclick = function () { promptModal('Title this Misc item', 'Name it after the document it holds.', 'Save', function (txt) { return api('renameMisc', { itemId: b.getAttribute('data-item'), title: txt }); }, true, b.getAttribute('data-t')); }; });
     qsa('.addn', c).forEach(function (b) { b.onclick = function () { promptModal('Add a note', 'Visible to the office and the agent on this file.', 'Add note', function (txt) { return api('addNote', { txnId: t.id, itemId: b.getAttribute('data-item'), text: txt }); }); }; });
+    qsa('.nind', c).forEach(function (b) { b.onclick = function () { itemNotesModal(b.getAttribute('data-item')); }; });
+    qsa('.dx', c).forEach(function (b) { b.onclick = function () { delDocModal(b.getAttribute('data-doc')); }; });
+    qsa('.rq', c).forEach(function (b) { b.onclick = function () { b.disabled = true; var on = !b.getAttribute('data-r'); api('setItemRequired', { txnId: t.id, itemId: b.getAttribute('data-item'), required: on }).then(function () { toast(on ? 'Marked Required for this file.' : 'Marked Not Required for this file.'); refresh(); }).catch(function (e) { b.disabled = false; toast(e.message, 1); }); }; });
   } else if (S.tab === 'storage') {
     var items = d.items.filter(function (x) { return x.active; });
     var opts = function (sel) { return '<option value="">Document Storage (unassigned)</option>' + items.map(function (x) { return '<option value="' + h(x.id) + '"' + (x.id === sel ? ' selected' : '') + '>' + h(x.title) + '</option>'; }).join(''); };
@@ -576,9 +615,9 @@ function drawTab() {
           '<td style="white-space:nowrap">' + (x.mime === 'application/pdf' && !x.removed && canEdit() ? '<button class="link spl" data-doc="' + h(x.id) + '">Split</button> ' : '') + (isAdmin() ? (x.removed ? '<button class="link rst" data-doc="' + h(x.id) + '">Restore</button>' : '<button class="link rm" data-doc="' + h(x.id) + '">Remove</button>') : '') + '</td></tr>';
       }).join('') : '<tr><td colspan="5">No documents yet.</td></tr>') + '</tbody></table></div>';
     var su = qs('#stUp'); if (su) su.onchange = function () { var fs = Array.prototype.slice.call(su.files); fs.reduce(function (pr, f) { return pr.then(function () { return uploadFile(f, '', true); }); }, Promise.resolve()).then(refresh); };
-    qsa('.asg', c).forEach(function (s) { s.onchange = function () { api('assignDocument', { docId: s.getAttribute('data-doc'), itemId: s.value }).then(function () { toast(s.value ? 'Assigned and sent for review.' : 'Moved to Document Storage.'); refresh(); }).catch(function (e) { toast(e.message, 1); refresh(); }); }; });
+    qsa('.asg', c).forEach(function (s) { s.onchange = function () { withMiscTitle(s.value, function (mt) { return api('assignDocument', { docId: s.getAttribute('data-doc'), itemId: s.value, miscTitle: mt }); }, refresh).then(function () { toast(s.value ? 'Assigned and sent for review.' : 'Moved to Document Storage.'); refresh(); }).catch(function (e) { toast(e.message, 1); refresh(); }); }; });
     qsa('.spl', c).forEach(function (b) { b.onclick = function () { splitModal(b.getAttribute('data-doc')); }; });
-    qsa('.rm', c).forEach(function (b) { b.onclick = function () { promptModal('Remove document (admin)', 'The file leaves the checklist but stays in the Drive archive, flagged for Enrique. Nothing is deleted. Give a reason.', 'Remove', function (txt) { return api('removeDocument', { docId: b.getAttribute('data-doc'), reason: txt }); }); }; });
+    qsa('.rm', c).forEach(function (b) { b.onclick = function () { if (S.v150) return delDocModal(b.getAttribute('data-doc')); promptModal('Remove document (admin)', 'The file leaves the checklist but stays in the Drive archive, flagged for Enrique. Nothing is deleted. Give a reason.', 'Remove', function (txt) { return api('removeDocument', { docId: b.getAttribute('data-doc'), reason: txt }); }); }; });
     qsa('.rst', c).forEach(function (b) { b.onclick = function () { api('restoreDocument', { docId: b.getAttribute('data-doc') }).then(function () { toast('Restored.'); refresh(); }).catch(function (e) { toast(e.message, 1); }); }; });
   } else if (S.tab === 'details') {
     var ii = oaLegacy(t.intake), defs = F[t.type], secOpen = false, secTitle = '';
@@ -586,26 +625,28 @@ function drawTab() {
       if (f.h) { var hh = (secOpen ? '</div>' : '') + '<h3 class="dh">' + h(f.h === 'Other Agent' ? oaLabel(t.type, t.side) : f.h) + '</h3><div class="kv">'; secOpen = true; return hh; }
       var v = ii[f.k];
       if (f.k === 'state' && !v && ii.address) v = 'CA';
-      if (f.oa && !v && t.side !== 'both') return '<div><span>' + h(f.l) + '</span><b class="miss">Missing · required</b></div>';
+      var fl = f.k === 'otherAgentName' ? oaLabel(t.type, t.side).replace(/ \/ .*/, '') + ' name' : f.l;
+      if (f.oa && !v && t.side !== 'both') return '<div><span>' + h(fl) + '</span><b class="miss">Missing · required</b></div>';
       if (f.people) v = (v || []).map(function (pp) { return [pp.name, pp.phone, pp.email].filter(Boolean).join(' · '); }).join('\n');
       else if (f.radio) v = (f.radio.filter(function (o) { return o[0] === (f.k === 'side' ? t.side : v); })[0] || [])[1];
       else if (f.t === 'date') v = fmtDate(v); else if (f.t === 'money' && v) v = money(v); else if (f.comm) v = fmtComm(v, ii[f.k + 'Type']);
-      return '<div' + (f.w === 3 || f.people ? ' style="grid-column:1/-1"' : '') + '><span>' + h(f.l) + '</span><b style="white-space:pre-line">' + (v ? h(v) : '—') + '</b></div>';
-    }).join('') + (secOpen ? '</div><h3 class="dh">File</h3><div class="kv">' : '') + (ii.otherAgent && t.intake && t.intake.otherAgent ? '<div style="grid-column:1/-1"><span>Other agent (original entry)</span><b>' + h(t.intake.otherAgent) + '</b></div>' : '') + (ii.finalPrice ? '<div><span>Final sales price</span><b>' + money(ii.finalPrice) + '</b></div>' : '') + (t.closedAt ? '<div><span>Closed</span><b>' + fmtDate(t.closedAt) + '</b></div>' : '') +
+      return '<div' + (f.w === 3 || f.people ? ' style="grid-column:1/-1"' : '') + '><span>' + h(fl) + '</span><b style="white-space:pre-line">' + (v ? h(v) : '—') + '</b></div>';
+    }).join('') + (secOpen ? '</div><h3 class="dh">File</h3><div class="kv">' : '') + (ii.otherAgent && t.intake && t.intake.otherAgent ? '<div style="grid-column:1/-1"><span>' + h(oaLabel(t.type, t.side)) + ' (original entry)</span><b>' + h(t.intake.otherAgent) + '</b></div>' : '') + (ii.finalPrice ? '<div><span>Final sales price</span><b>' + money(ii.finalPrice) + '</b></div>' : '') + (t.closedAt ? '<div><span>Closed</span><b>' + fmtDate(t.closedAt) + '</b></div>' : '') +
       (t.retentionUntil ? '<div><span>Keep records until</span><b>' + fmtDate(t.retentionUntil) + '</b></div>' : '') + (S.tcApi ? '<div><span>Transaction coordinator</span><b>' + (t.tcName ? h(t.tcName) : 'None') + '</b></div>' : '') + '<div><span>File ID</span><b>' + h(t.id) + '</b></div></div>' +
       (canEdit() ? '<div class="actions">' + (S.tcApi && t.canAssignTc ? '<button class="ub" id="editTc">' + (t.tcName ? 'Change TC' : 'Add TC') + '</button>' : '') + '<button class="ub" id="editI">Edit intake</button></div>' : '') + '</div>';
     if (qs('#editTc')) qs('#editTc').onclick = tcModal;
     if (qs('#editI')) qs('#editI').onclick = function () {
       c.innerHTML = '<form id="ef" novalidate><div id="ee"></div>' + formHtml(t.type, ii, 'e', { side: 1 }) + '<div class="actions"><button type="button" class="ub" id="ecan">Cancel</button><button class="btn">Save intake</button></div></form>';
-      var f = qs('#ef'); f.setAttribute('data-side', t.side || ''); wireForm(f); qs('#ecan').onclick = drawTab;
+      var f = qs('#ef'); f.setAttribute('data-side', t.side || ''); f.setAttribute('data-type', t.type); wireForm(f); qs('#ecan').onclick = drawTab;
       qsa('.f[data-oa]', f).forEach(function (el) { var x = qs('input', el); if (!x.value && t.side !== 'both') el.classList.add('bad'); });
       f.onsubmit = function (e) { e.preventDefault(); var r = readForm(f); if (r.missing.length) { qs('#ee').innerHTML = '<div class="err">Please complete: ' + h(r.missing.join(', ')) + '</div>'; return; }
         api('updateIntake', { id: t.id, intake: r.intake }).then(function () { toast('Saved.'); refresh(); }).catch(function (err) { qs('#ee').innerHTML = '<div class="err">' + h(err.message) + '</div>'; }); };
     };
   } else {
     c.innerHTML = '<div class="split" style="grid-template-columns:1fr 1fr"><div class="card gb"><h3>Notes</h3><textarea id="nt" placeholder="Add a note for this file"></textarea><div class="actions" style="margin-top:8px"><button class="btn sm" id="ntb">Add note</button></div><div class="feed">' +
-      d.notes.slice().reverse().map(function (n) { var it = d.items.filter(function (x) { return x.id === n.itemId; })[0]; return '<div class="ev"><b>' + h(n.by) + '</b> ' + (n.kind === 'rejection' ? '<span class="rt">rejected</span> ' : n.kind === 'resubmit' ? '<span class="gt">resubmitted</span> ' : n.kind === 'review_update' ? '<span class="gt">review update</span> ' : n.kind === 'review' ? '<span class="gt">approved</span> ' : '') + (it ? '· ' + h(it.title) : '') + '<br>' + h(n.text).replace(/\n/g, '<br>') + '<small>' + h(fmtTs(n.createdAt)) + '</small></div>'; }).join('') + '</div></div>' +
+      d.notes.slice().reverse().map(function (n) { var it = d.items.filter(function (x) { return x.id === n.itemId; })[0]; return '<div class="ev"><b>' + h(n.by) + '</b> ' + (n.kind === 'rejection' ? '<span class="rt">rejected</span> ' : n.kind === 'resubmit' ? '<span class="gt">resubmitted</span> ' : n.kind === 'review_update' ? '<span class="gt">review update</span> ' : n.kind === 'review' ? '<span class="gt">approved</span> ' : '') + (it ? '· ' + h(it.title) : '') + (canDelNotes() ? '<button class="nx" data-note="' + h(n.id) + '" title="Delete note" aria-label="Delete note">×</button>' : '') + '<br>' + h(n.text).replace(/\n/g, '<br>') + '<small>' + h(fmtTs(n.createdAt)) + '</small></div>'; }).join('') + '</div></div>' +
       '<div class="card gb"><h3>Activity</h3><div class="feed">' + d.activity.map(function (a) { return '<div class="ev">' + h(actLabel(a, d.txn)) + '<small>' + h(a.by) + ' · ' + h(fmtTs(a.ts)) + '</small></div>'; }).join('') + '</div></div></div>';
+    qsa('.nx', c).forEach(function (b) { b.onclick = function () { delNoteModal(b.getAttribute('data-note')); }; });
     qs('#ntb').onclick = function () { var v = qs('#nt').value.trim(); if (!v) return; api('addNote', { txnId: t.id, text: v }).then(function () { toast('Note added.'); refresh(); }).catch(function (e) { toast(e.message, 1); }); };
   }
   qsa('.dl', c).forEach(function (b) { b.onclick = function () { openDoc(b.getAttribute('data-doc'), b); }; });
@@ -627,12 +668,12 @@ function tcModal() {
 /* ---------------- files ---------------- */
 var MAX = 20 * 1024 * 1024;
 function bytesToB64(bytes) { var s = '', ch = 0x8000; for (var i = 0; i < bytes.length; i += ch) s += String.fromCharCode.apply(null, bytes.subarray(i, i + ch)); return btoa(s); }
-function uploadFile(file, itemId, quiet) {
+function uploadFile(file, itemId, quiet, miscTitle) {
   var bad = upCheck(file); if (bad) { toast(bad, 1); return Promise.resolve(); }
   toast('Preparing ' + file.name + '…');
   return prepUpload(file).then(function (p) {
     toast('Uploading ' + p.name + ' (' + fmtSize(p.bytes.length) + ')…');
-    return api('upload', { txnId: S.txn.txn.id, itemId: itemId || '', name: p.name, mime: 'application/pdf', base64: bytesToB64(p.bytes), kind: 'file', pages: p.pages || '' })
+    return api('upload', { txnId: S.txn.txn.id, itemId: itemId || '', name: p.name, mime: 'application/pdf', base64: bytesToB64(p.bytes), kind: 'file', pages: p.pages || '', miscTitle: miscTitle || undefined })
       .then(function () { toast('Uploaded ' + p.name + ' (' + fmtSize(p.bytes.length) + ')' + (itemId ? '. Sent for review.' : ' to Document Storage.')); if (!quiet) refresh(); });
   }).catch(function (e) { toast(e.message, 1); });
 }
@@ -856,7 +897,7 @@ function splitModal(existingDocId) {
     (existingDocId ? '' : '<label class="btn" id="spick">Choose PDF packet<input type="file" class="hidden" id="sfile" accept="' + UP_ACCEPT + '"></label>') + '<div id="sbody"></div>', true);
   var state = { bytes: null, name: '', pages: 0, srcId: existingDocId || '' };
   function showErr(msg) { qs('#se', m).innerHTML = msg ? '<div class="err">' + h(msg) + '</div>' : ''; }
-  function addRange(a, b) { qs('#rngs', m).insertAdjacentHTML('beforeend', '<div class="rng"><input type="number" min="1" max="' + state.pages + '" value="' + a + '" aria-label="From page"><input type="number" min="1" max="' + state.pages + '" value="' + b + '" aria-label="To page"><select aria-label="Checklist item">' + opt + '</select><button class="rx link" title="Remove" style="text-decoration:none;font-size:20px">×</button></div>'); }
+  function addRange(a, b) { qs('#rngs', m).insertAdjacentHTML('beforeend', '<div class="rng"><input type="number" min="1" max="' + state.pages + '" value="' + a + '" aria-label="From page"><input type="number" min="1" max="' + state.pages + '" value="' + b + '" aria-label="To page"><select aria-label="Checklist item">' + opt + '</select><button class="rx link" title="Remove" style="text-decoration:none;font-size:20px">×</button><input type="text" class="rmt hidden" maxlength="80" placeholder="Title for this Misc document *" aria-label="Misc document title"></div>'); }
   function setup(bytes, name) {
     return loadPdfLib().then(function (L) { return L.PDFDocument.load(bytes, { ignoreEncryption: true }); }).then(function (doc) {
       state.bytes = bytes; state.name = name; state.pages = doc.getPageCount();
@@ -865,13 +906,15 @@ function splitModal(existingDocId) {
         '<div class="actions"><button class="btn" id="sgo">Split &amp; upload</button></div></div></div>';
       addRange(1, state.pages);
       qs('#addr', m).onclick = function () { var last = qsa('.rng', m).pop(); var s = last ? Math.min(state.pages, Number(qsa('input', last)[1].value) + 1) : 1; addRange(s, state.pages); };
+      qs('#rngs', m).addEventListener('change', function (e) { if (e.target.tagName === 'SELECT') { var it = items.filter(function (x) { return x.id === e.target.value; })[0]; qs('.rmt', e.target.closest('.rng')).classList.toggle('hidden', !needsMiscTitle(it)); } });
       qs('#rngs', m).addEventListener('click', function (e) { if (e.target.classList.contains('rx')) e.target.closest('.rng').remove(); });
       qs('#sgo', m).onclick = run;
     });
   }
   function run() {
-    var ranges = qsa('.rng', m).map(function (r) { var ins = qsa('input', r); return { a: Number(ins[0].value), b: Number(ins[1].value), item: qs('select', r).value }; });
+    var ranges = qsa('.rng', m).map(function (r) { var ins = qsa('input[type=number]', r); return { a: Number(ins[0].value), b: Number(ins[1].value), item: qs('select', r).value, mt: qs('.rmt', r) ? qs('.rmt', r).value.trim() : '' }; });
     if (!ranges.length) return showErr('Add at least one range.');
+    for (var q = 0; q < ranges.length; q++) { var ri = items.filter(function (x) { return x.id === ranges[q].item; })[0]; if (needsMiscTitle(ri) && !ranges[q].mt && !ranges.some(function (o, j) { return j < q && o.item === ranges[q].item && o.mt; })) return showErr('Enter a title for the Misc document in range ' + (q + 1) + '.'); }
     for (var k = 0; k < ranges.length; k++) { var r = ranges[k]; if (!(r.a >= 1 && r.b >= r.a && r.b <= state.pages)) return showErr('Check the page numbers in range ' + (k + 1) + ' (1–' + state.pages + ').'); }
     showErr(''); var btn = qs('#sgo', m); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Working…';
     var L, txnId = S.txn.txn.id, base = state.name.replace(/\.pdf$/i, '');
@@ -889,8 +932,8 @@ function splitModal(existingDocId) {
             return out.copyPages(src, ix).then(function (pages) { pages.forEach(function (pg) { out.addPage(pg); }); return out.save(); });
           }).then(function (bytes) {
             var it = items.filter(function (x) { return x.id === r.item; })[0];
-            var nm = (it ? it.title : base).replace(/[\\/:*?"<>|]+/g, '-') + ' (p' + r.a + (r.b > r.a ? '-' + r.b : '') + ').pdf';
-            return api('upload', { txnId: txnId, itemId: r.item, name: nm, mime: 'application/pdf', base64: bytesToB64(bytes), kind: 'split', sourceDocId: state.srcId, pageRange: r.a + '-' + r.b, pages: r.b - r.a + 1 });
+            var nm = (r.mt || (it ? it.title : base)).replace(/[\\/:*?"<>|]+/g, '-') + ' (p' + r.a + (r.b > r.a ? '-' + r.b : '') + ').pdf';
+            return api('upload', { txnId: txnId, itemId: r.item, name: nm, mime: 'application/pdf', base64: bytesToB64(bytes), kind: 'split', sourceDocId: state.srcId, pageRange: r.a + '-' + r.b, pages: r.b - r.a + 1, miscTitle: r.mt || undefined });
           });
         });
       }, Promise.resolve());
@@ -916,7 +959,7 @@ function convertModal() {
   var m = modal('<h2>' + (to === 'purchase' ? 'Accepted Contract' : 'Convert to Lease') + '</h2><p class="sub">' + (to === 'purchase' ? 'Offer accepted? Add the escrow details. The listing information is already filled in, and the purchase checklist items are added to this file.' : 'Tenant found? Add the lease details. The listing information is already filled in, and the lease checklist items are added to this file.') + '</p><div id="ce"></div><form id="cf" novalidate>' +
     '<div class="card gb"><h3>Who we represent</h3><div class="fgrid">' + fieldHtml(sideField, pre.side, 'c') + '</div></div>' +
     formHtml(to, pre, 'c', { side: 1 }) + '<div class="actions"><button class="btn" id="cb">' + (to === 'purchase' ? 'Save Accepted Contract' : 'Convert') + '</button></div></form>', true);
-  var f = qs('#cf', m); wireForm(f);
+  var f = qs('#cf', m); f.setAttribute('data-type', to); wireForm(f);
   f.onsubmit = function (e) {
     e.preventDefault(); var r = readForm(f);
     if (r.missing.length) { qs('#ce', m).innerHTML = '<div class="err">Please complete: ' + h(r.missing.join(', ')) + '</div>'; m.scrollTop = 0; return; }
@@ -1133,7 +1176,8 @@ function usersView() {
     var admins = users.filter(function (u) { return rolesOf(u)[0] === 'admin'; }), agents = users.filter(function (u) { return rolesOf(u).indexOf('agent') >= 0; }), tcs = users.filter(function (u) { return rolesOf(u).indexOf('tc') >= 0; });
     var inner = '<div class="top"><div><h1>Users</h1></div><button class="btn" id="nu">' + (S.tcApi ? '+ Add user' : '+ Add agent') + '</button></div>' +
       section('admin', 'Admins', admins, 'No admins.') + section('agent', 'Agents', agents, 'No agents yet.') +
-      section('tc', 'Transaction Coordinators', tcs, S.tcApi ? 'No transaction coordinators yet. Use <b>+ Add user</b> and tick Transaction Coordinator.' : 'Transaction coordinators arrive with the next backend update.');
+      section('tc', 'Transaction Coordinators', tcs, S.tcApi ? 'No transaction coordinators yet. Use <b>+ Add user</b> and tick Transaction Coordinator.' : 'Transaction coordinators arrive with the next backend update.') +
+      (S.v150 ? '<section class="usec" id="teamsSec"><div class="loading"><span class="spin"></span>Loading teams…</div></section>' : '');
     page('users', inner, function () {
       qs('#nu').onclick = function () {
         var m = modal('<h2>' + (S.tcApi ? 'Add user' : 'Add agent') + '</h2><div id="ae"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="af" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="al" maxlength="50" required></div>' +
@@ -1179,6 +1223,7 @@ function usersView() {
           }).catch(function (e) { qs('#ee', m).innerHTML = '<div class="err">' + h(/unknown action/i.test(e.message) ? 'Editing names needs the Transaction Center backend 1.2.1 or later.' : e.message) + '</div>'; });
         };
       }; });
+      if (S.v150) teamsSection(users);
       qsa('.act').forEach(function (b) { b.onclick = function () { api('setUserActive', { userId: b.getAttribute('data-id'), active: !!b.getAttribute('data-a') }).then(usersView).catch(function (e) { toast(e.message, 1); }); }; });
     });
   }).catch(function (e) { failView('users', e); });
@@ -1666,6 +1711,126 @@ function feedModal(d) {
   draw(!!(d.feed && d.feed.active));
 }
 
+/* ---------------- 1.5.0: categories, misc titles, deletes, notes popup, goals, teams ---------------- */
+var CL_CATS = ['Listing Documents', 'Buyer Representation', 'Sales Documentation', 'Escrow Documentation', 'Disclosures', 'Misc', 'Reports and Invoices', 'Closing Documents'];
+function isLeader() { return !!(S.v150 && S.user && S.user.team && S.user.team.leader); }
+function canGoals() { return !!(S.v150 && S.user && !isTC() && (isAdmin() || rolesOf(S.user).indexOf('agent') >= 0)); }
+function canDelNotes() { return !!(S.v150 && isAdmin()); }
+function itemCat(it) {
+  if (it.category) return it.category;
+  if (it.misc) return 'Misc'; if (it.cancel) return 'Cancellation';
+  var c = String(it.forms || '').split(' · ')[0].trim(); return CL_CATS.indexOf(c) >= 0 ? c : '';
+}
+function formsRest(it) {   // the forms text minus the category (now a subtitle) and the misc hint
+  if (it.misc) return '';
+  var f = String(it.forms || ''), c = itemCat(it), parts = f.split(' · ');
+  if (c && parts[0].trim() === c) parts.shift();
+  return parts.join(' · ').trim();
+}
+function needsMiscTitle(it) { return !!(it && it.misc && !it.customTitle); }
+function titleModal(it, fn) {
+  var m = modal('<h2>Title this Misc document</h2><p class="sub">' + h(it.title) + ' needs a title before a document goes in it. Name it after the document, for example “HOA Approval Letter”.</p><div id="me"></div><input type="text" id="mt" maxlength="80"><div class="actions"><button class="btn" id="mb">Continue</button></div>');
+  qs('#mt', m).focus();
+  qs('#mt', m).onkeydown = function (e) { if (e.key === 'Enter') qs('#mb', m).click(); };
+  qs('#mb', m).onclick = function () {
+    var v = qs('#mt', m).value.trim(); if (!v) { qs('#me', m).innerHTML = '<div class="err">A title is required for Misc documents.</div>'; return; }
+    m.close(); fn(v);
+  };
+  return m;
+}
+function withMiscTitle(itemId, fn, cancel) {   // resolves after fn(title) when the target is an untitled Misc slot
+  var it = S.txn.items.filter(function (x) { return x.id === itemId; })[0];
+  if (!S.v150 || !needsMiscTitle(it)) return fn('');
+  return new Promise(function (res, rej) { var m = titleModal(it, function (v) { fn(v).then(res, rej); }); var cl = m.close; m.close = function () { cl(); }; qs('.close', m).onclick = function () { cl(); if (cancel) cancel(); }; });
+}
+function confirmModal(title, body, btn, fn) {
+  var m = modal('<h2>' + h(title) + '</h2><p class="sub">' + body + '</p><div id="ce"></div><div class="actions"><button class="ub" id="cn">Cancel</button><button class="btn red" id="cy">' + h(btn) + '</button></div>');
+  qs('#cn', m).onclick = m.close;
+  qs('#cy', m).onclick = function () { var b = this; b.disabled = true; fn().then(function () { m.close(); }).catch(function (e) { b.disabled = false; qs('#ce', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; }); };
+  return m;
+}
+function delDocModal(docId) {
+  var x = S.txn.documents.filter(function (y) { return y.id === docId; })[0]; if (!x) return;
+  confirmModal('Delete attachment?', 'Delete <b>' + h(x.name) + '</b> from this file? It leaves the checklist and Document Storage. A copy stays in the Drive archive for records retention, and an admin can restore it.', 'Delete', function () {
+    return api('removeDocument', { docId: docId }).then(function () { toast('Attachment deleted.'); refresh(); });
+  });
+}
+function delNoteModal(noteId, after) {
+  var n = S.txn.notes.filter(function (y) { return y.id === noteId; })[0]; if (!n) return;
+  confirmModal('Delete note?', 'Delete this note by <b>' + h(n.by) + '</b>? “' + h(String(n.text).slice(0, 140)) + (String(n.text).length > 140 ? '…' : '') + '”', 'Delete note', function () {
+    return api('deleteNote', { noteId: noteId }).then(function () { toast('Note deleted.'); if (after) after(); refresh(); });
+  });
+}
+function itemNotesModal(itemId) {
+  var d = S.txn, it = d.items.filter(function (x) { return x.id === itemId; })[0]; if (!it) return;
+  var ns = d.notes.filter(function (n) { return n.itemId === itemId; }).slice().reverse();
+  var m = modal('<h2>Notes · ' + h(it.title) + '</h2><p class="sub">' + (ns.length ? ns.length + (ns.length === 1 ? ' note' : ' notes') + ', newest first.' : 'No notes on this item yet.') + '</p><div class="feed nfeed">' + ns.map(function (n) {
+    return '<div class="ev"><b>' + h(n.by) + '</b> ' + (n.kind === 'rejection' ? '<span class="rt">rejected</span> ' : n.kind === 'resubmit' ? '<span class="gt">resubmitted</span> ' : n.kind === 'review' ? '<span class="gt">approved</span> ' : '') + (canDelNotes() ? '<button class="nx" data-note="' + h(n.id) + '" title="Delete note" aria-label="Delete note">×</button>' : '') + '<br>' + h(n.text).replace(/\n/g, '<br>') + '<small>' + h(fmtTs(n.createdAt)) + '</small></div>';
+  }).join('') + '</div>' + (d.txn.readOnly ? '' : '<div id="me"></div><textarea id="mt" placeholder="Add a note for this item"></textarea><div class="actions"><button class="btn" id="mb">Add note</button></div>'));
+  qsa('.nx', m).forEach(function (b) { b.onclick = function () { m.close(); delNoteModal(b.getAttribute('data-note')); }; });
+  if (qs('#mb', m)) qs('#mb', m).onclick = function () {
+    var v = qs('#mt', m).value.trim(); if (!v) { qs('#me', m).innerHTML = '<div class="err">Write the note first.</div>'; return; }
+    this.disabled = true;
+    api('addNote', { txnId: d.txn.id, itemId: itemId, text: v }).then(function () { m.close(); toast('Note added.'); refresh(); }).catch(function (e) { qs('#mb', m).disabled = false; qs('#me', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
+  };
+}
+function goalBars(g) {
+  var row = function (lbl, have, goal, pct) { return '<div class="gl"><div class="glh"><span>' + lbl + '</span><b>' + have + (goal ? ' <small>of ' + goal + '</small>' : '') + '</b></div><div class="bar"><i style="width:' + pct + '%"></i></div><small>' + (goal ? pct + '%' : 'No goal set') + '</small></div>'; };
+  return '<div class="goals gb"><div class="ttl">' + h(g.year) + ' goals<button class="link" id="setGoals">' + (g.units || g.volume ? 'Edit goals' : 'Set goals') + '</button></div>' +
+    row('Units closed', g.closedUnits, g.units ? String(g.units) : '', g.unitsPct) + row('Volume closed', moneyShort(g.closedVolume), g.volume ? moneyShort(g.volume) : '', g.volumePct) +
+    '<div class="rank"><span>Rank</span><b class="gt">#' + g.rank + '</b><small>of ' + g.rankOf + ' agents by closed volume</small></div></div>';
+}
+function teamTable(tm) {
+  return '<div class="gb tbl tprod"><div class="ttl">' + h(tm.name) + ' · ' + h(tm.year) + ' production</div><table><thead><tr><th>Agent</th><th>Open</th><th>Units</th><th>Volume</th><th>Units goal</th><th>Volume goal</th><th>Rank</th></tr></thead><tbody>' +
+    tm.agents.map(function (a) { return '<tr><td>' + h(a.name) + (a.leader ? ' <span class="pill p-pend">Team Leader</span>' : '') + '</td><td>' + a.open + '</td><td>' + a.closedUnits + '</td><td>' + moneyShort(a.closedVolume) + '</td><td>' + (a.goalUnits ? a.unitsPct + '% of ' + a.goalUnits : '—') + '</td><td>' + (a.goalVolume ? a.volumePct + '% of ' + moneyShort(a.goalVolume) : '—') + '</td><td>#' + a.rank + '</td></tr>'; }).join('') +
+    '<tr class="tot"><td>Team total</td><td>' + tm.totals.open + '</td><td>' + tm.totals.closedUnits + '</td><td>' + moneyShort(tm.totals.closedVolume) + '</td><td></td><td></td><td></td></tr></tbody></table></div>';
+}
+function goalsModal() {
+  var m = modal('<h2>Goals</h2><div id="ge"><div class="loading"><span class="spin"></span>Loading…</div></div>');
+  api('getGoals').then(function (r) {
+    var g = r.goals || {};
+    qs('#ge', m).innerHTML = '<p class="sub">Your ' + h(g.year || '') + ' goals. Closed units count each side you represent; volume is the sales price per side.</p><div id="gx"></div><div class="fgrid"><div class="f"><label for="gu">Units (closed sides)</label><input type="text" inputmode="numeric" id="gu" value="' + (g.units || '') + '" placeholder="e.g. 12"></div><div class="f w2"><label for="gv">Volume ($)</label><input type="text" inputmode="numeric" id="gv" value="' + (g.volume ? money(g.volume) : '') + '" placeholder="e.g. $10,000,000"></div></div><div class="actions"><button class="btn" id="gb">Save goals</button></div>';
+    qs('#gv', m).onblur = function () { var n = Number(this.value.replace(/[$,\s]/g, '')); if (n) this.value = money(n); };
+    qs('#gb', m).onclick = function () {
+      var u = qs('#gu', m).value.replace(/[,\s]/g, ''), v = qs('#gv', m).value.replace(/[$,\s]/g, '');
+      if ((u && !/^\d+$/.test(u)) || (v && !/^\d+(\.\d+)?$/.test(v))) { qs('#gx', m).innerHTML = '<div class="err">Enter whole numbers, like 12 units and $10,000,000.</div>'; return; }
+      this.disabled = true;
+      api('setGoals', { units: Number(u || 0), volume: Number(v || 0) }).then(function () { m.close(); toast('Goals saved.'); if (!location.hash || location.hash === '#/' ) dashView(); }).catch(function (e) { qs('#gb', m).disabled = false; qs('#gx', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
+    };
+  }).catch(function (e) { qs('#ge', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
+}
+function teamsSection(users) {
+  var sec = qs('#teamsSec'); if (!sec) return;
+  var agents = users.filter(function (u) { return rolesOf(u).indexOf('agent') >= 0 && u.active !== false; });
+  api('listTeams').then(function (r) {
+    var teams = r.teams || [];
+    sec.innerHTML = '<div class="ush"><h2 id="us_team">Teams</h2><span class="ucount">' + teams.length + '</span><button class="ub" id="nt" style="margin-left:auto">+ New team</button></div>' +
+      (teams.length ? '<div class="gb tbl"><table class="ttbl"><thead><tr><th>Team</th><th>Team Leader</th><th>Agents</th><th></th></tr></thead><tbody>' + teams.map(function (x) {
+        return '<tr><td><b>' + h(x.name) + '</b></td><td>' + h(x.leaderName) + '</td><td>' + h(x.members.filter(function (p) { return p.id !== x.leaderId; }).map(function (p) { return p.name; }).join(', ') || '—') + '</td><td style="white-space:nowrap"><button class="link et" data-id="' + h(x.id) + '">Edit</button> <button class="link dt" data-id="' + h(x.id) + '">Delete</button></td></tr>';
+      }).join('') + '</tbody></table></div>' : '<div class="card gb uempty">No teams yet. A Team Leader sees only their own team’s files and production, with no admin powers.</div>');
+    var edit = function (x) {
+      x = x || { name: '', leaderId: '', memberIds: [] };
+      var other = {}; teams.forEach(function (o) { if (o.id !== x.id) o.memberIds.forEach(function (id) { other[id] = o.name; }); });
+      var m = modal('<h2>' + (x.id ? 'Edit team' : 'New team') + '</h2><div id="te"></div><div class="fgrid"><div class="f w3"><label for="tn">Team name *</label><input type="text" id="tn" maxlength="60" value="' + h(x.name) + '"></div>' +
+        '<div class="f w3"><label for="tl">Team Leader *</label><select id="tl"><option value="">Choose an agent</option>' + agents.map(function (u) { return '<option value="' + h(u.id) + '"' + (u.id === x.leaderId ? ' selected' : '') + '>' + h(uName(u)) + (other[u.id] ? ' (on ' + h(other[u.id]) + ')' : '') + '</option>'; }).join('') + '</select></div>' +
+        '<div class="f w3"><label>Agents on the team</label><div class="tpick">' + agents.map(function (u) { return '<label><input type="checkbox" value="' + h(u.id) + '"' + (x.memberIds.indexOf(u.id) >= 0 && u.id !== x.leaderId ? ' checked' : '') + '> ' + h(uName(u)) + (other[u.id] ? ' <small>(moves from ' + h(other[u.id]) + ')</small>' : '') + '</label>'; }).join('') + '</div></div></div>' +
+        '<div class="actions"><button class="btn" id="ts">Save team</button></div>', true);
+      var sync = function () { var l = qs('#tl', m).value; qsa('.tpick input', m).forEach(function (c) { c.disabled = c.value === l; if (c.value === l) c.checked = false; }); };
+      qs('#tl', m).onchange = sync; sync();
+      qs('#ts', m).onclick = function () {
+        var nm = qs('#tn', m).value.trim(), l = qs('#tl', m).value, ids = qsa('.tpick input:checked', m).map(function (c) { return c.value; });
+        if (!nm || !l) { qs('#te', m).innerHTML = '<div class="err">Enter a team name and choose the Team Leader.</div>'; return; }
+        this.disabled = true;
+        api('saveTeam', { id: x.id || undefined, name: nm, leaderId: l, memberIds: ids }).then(function () { m.close(); toast('Team saved.'); usersView(); }).catch(function (e) { qs('#ts', m).disabled = false; qs('#te', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
+      };
+    };
+    qs('#nt', sec).onclick = function () { edit(); };
+    qsa('.et', sec).forEach(function (b) { b.onclick = function () { edit(teams.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]); }; });
+    qsa('.dt', sec).forEach(function (b) { b.onclick = function () { var x = teams.filter(function (y) { return y.id === b.getAttribute('data-id'); })[0];
+      confirmModal('Delete team?', 'Delete <b>' + h(x.name) + '</b>? The agents and their files are not changed; ' + h(x.leaderName) + ' stops being a Team Leader.', 'Delete team', function () { return api('deleteTeam', { id: x.id }).then(function () { toast('Team deleted.'); usersView(); }); }); }; });
+  }).catch(function (e) { sec.innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
+}
+
 /* ---------------- router ---------------- */
 function route() {
   qsa('.modal').forEach(function (m) { m.remove(); }); document.body.style.overflow = '';
@@ -1689,7 +1854,7 @@ function route() {
 function render() {
   if (S.tcApi === undefined) {   // feature detection: TC (1.3.0+) and CRM (1.4.0+) only when the backend says it has them
     S.tcApi = false;
-    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); S.crmLender = !!(d && d.features && d.features.indexOf('crm_lender') >= 0); S.crmBday = !!(d && d.features && d.features.indexOf('crm_birthday') >= 0); S.batchReview = !!(d && d.features && d.features.indexOf('batch_review') >= 0); }, function () { }).then(render);
+    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); S.crmLender = !!(d && d.features && d.features.indexOf('crm_lender') >= 0); S.crmBday = !!(d && d.features && d.features.indexOf('crm_birthday') >= 0); S.batchReview = !!(d && d.features && d.features.indexOf('batch_review') >= 0); S.v150 = !!(d && d.features && d.features.indexOf('v150') >= 0); }, function () { }).then(render);
   }
   if (!S.token) return loginView();
   if (!S.user) {
