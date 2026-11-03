@@ -459,3 +459,9 @@ h1.taddr{margin-bottom:2px}
   #ebprint .ebkv{border-collapse:collapse;width:100%;font-size:13px}#ebprint .ebkv th{text-align:left;width:40%;padding:7px;border-bottom:1px solid #ccc}#ebprint .ebkv td{padding:7px;border-bottom:1px solid #ccc}
   #ebprint svg{max-width:560px}
 }
+
+/* v38: E-Books gold tab right of CRM (owner only) */
+nav.main a.crmtab.ebtab{margin-left:8px;display:inline-flex;align-items:center;gap:6px}
+nav.main a.crmtab.ebtab:before{display:none}
+nav.main a.ebtab .ebico{flex:none;display:block}
+@media (max-width:899px){nav.main a.crmtab.ebtab{margin:8px 0 0;display:flex}}
