@@ -859,11 +859,50 @@ function openDoc(docId, btn) {
     var url = URL.createObjectURL(new Blob([f.bytes], { type: f.mime }));
     var viewable = /^application\/pdf|^image\/(png|jpe?g|gif|webp)|^text\/plain/.test(f.mime);
     qs('.box', m).innerHTML = '<button class="close" aria-label="Close">×</button><h2 style="padding-right:30px;word-break:break-word">' + h(f.name) + '</h2>' +
-      (viewable ? (/^image/.test(f.mime) ? '<img src="' + url + '" alt="" style="max-width:100%;border-radius:10px;margin-top:10px">' : '<iframe src="' + url + '" title="Document" style="width:100%;height:70vh;border:1px solid rgba(0,0,7,.12);border-radius:10px;margin-top:10px;background:#fff"></iframe>') : '<p class="sub">This file type cannot be previewed in the browser.</p>') +
+      (viewable ? (/^image/.test(f.mime) ? '<img src="' + url + '" alt="" style="max-width:100%;border-radius:10px;margin-top:10px">' : (/^application\/pdf/.test(f.mime) ? '<div class="pdfv" style="margin-top:10px"></div>' : '<iframe src="' + url + '" title="Document" style="width:100%;height:70vh;border:1px solid rgba(0,0,7,.12);border-radius:10px;margin-top:10px;background:#fff"></iframe>')) : '<p class="sub">This file type cannot be previewed in the browser.</p>') +
       '<div class="actions"><a class="btn" href="' + url + '" download="' + h(f.name) + '">Download</a></div>';
-    qs('.close', m).onclick = function () { m.close(); URL.revokeObjectURL(url); };
+    var pv = qs('.pdfv', m), stop = pv ? renderPdfPages(pv, f.bytes, f.name) : null;
+    qs('.close', m).onclick = function () { if (stop) stop(); m.close(); URL.revokeObjectURL(url); };
   }).catch(function (e) { m.close(); toast(e.message, 1); }).then(function () { if (btn) btn.disabled = false; });
 }
+/* Full-document PDF viewer. iOS Safari shows only the first page of a PDF inside an <iframe>/<img>,
+   so every page is rendered to its own <canvas> with PDF.js (main thread; CSP has worker-src 'none'). */
+function loadPdfJs() {
+  if (window.pdfjsLib && window.pdfjsWorker) return Promise.resolve(window.pdfjsLib);
+  function load(src) { return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = function () { rej(new Error('Could not load the PDF viewer.')); }; document.head.appendChild(s); }); }
+  return load('vendor/pdfjs.min.js?v=1').then(function () { return load('vendor/pdfjs.worker.min.js?v=1'); }).then(function () {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs.worker.min.js?v=1'; return window.pdfjsLib;
+  });
+}
+function renderPdfPages(host, bytes, name) {
+  var cancelled = false, doc = null;
+  host.innerHTML = '<div class="loading"><span class="spin"></span>Loading pages…</div>';
+  loadPdfJs().then(function (lib) {
+    return lib.getDocument({ data: bytes.slice(0), isEvalSupported: false, disableWorker: true }).promise;
+  }).then(function (d) {
+    doc = d; if (cancelled) return;
+    host.innerHTML = '<p class="sub pdfcount" style="margin:0 0 8px">' + d.numPages + (d.numPages === 1 ? ' page' : ' pages') + '</p>';
+    var w = Math.max(200, host.clientWidth || 320), dpr = Math.min(window.devicePixelRatio || 1, 2), chain = Promise.resolve();
+    for (var i = 1; i <= d.numPages; i++) (function (n) {
+      var wrap = document.createElement('div'); wrap.className = 'pdfpage'; wrap.setAttribute('data-page', n);
+      wrap.style.cssText = 'background:#fff;border:1px solid rgba(0,0,7,.12);border-radius:8px;margin:0 0 12px;overflow:hidden;min-height:120px';
+      host.appendChild(wrap);
+      chain = chain.then(function () { if (cancelled) return; return d.getPage(n); }).then(function (pg) {
+        if (!pg || cancelled) return;
+        var vp1 = pg.getViewport({ scale: 1 }), sc = w / vp1.width, vp = pg.getViewport({ scale: sc * dpr });
+        var c = document.createElement('canvas'); c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+        c.style.cssText = 'display:block;width:100%;height:auto'; c.setAttribute('aria-label', (name || 'Document') + ' page ' + n);
+        wrap.style.minHeight = ''; wrap.appendChild(c);
+        return pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise.then(function () { pg.cleanup(); });
+      });
+    })(i);
+    return chain;
+  }).catch(function (e) {
+    if (!cancelled) host.innerHTML = '<div class="err">Preview unavailable (' + h(e.message || 'error') + '). Use Download to open the full file.</div>';
+  });
+  return function () { cancelled = true; if (doc) doc.destroy(); };
+}
+window.TCPdf = { render: renderPdfPages, load: loadPdfJs };   // used by the viewer tests
 function loadPdfLib() {
   if (window.PDFLib) return Promise.resolve(window.PDFLib);
   return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = 'vendor/pdf-lib.min.js'; s.onload = function () { res(window.PDFLib); }; s.onerror = function () { rej(new Error('Could not load the PDF tools.')); }; document.head.appendChild(s); });
@@ -1114,8 +1153,9 @@ function batchReviewView(txnId) {
         return getFileBytes(docId).then(function (f) {
           var url = URL.createObjectURL(new Blob([f.bytes], { type: f.mime })); urls.push(url);
           box.innerHTML = /^image/.test(f.mime) ? '<img src="' + url + '" alt="' + h(f.name) + '" style="max-width:100%;max-height:70vh;border-radius:10px">'
-            : /^application\/pdf/.test(f.mime) ? '<iframe src="' + url + '" title="' + h(f.name) + '" style="width:100%;height:60vh;border:1px solid rgba(0,0,7,.12);border-radius:10px;background:#FBFBFB"></iframe>'
+            : /^application\/pdf/.test(f.mime) ? '<div class="pdfv" style="max-height:70vh;overflow:auto;-webkit-overflow-scrolling:touch"></div><div class="actions"><a class="btn" href="' + url + '" download="' + h(f.name) + '">Download</a></div>'
             : '<p class="sub">This file type can’t be previewed. <a href="' + url + '" download="' + h(f.name) + '">Download</a></p>';
+          if (qs('.pdfv', box)) renderPdfPages(qs('.pdfv', box), f.bytes, f.name);
         }).catch(function (e) { box.innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
       }
       var cards = qsa('.bri');
