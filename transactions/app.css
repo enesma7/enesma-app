@@ -382,3 +382,10 @@ h1.taddr{margin-bottom:2px}
 .tpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px 14px}.tpick label{display:flex;gap:8px;align-items:center;font-weight:500;text-transform:none;letter-spacing:0;font-size:14px}
 .rng .rmt{grid-column:1/-1}
 @media(max-width:720px){.goals{grid-template-columns:1fr}}
+
+/* checklist: attachments open from the item title */
+.ttl-att{font:inherit;font-weight:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:left;display:inline;text-decoration:underline;text-decoration-color:#D5BE87;text-underline-offset:3px}
+.ttl-att:hover,.ttl-att:focus-visible{text-decoration-thickness:2px}
+.ttl-att .acnt{display:inline-block;margin-left:6px;min-width:18px;padding:0 5px;border-radius:9px;font-size:11px;line-height:18px;text-align:center;font-weight:700;color:#000007;background:linear-gradient(135deg,#EAD59E,#D5BE87);vertical-align:2px;text-decoration:none}
+.adocs{gap:8px}
+.tpen{border:0;background:none;cursor:pointer;padding:0 4px;margin-left:4px;font-size:14px;line-height:1;color:#D5BE87;vertical-align:1px}.tpen:hover,.tpen:focus-visible{color:#000007}

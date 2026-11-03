@@ -575,16 +575,14 @@ function drawTab() {
       if (v15 && cat && cat !== lastCat) { html += '<div class="cat">' + h(cat) + '</div>'; lastCat = cat; }
       var docs = docsOf(it.id), allNotes = d.notes.filter(function (n) { return n.itemId === it.id; }), notes = allNotes.filter(function (n) { return n.kind !== 'rejection'; }).slice(-3);
       var untitled = needsMiscTitle(it);
-      html += '<div class="row" id="it_' + h(it.id) + '"><div class="n"><b>' + h(it.title) + (it.req ? '<span class="req-dot" title="Required"></span>' : '') + '</b>' + (rest ? '<small>' + h(rest) + '</small>' : '') +
-        (untitled && v15 ? '<small class="mhint">Enter a title when you upload or assign a document</small>' : '') +
+      html += '<div class="row" id="it_' + h(it.id) + '"><div class="n"><b>' + (docs.length ? '<button class="ttl-att" data-item="' + h(it.id) + '" title="View attachments" aria-haspopup="dialog" aria-label="' + h(it.title) + ', ' + docs.length + (docs.length === 1 ? ' attachment' : ' attachments') + '">' + h(it.title) + '<span class="acnt" aria-hidden="true">' + docs.length + '</span></button>' : h(it.title)) + (it.req ? '<span class="req-dot" title="Required"></span>' : '') + (it.misc && canEdit() ? '<button class="ren tpen" data-item="' + h(it.id) + '" data-t="' + h(it.customTitle || '') + '" title="Rename this item" aria-label="Rename ' + h(it.title) + '">&#9998;</button>' : '') + '</b>' + (rest ? '<small>' + h(rest) + '</small>' : '') +
         (it.status === 'Rejected' && it.reviewNote ? '<div class="note rt">Admin note: ' + h(it.reviewNote) + '</div>' : '') +
         (v15 ? '' : notes.map(function (n) { return '<div class="note">' + h(n.by) + ': ' + h(n.text) + '</div>'; }).join('')) +
-        (docs.length ? '<div class="docs">' + docs.map(function (x) { return '<span class="dwrap"><button class="dl" data-doc="' + h(x.id) + '">' + h(x.name) + (x.pageRange ? ' (pages ' + h(x.pageRange) + ')' : '') + '</button>' + (v15 && isAdmin() ? '<button class="dx" data-doc="' + h(x.id) + '" data-n="' + h(x.name) + '" title="Delete attachment" aria-label="Delete ' + h(x.name) + '">×</button>' : '') + '</span>'; }).join('') + '</div>' : '') + '</div>' +
+        '</div>' +
         itemPill(it.status) + '<div class="acts">' +
         (v15 && isAdmin() && !it.cancel ? '<button class="rq' + (it.req ? ' on' : '') + '" data-item="' + h(it.id) + '" data-r="' + (it.req ? '1' : '') + '" aria-pressed="' + (it.req ? 'true' : 'false') + '" title="Switch between Required and Not Required for this file">' + (it.req ? 'Required' : 'Not Required') + '</button>' : '') +
         (canEdit() ? '<label class="ub">' + (it.status === 'Rejected' ? 'Re-upload' : 'Upload') + '<input type="file" class="hidden up" data-item="' + h(it.id) + '" accept="' + UP_ACCEPT + '"></label>' : '') +
         (it.status === 'Rejected' && canEdit() ? '<button class="ub red resub" data-item="' + h(it.id) + '">Add note &amp; resubmit</button>' : '') +
-        (it.misc && canEdit() ? '<button class="link ren" data-item="' + h(it.id) + '" data-t="' + h(it.customTitle || '') + '">' + (untitled ? 'Title' : 'Rename') + '</button>' : '') +
         (v15 ? '<button class="nind' + (allNotes.length ? ' has' : '') + '" data-item="' + h(it.id) + '" title="' + (allNotes.length ? 'Read notes' : 'Add a note') + '" aria-label="Notes (' + allNotes.length + ')"><span class="ico" aria-hidden="true"></span>' + (allNotes.length ? allNotes.length : '+') + '</button>'
           : (t.readOnly ? '' : '<button class="link addn" data-item="' + h(it.id) + '">Note</button>')) + '</div></div>';
     });
@@ -597,7 +595,7 @@ function drawTab() {
     qsa('.ren', c).forEach(function (b) { b.onclick = function () { promptModal('Title this Misc item', 'Name it after the document it holds.', 'Save', function (txt) { return api('renameMisc', { itemId: b.getAttribute('data-item'), title: txt }); }, true, b.getAttribute('data-t')); }; });
     qsa('.addn', c).forEach(function (b) { b.onclick = function () { promptModal('Add a note', 'Visible to the office and the agent on this file.', 'Add note', function (txt) { return api('addNote', { txnId: t.id, itemId: b.getAttribute('data-item'), text: txt }); }); }; });
     qsa('.nind', c).forEach(function (b) { b.onclick = function () { itemNotesModal(b.getAttribute('data-item')); }; });
-    qsa('.dx', c).forEach(function (b) { b.onclick = function () { delDocModal(b.getAttribute('data-doc')); }; });
+    qsa('.ttl-att', c).forEach(function (b) { b.onclick = function () { itemDocsModal(b.getAttribute('data-item')); }; });
     qsa('.rq', c).forEach(function (b) { b.onclick = function () { b.disabled = true; var on = !b.getAttribute('data-r'); api('setItemRequired', { txnId: t.id, itemId: b.getAttribute('data-item'), required: on }).then(function () { toast(on ? 'Marked Required for this file.' : 'Marked Not Required for this file.'); refresh(); }).catch(function (e) { b.disabled = false; toast(e.message, 1); }); }; });
   } else if (S.tab === 'storage') {
     var items = d.items.filter(function (x) { return x.active; });
@@ -1764,6 +1762,7 @@ function formsRest(it) {   // the forms text minus the category (now a subtitle)
   if (it.misc) return '';
   var f = String(it.forms || ''), c = itemCat(it), parts = f.split(' · ');
   if (c && parts[0].trim() === c) parts.shift();
+  parts = parts.filter(function (x) { return x.trim().toLowerCase() !== 'optional'; });   // no gray 'optional' label; required items show the gold dot
   return parts.join(' · ').trim();
 }
 function needsMiscTitle(it) { return !!(it && it.misc && !it.customTitle); }
@@ -1799,6 +1798,19 @@ function delNoteModal(noteId, after) {
   confirmModal('Delete note?', 'Delete this note by <b>' + h(n.by) + '</b>? “' + h(String(n.text).slice(0, 140)) + (String(n.text).length > 140 ? '…' : '') + '”', 'Delete note', function () {
     return api('deleteNote', { noteId: noteId }).then(function () { toast('Note deleted.'); if (after) after(); refresh(); });
   });
+}
+function itemDocsModal(itemId) {   // checklist item attachments popup (replaces the inline list under the title)
+  var d = S.txn, it = d.items.filter(function (x) { return x.id === itemId; })[0]; if (!it) return;
+  var docs = docsOf(itemId), adm = !!S.v150 && isAdmin();
+  var m = modal('<h2>Attachments · ' + h(it.title) + '</h2><p class="sub">' + docs.length + (docs.length === 1 ? ' attachment' : ' attachments') + '. Tap one to preview.</p><div class="docs adocs">' + docs.map(function (x) {
+    return '<span class="dwrap"><button class="dl" data-doc="' + h(x.id) + '">' + h(x.name) + (x.pageRange ? ' (pages ' + h(x.pageRange) + ')' : '') + '</button>' + (adm ? '<button class="dx" data-doc="' + h(x.id) + '" data-n="' + h(x.name) + '" title="Delete attachment" aria-label="Delete ' + h(x.name) + '">×</button>' : '') + '</span>';
+  }).join('') + '</div>');
+  var esc = function (e) { if (e.key === 'Escape' && document.body.contains(m) && !qs('.modal ~ .modal')) m.close(); };
+  var close0 = m.close; m.close = function () { document.removeEventListener('keydown', esc); close0(); };
+  qs('.close', m).onclick = m.close; m.addEventListener('click', function (e) { if (e.target === m) m.close(); }, true);
+  document.addEventListener('keydown', esc);
+  qsa('.dl', m).forEach(function (b) { b.onclick = function () { openDoc(b.getAttribute('data-doc'), b); }; });
+  qsa('.dx', m).forEach(function (b) { b.onclick = function () { m.close(); delDocModal(b.getAttribute('data-doc')); }; });
 }
 function itemNotesModal(itemId) {
   var d = S.txn, it = d.items.filter(function (x) { return x.id === itemId; })[0]; if (!it) return;
