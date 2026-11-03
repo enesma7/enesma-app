@@ -389,3 +389,6 @@ h1.taddr{margin-bottom:2px}
 .ttl-att .acnt{display:inline-block;margin-left:6px;min-width:18px;padding:0 5px;border-radius:9px;font-size:11px;line-height:18px;text-align:center;font-weight:700;color:#000007;background:linear-gradient(135deg,#EAD59E,#D5BE87);vertical-align:2px;text-decoration:none}
 .adocs{gap:8px}
 .tpen{border:0;background:none;cursor:pointer;padding:0 4px;margin-left:4px;font-size:14px;line-height:1;color:#D5BE87;vertical-align:1px}.tpen:hover,.tpen:focus-visible{color:#000007}
+/* v35: touch-friendly targets for the Misc pencil and popup delete × */
+.tpen{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;margin:-9px 0 -9px 2px;vertical-align:middle}
+.adocs .dwrap{min-height:32px}.adocs .dx{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px}
