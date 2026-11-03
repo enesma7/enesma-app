@@ -244,7 +244,8 @@ function checklistTemplate_(type, side) {
       out.push(copy);
     });
   });
-  return out;
+  // Cancellation items always go at the very end of the checklist
+  return out.filter(function (x) { return !x.cancel; }).concat(out.filter(function (x) { return x.cancel; }));
 }
 
 /** Intake field definitions (server-side validation; the frontend renders the same keys). */
@@ -585,6 +586,102 @@ A.setStatus = function (b, u) {
   } else if (s === 'Expired Contract') t.retentionUntil = addYears(t.intake.expirationDate || now(), 7);
   else { t.closedAt = ''; t.retentionUntil = ''; }
   t.status = s; touch(t); audit(t.id, u.username, 'status_changed'); return {};
+};
+/* ---- 1.6.0 E-Books (demo): same shapes and the same owner-only rule as EBooks.gs ---- */
+var EBD = { cats: [], vendors: [], agents: {}, entries: [] };
+(function () {
+  var o = 0;
+  [['income', ['Commission Income', 'Referral Income', 'Transaction/Admin Fees', 'Other Income']], ['expense', ['Agent Commission Payouts', 'Referral Fees Paid', 'Advertising & Marketing', 'MLS/Association Dues', 'E&O Insurance', 'Office/Rent', 'Software & Subscriptions', 'Licensing & Education', 'Auto', 'Meals', 'Professional Fees', 'Bank Fees', 'Utilities', 'Other Expense']]].forEach(function (g) {
+    g[1].forEach(function (n) { EBD.cats.push({ id: 'EC' + (++o), type: g[0], name: n, archived: false, ord: o }); });
+  });
+  EBD.vendors.push({ id: 'EV1', name: 'Bright Signs Co.', email: 'hello@brightsigns.test', phone: '', address: '10 Main St, Riverside, CA 92501', tin: '', is1099: true, archived: false });
+  EBD.vendors.push({ id: 'EV2', name: 'Inland MLS', email: '', phone: '', address: '', tin: '', is1099: false, archived: false });
+  EBD.agents.U2 = { address: '', tin: '', splitPct: 70 };
+  var y = new Date().getFullYear(), cat = function (n) { return EBD.cats.filter(function (c) { return c.name === n; })[0].id; };
+  [['expense', y + '-01-15', 450, 'Advertising & Marketing', 'vendor', 'EV1', 'Credit Card', 'Yard signs'], ['expense', y + '-02-01', 89.99, 'Software & Subscriptions', '', '', 'Credit Card', 'Transaction software'], ['expense', y + '-02-10', 320, 'MLS/Association Dues', 'vendor', 'EV2', 'ACH/Transfer', 'Quarterly dues'],
+   ['income', y + '-03-05', 1500, 'Referral Income', '', '', 'Check', 'Referral from Phoenix office'], ['expense', y + '-03-20', 12600, 'Agent Commission Payouts', 'agent', 'U2', 'ACH/Transfer', 'Sample payout'], ['expense', y + '-04-02', 275, 'Advertising & Marketing', 'vendor', 'EV1', 'Check', 'Open house signs']].forEach(function (r, i) {
+    EBD.entries.push({ id: 'EE' + (i + 1), type: r[0], date: r[1], amount: r[2], categoryId: cat(r[3]), payeeType: r[4], payeeId: r[5], payeeName: '', method: r[6], memo: r[7], txnId: '', source: 'manual', importKey: '', receipt: null, createdAt: now(), updatedAt: now(), deleted: false });
+  });
+})();
+function ebGate(u) { if (!u || !u.owner || u.role !== 'admin') Fail('E-Books is only available to the owner.', 'FORBIDDEN'); }
+function ebPName(e) { if (e.payeeType === 'agent') return (user(e.payeeId) || {}).name || ''; if (e.payeeType === 'vendor') return (EBD.vendors.filter(function (v) { return v.id === e.payeeId; })[0] || {}).name || ''; return e.payeeName || ''; }
+function ebEOut(e) { return { id: e.id, type: e.type, date: e.date, amount: e.amount, categoryId: e.categoryId, payeeType: e.payeeType, payeeId: e.payeeId, payeeName: ebPName(e), method: e.method, memo: e.memo, txnId: e.txnId, source: e.source, importKey: e.importKey, receiptId: e.receipt ? '1' : '', receiptName: e.receipt ? e.receipt.name : '', createdAt: e.createdAt, updatedAt: e.updatedAt }; }
+function ebLive() { return EBD.entries.filter(function (e) { return !e.deleted; }); }
+function ebNum(v) { var n = parseFloat(String(v === undefined || v === null ? '' : v).replace(/[$,\s]/g, '')); return isNaN(n) ? NaN : Math.round(n * 100) / 100; }
+function ebN0(v) { var n = parseFloat(String(v || '').replace(/[$,%\s]/g, '')); return isNaN(n) ? 0 : n; }
+function ebGrossM(t) {
+  var i = t.intake || {}, base = ebN0(i.purchasePrice) || ebN0(i.listPrice) || ebN0(i.monthlyRent), tot = 0;
+  ['commission', 'listingCommission', 'buyerBrokerComp'].some(function (k) { if (i[k] === undefined || i[k] === '') return false; var v = ebN0(i[k]); tot = i[k + 'Type'] === 'amount' ? v : base * v / 100; return true; });
+  return Math.round(tot * 100) / 100;
+}
+function ebTitle(t) { return [t.address, t.city].filter(Boolean).join(', ') || (t.intake && t.intake.clientName) || t.id; }
+function ebTin(v) { var d = String(v || '').replace(/\D/g, ''); if (d && d.length !== 9) Fail('A TIN (SSN or EIN) has 9 digits.'); return d; }
+function ebFmt(d) { return d ? d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5) : ''; }
+function ebAgentsOut() { return DB.users.map(function (x) { var p = EBD.agents[x.id] || {}; return { id: x.id, name: x.name, email: x.email, phone: x.phone || '', active: !!x.active, owner: !!x.owner, address: p.address || '', tinLast4: p.tin ? p.tin.slice(-4) : '', hasTin: !!p.tin, splitPct: p.splitPct === undefined || p.splitPct === '' ? '' : p.splitPct }; }); }
+function ebVOut(v) { return { id: v.id, name: v.name, email: v.email, phone: v.phone, address: v.address, tinLast4: v.tin ? v.tin.slice(-4) : '', hasTin: !!v.tin, is1099: v.is1099, archived: v.archived }; }
+A.ebLoad = function (b, u) {
+  ebGate(u); var keys = {}; ebLive().forEach(function (e) { if (e.importKey) keys[e.importKey] = 1; });
+  var txns = DB.txns.filter(function (t) { return t.status === 'Closed'; }).map(function (t) { return { id: t.id, title: ebTitle(t), type: t.type, side: t.side, closedAt: String(t.closedAt || '').slice(0, 10), agentId: t.agentId, agentName: (user(t.agentId) || {}).name || '', gross: ebGrossM(t), importedIncome: !!keys['txn:' + t.id + ':income'], importedPayout: !!keys['txn:' + t.id + ':payout:' + t.agentId] }; });
+  return { categories: EBD.cats, vendors: EBD.vendors.map(ebVOut), agents: ebAgentsOut(), entries: ebLive().map(ebEOut), txns: txns, methods: ['Check', 'ACH/Transfer', 'Wire', 'Credit Card', 'Debit Card', 'Cash', 'Zelle', 'Escrow Disbursement', 'Other'], threshold: 600 };
+};
+A.ebSaveEntry = function (b, u) {
+  ebGate(u); var p = b.entry || {}, type = p.type === 'income' || p.type === 'expense' ? p.type : Fail('Pick Income or Expense.');
+  var amt = ebNum(p.amount); if (isNaN(amt) || amt <= 0) Fail('Enter an amount greater than $0.');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.date || ''))) Fail('Enter a valid date.');
+  var c = EBD.cats.filter(function (x) { return x.id === p.categoryId; })[0]; if (!c || c.type !== type) Fail('Pick a ' + type + ' category.');
+  var f = { type: type, date: p.date, amount: amt, categoryId: c.id, payeeType: p.payeeType === 'agent' || p.payeeType === 'vendor' ? p.payeeType : '', payeeId: p.payeeId || '', payeeName: String(p.payeeName || '').trim().slice(0, 120), method: p.method || '', memo: String(p.memo || '').slice(0, 500), txnId: p.txnId || '', updatedAt: now() };
+  if (!f.payeeType) f.payeeId = '';
+  var e; if (p.id) { e = EBD.entries.filter(function (x) { return x.id === p.id && !x.deleted; })[0]; if (!e) Fail('Entry not found.'); Object.assign(e, f); }
+  else { e = Object.assign({ id: nid('EE'), source: 'manual', importKey: '', receipt: null, createdAt: now(), deleted: false }, f); EBD.entries.push(e); }
+  return { entry: ebEOut(e) };
+};
+A.ebDeleteEntry = function (b, u) { ebGate(u); var e = EBD.entries.filter(function (x) { return x.id === b.id && !x.deleted; })[0]; if (!e) Fail('Entry not found.'); e.deleted = true; return {}; };
+A.ebUploadReceipt = function (b, u) { ebGate(u); var e = EBD.entries.filter(function (x) { return x.id === b.entryId; })[0]; if (!e) Fail('Entry not found.'); e.receipt = { name: e.date + ' ' + (ebPName(e) || e.type) + ' ' + b.name, mime: b.mime, b64: b.base64 }; return { entry: ebEOut(e) }; };
+A.ebGetReceipt = function (b, u) { ebGate(u); var e = EBD.entries.filter(function (x) { return x.id === b.entryId; })[0]; if (!e || !e.receipt) Fail('No receipt on this entry.'); return { name: e.receipt.name, mime: e.receipt.mime, base64: e.receipt.b64 }; };
+A.ebSaveCategory = function (b, u) {
+  ebGate(u); var p = b.category || {}, name = String(p.name || '').trim().slice(0, 60); if (!name) Fail('Enter a category name.');
+  var c = p.id ? EBD.cats.filter(function (x) { return x.id === p.id; })[0] : null; if (p.id && !c) Fail('Category not found.');
+  var type = c ? c.type : (p.type === 'income' ? 'income' : 'expense');
+  var dup = EBD.cats.filter(function (x) { return x.type === type && x.id !== p.id && x.name.toLowerCase() === name.toLowerCase(); })[0]; if (dup) Fail('There is already a ' + type + ' category named ' + dup.name + '.');
+  if (c) { c.name = name; c.archived = !!p.archived; } else { c = { id: nid('EC'), type: type, name: name, archived: false, ord: EBD.cats.length + 1 }; EBD.cats.push(c); }
+  return { category: c };
+};
+A.ebSaveVendor = function (b, u) {
+  ebGate(u); var p = b.vendor || {}, name = String(p.name || '').trim(); if (!name) Fail('Enter the vendor name.');
+  if (p.email && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(p.email)) Fail('Enter a valid email or leave it blank.');
+  var v = p.id ? EBD.vendors.filter(function (x) { return x.id === p.id; })[0] : null; if (p.id && !v) Fail('Vendor not found.');
+  if (!v) { v = { id: nid('EV'), tin: '' }; EBD.vendors.push(v); }
+  Object.assign(v, { name: name, email: p.email || '', phone: p.phone || '', address: p.address || '', is1099: !!p.is1099, archived: !!p.archived });
+  if (p.tin) v.tin = ebTin(p.tin); if (p.clearTin) v.tin = '';
+  return { vendor: ebVOut(v) };
+};
+A.ebSaveAgentProfile = function (b, u) {
+  ebGate(u); var p = b.profile || {}, x = user(p.userId); if (!x) Fail('Agent not found.');
+  var sp = p.splitPct === '' || p.splitPct === undefined ? '' : ebNum(p.splitPct); if (sp !== '' && (isNaN(sp) || sp < 0 || sp > 100)) Fail('The split is a percent from 0 to 100.');
+  var a = EBD.agents[x.id] = EBD.agents[x.id] || { tin: '' }; a.address = p.address || ''; a.splitPct = sp;
+  if (p.tin) a.tin = ebTin(p.tin); if (p.clearTin) a.tin = '';
+  return {};
+};
+A.ebImport = function (b, u) {
+  ebGate(u); var keys = {}; ebLive().forEach(function (e) { if (e.importKey) keys[e.importKey] = 1; });
+  var cat = function (n) { return EBD.cats.filter(function (c) { return c.name === n; })[0].id; }, added = 0, skipped = 0;
+  (b.items || []).forEach(function (it) {
+    var t = txn(it.txnId); if (!t || t.status !== 'Closed') { skipped++; return; }
+    var date = String(t.closedAt || now()).slice(0, 10), title = ebTitle(t);
+    var add = function (key, type, c, amount, pt, pid, memo) { if (keys[key]) { skipped++; return; } var a = ebNum(amount); if (isNaN(a) || a <= 0) return; EBD.entries.push({ id: nid('EE'), type: type, date: date, amount: a, categoryId: c, payeeType: pt, payeeId: pid, payeeName: '', method: 'Escrow Disbursement', memo: memo, txnId: t.id, source: 'import', importKey: key, receipt: null, createdAt: now(), updatedAt: now(), deleted: false }); keys[key] = 1; added++; };
+    if (it.gross !== undefined) add('txn:' + t.id + ':income', 'income', cat('Commission Income'), it.gross, '', '', 'Gross commission · ' + title);
+    if (it.payout !== undefined && t.agentId) add('txn:' + t.id + ':payout:' + t.agentId, 'expense', cat('Agent Commission Payouts'), it.payout, 'agent', t.agentId, 'Agent commission payout · ' + title);
+  });
+  return { added: added, skipped: skipped };
+};
+A.eb1099 = function (b, u) {
+  ebGate(u); var y = String(b.year || ''), tot = {};
+  ebLive().forEach(function (e) { if (e.type !== 'expense' || !e.payeeId || e.date.slice(0, 4) !== y) return; var k = e.payeeType + ':' + e.payeeId; tot[k] = tot[k] || { total: 0, fromTxns: 0, count: 0 }; tot[k].total += e.amount; tot[k].count++; if (e.txnId) tot[k].fromTxns += e.amount; });
+  var out = [];
+  DB.users.forEach(function (x) { var t = tot['agent:' + x.id]; if (!t) return; var p = EBD.agents[x.id] || {}; out.push({ payeeType: 'agent', id: x.id, name: x.name, email: x.email, address: p.address || '', tin: ebFmt(p.tin), missingTin: !p.tin, total: Math.round(t.total * 100) / 100, fromTxns: t.fromTxns, count: t.count }); });
+  EBD.vendors.forEach(function (v) { var t = tot['vendor:' + v.id]; if (!t || !v.is1099) return; out.push({ payeeType: 'vendor', id: v.id, name: v.name, email: v.email, address: v.address, tin: ebFmt(v.tin), missingTin: !v.tin, total: Math.round(t.total * 100) / 100, fromTxns: t.fromTxns, count: t.count }); });
+  out.forEach(function (r) { r.over = r.total >= 600; }); out.sort(function (a, c) { return c.total - a.total; });
+  return { year: y, threshold: 600, payees: out, payer: { name: 'ENESMA Realty', email: 'admin@demo.test' } };
 };
 var OPEN = { ping: 1, login: 1, requestPasswordCode: 1, resetPasswordWithCode: 1 };
 window.TC_MOCK = {

@@ -262,6 +262,7 @@ function shell(active, inner) {
   // No '+ New' tab: My Transactions has the '+ New Transaction' button; the new-transaction screen lights up Transactions.
   var nav = '<a href="#/" class="' + (active === 'dash' || active === 'new' ? 'on' : '') + '">Transactions</a>';
   if (isAdmin()) nav += '<a href="#/review" class="' + (active === 'review' ? 'on' : '') + '">Review' + (S.badges.review ? '<span class="cnt">' + S.badges.review + '</span>' : '') + '</a><a href="#/users" class="' + (active === 'users' ? 'on' : '') + '">Users</a><a href="#/archive" class="' + (active === 'archive' ? 'on' : '') + '">Archive</a>';
+  if (canEbooks()) nav += '<a href="#/ebooks" class="' + (active === 'ebooks' ? 'on' : '') + '"' + (active === 'ebooks' ? ' aria-current="page"' : '') + '>E-Books</a>';   // owner only
   // CRM sits last, set apart from the transaction tabs (gold tab, divider before it).
   if (canCrm()) nav += '<a href="#/crm" class="crmtab' + (active === 'crm' ? ' on' : '') + '"' + (active === 'crm' ? ' aria-current="page"' : '') + '>CRM</a>';
   var tog = isDual() ? '<div class="rtog seg" role="group" aria-label="View as">' + [['agent', 'My Files'], ['tc', 'TC View']].map(function (x) { return '<button type="button" data-role="' + x[0] + '" class="' + (activeRole() === x[0] ? 'on' : '') + '" aria-pressed="' + (activeRole() === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' : '';
@@ -314,6 +315,7 @@ function expectedPage() {
   if (hs === '/new') return 'new';
   if (hs === '/account') return '';
   if (/^\/crm(\/|$)/.test(hs) && canCrm()) return 'crm';
+  if (/^\/ebooks(\/|$)/.test(hs) && canEbooks()) return 'ebooks';
   if (/^\/(review|users|archive)$/.test(hs) && isAdmin()) return hs.slice(1);
   if (/^\/review\/[A-Za-z0-9_-]+$/.test(hs) && isAdmin() && S.batchReview) return 'review';
   return 'dash';
@@ -321,6 +323,337 @@ function expectedPage() {
 function page(active, inner, after) { if (S.user && !S.user.mustChange && active !== expectedPage()) return; $app.innerHTML = shell(active, inner); wireShell(); if (!page.keepScroll) window.scrollTo(0, 0); page.keepScroll = false; if (after) after(); }
 function loading(active) { page(active, '<div class="loading"><span class="spin"></span>Loading…</div>'); }
 function failView(active, e) { page(active, '<div class="err">' + h(e.message) + '</div><a class="ub" href="#/">Back to transactions</a>'); }
+
+/* ---------------- E-Books (1.6.0): owner-only bookkeeping. The server refuses every eb* call from anyone but the owner. ---------------- */
+function canEbooks() { return !!S.user && !!S.user.owner && isAdmin() && (S.ebooks || DEMO); }
+var EB = { data: null, tab: 'ledger', f: { from: '', to: '', type: '', cat: '', q: '' }, rep: 'pl', rf: '', rt: '', year: '' };
+var EB_TABS = [['ledger', 'Ledger'], ['import', 'Import from TC'], ['payees', 'Payees'], ['categories', 'Categories'], ['1099', '1099-NEC'], ['reports', 'Reports']];
+function ebM(n) { n = Number(n) || 0; return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function ebCat(id) { return (EB.data.categories.filter(function (c) { return c.id === id; })[0] || { name: '(deleted category)', type: '' }); }
+function ebTxn(id) { return EB.data.txns.filter(function (t) { return t.id === id; })[0]; }
+function ebYear() { return new Date().getFullYear(); }
+function ebCsv(name, rows) {
+  var esc = function (v) { v = v === undefined || v === null ? '' : String(v); if (/^[=+\-@\t\r]/.test(v) && !/^-?\d/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  var blob = new Blob(['\ufeff' + rows.map(function (r) { return r.map(esc).join(','); }).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function ebPrint(title, html) {
+  var old = qs('#ebprint'); if (old) old.remove();
+  var d = document.createElement('div'); d.id = 'ebprint';
+  d.innerHTML = '<div class="ebp-h"><b>ENESMA Realty · E-Books</b><span>Printed ' + h(fmtDate(new Date().toISOString().slice(0, 10))) + '</span></div><h1>' + h(title) + '</h1>' + html;
+  document.body.appendChild(d); document.body.classList.add('ebprinting');
+  var done = function () { document.body.classList.remove('ebprinting'); d.remove(); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  setTimeout(function () { window.print(); }, 50);
+}
+function ebBars(rows, opt) {   // rows: [{label, a, b?}] -> simple responsive SVG bar chart (brand colors only)
+  opt = opt || {}; if (!rows.length) return '<div class="empty">Nothing to chart for this range.</div>';
+  var max = 0; rows.forEach(function (r) { max = Math.max(max, Math.abs(r.a || 0), Math.abs(r.b || 0)); }); max = max || 1;
+  var rh = opt.pair ? 30 : 22, W = 640, lw = 170, H = rows.length * (rh + 8) + 6, bw = W - lw - 90;
+  var g = '<defs><linearGradient id="ebg" x1="0" x2="1"><stop offset="0" stop-color="#EAD59E"/><stop offset="1" stop-color="#D5BE87"/></linearGradient><linearGradient id="ebr" x1="0" x2="1"><stop offset="0" stop-color="#EF0207"/><stop offset="1" stop-color="#9A0007"/></linearGradient></defs>';
+  rows.forEach(function (r, i) {
+    var y = 4 + i * (rh + 8), lab = String(r.label); if (lab.length > 24) lab = lab.slice(0, 23) + '…';
+    g += '<text x="' + (lw - 8) + '" y="' + (y + rh / 2 + 4) + '" text-anchor="end" font-size="12" fill="#000007">' + h(lab) + '</text>';
+    if (opt.pair) {
+      g += '<rect x="' + lw + '" y="' + y + '" height="' + (rh / 2 - 1) + '" width="' + Math.max(1, Math.abs(r.a) / max * bw) + '" rx="3" fill="url(#ebg)"/>';
+      g += '<rect x="' + lw + '" y="' + (y + rh / 2 + 1) + '" height="' + (rh / 2 - 1) + '" width="' + Math.max(1, Math.abs(r.b) / max * bw) + '" rx="3" fill="url(#ebr)"/>';
+      g += '<text x="' + (lw + Math.abs(r.a) / max * bw + 6) + '" y="' + (y + rh / 2 - 3) + '" font-size="10" fill="#000007">' + h(moneyShort(Math.round(r.a))) + '</text>';
+      g += '<text x="' + (lw + Math.abs(r.b) / max * bw + 6) + '" y="' + (y + rh - 1) + '" font-size="10" fill="#000007">' + h(moneyShort(Math.round(r.b))) + '</text>';
+    } else {
+      g += '<rect x="' + lw + '" y="' + y + '" height="' + rh + '" width="' + Math.max(1, Math.abs(r.a) / max * bw) + '" rx="4" fill="url(#' + (r.neg ? 'ebr' : 'ebg') + ')"/>';
+      g += '<text x="' + (lw + Math.abs(r.a) / max * bw + 6) + '" y="' + (y + rh / 2 + 4) + '" font-size="11" fill="#000007">' + h(ebM(r.a)) + '</text>';
+    }
+  });
+  return '<div class="ebchart"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + h(opt.label || 'Chart') + '" preserveAspectRatio="xMinYMin meet">' + g + '</svg>' +
+    (opt.pair ? '<div class="eblegend"><span class="lg g"></span>Money in <span class="lg r"></span>Money out</div>' : '') + '</div>';
+}
+function ebInRange(e, from, to) { return (!from || e.date >= from) && (!to || e.date <= to); }
+
+function ebView(tab) {
+  EB.tab = EB_TABS.some(function (t) { return t[0] === tab; }) ? tab : 'ledger';
+  if (!EB.data) { loading('ebooks'); return ebReload().then(function () { ebRender(); }).catch(function (e) { failView('ebooks', e); }); }
+  ebRender();
+}
+function ebReload() { return api('ebLoad').then(function (d) { EB.data = d; }); }
+function ebAfter(msg) { return ebReload().then(function () { if (msg) toast(msg); page.keepScroll = true; ebRender(); }); }
+function ebRender() {
+  var tabs = '<div class="ebtabs" role="tablist">' + EB_TABS.map(function (t) { return '<a role="tab" href="#/ebooks/' + t[0] + '" class="' + (EB.tab === t[0] ? 'on' : '') + '" aria-selected="' + (EB.tab === t[0]) + '">' + t[1] + '</a>'; }).join('') + '</div>';
+  var body = ({ ledger: ebLedger, import: ebImportView, payees: ebPayees, categories: ebCats, '1099': eb1099View, reports: ebReports })[EB.tab]();
+  page('ebooks', '<div class="ebooks"><div class="ebhead"><h1>E-Books</h1><span class="ebown">Owner only</span></div>' + tabs + '<div id="ebbody">' + body.html + '</div></div>', body.wire);
+}
+
+/* ---- Ledger ---- */
+function ebFiltered() {
+  var f = EB.f, q = f.q.toLowerCase();
+  return EB.data.entries.filter(function (e) {
+    if (!ebInRange(e, f.from, f.to) || (f.type && e.type !== f.type) || (f.cat && e.categoryId !== f.cat)) return false;
+    if (q) { var t = ebTxn(e.txnId); if ((e.payeeName + ' ' + e.memo + ' ' + ebCat(e.categoryId).name + ' ' + e.method + ' ' + (t ? t.title : '') + ' ' + e.amount).toLowerCase().indexOf(q) < 0) return false; }
+    return true;
+  }).sort(function (a, b) { return b.date.localeCompare(a.date) || String(b.createdAt).localeCompare(String(a.createdAt)); });
+}
+function ebCatOptions(type, sel, withArchived) {
+  return EB.data.categories.filter(function (c) { return (!type || c.type === type) && (withArchived || !c.archived || c.id === sel); })
+    .map(function (c) { return '<option value="' + h(c.id) + '"' + (c.id === sel ? ' selected' : '') + '>' + h(c.name + (type ? '' : ' (' + c.type + ')') + (c.archived ? ' · archived' : '')) + '</option>'; }).join('');
+}
+function ebLedger() {
+  var f = EB.f, rows = ebFiltered(), tin = 0, tout = 0;
+  rows.forEach(function (e) { if (e.type === 'income') tin += e.amount; else tout += e.amount; });
+  var html = '<div class="ebbar"><button class="btn" id="ebAddIn">+ Income</button><button class="btn red" id="ebAddEx">+ Expense</button><span class="hspace"></span><button class="ub" id="ebCsvL">Export CSV</button><button class="ub" id="ebPrintL">Print</button></div>' +
+    '<div class="ebfilt"><label>From<input type="date" id="fFrom" value="' + h(f.from) + '"></label><label>To<input type="date" id="fTo" value="' + h(f.to) + '"></label>' +
+    '<label>Type<select id="fType"><option value="">All</option><option value="income"' + (f.type === 'income' ? ' selected' : '') + '>Income</option><option value="expense"' + (f.type === 'expense' ? ' selected' : '') + '>Expense</option></select></label>' +
+    '<label>Category<select id="fCat"><option value="">All</option>' + ebCatOptions(f.type, f.cat, true) + '</select></label>' +
+    '<label class="grow">Search<input type="search" id="fQ" value="' + h(f.q) + '" placeholder="Payee, memo, address…"></label></div>' +
+    '<div class="ebsum"><div><small>Income</small><b>' + ebM(tin) + '</b></div><div><small>Expenses</small><b>' + ebM(tout) + '</b></div><div class="' + (tin - tout < 0 ? 'neg' : '') + '"><small>Net</small><b>' + ebM(tin - tout) + '</b></div><div><small>Entries</small><b>' + rows.length + '</b></div></div>';
+  html += rows.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Payee</th><th class="hm">Method</th><th class="hm">Memo / Transaction</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + rows.map(function (e) {
+    var t = ebTxn(e.txnId), c = ebCat(e.categoryId);
+    return '<tr data-id="' + h(e.id) + '"><td data-l="Date">' + h(fmtDate(e.date)) + '</td><td data-l="Category"><span class="ebtype ' + e.type + '">' + (e.type === 'income' ? 'In' : 'Out') + '</span>' + h(c.name) + '</td><td data-l="Payee">' + h(e.payeeName || '—') + (e.payeeType === 'agent' ? ' <small class="muted">agent</small>' : '') + '</td>' +
+      '<td data-l="Method" class="hm">' + h(e.method || '') + '</td><td data-l="Memo" class="hm">' + h(e.memo || '') + (t ? '<br><a href="#/t/' + h(t.id) + '" class="muted">' + h(t.title) + '</a>' : '') + (e.source === 'import' ? ' <small class="ebimp">imported</small>' : '') + '</td>' +
+      '<td data-l="Amount" class="r amt ' + e.type + '">' + (e.type === 'expense' ? '−' : '') + ebM(e.amount) + '</td>' +
+      '<td class="acts">' + (e.receiptId ? '<button class="ub sm ebRc" title="View receipt" aria-label="View receipt">📎</button>' : '') + '<button class="ub sm ebEd">Edit</button><button class="ub sm ebDel" aria-label="Delete entry">×</button></td></tr>';
+  }).join('') + '</tbody></table></div>' : '<div class="empty">' + (EB.data.entries.length ? 'No entries match these filters.' : 'No entries yet. Add income or an expense, or import closed transactions.') + '</div>';
+  return { html: html, wire: function () {
+    var set = function (k, v) { EB.f[k] = v; if (k === 'type') EB.f.cat = ''; page.keepScroll = true; ebRender(); };
+    qs('#fFrom').onchange = function () { set('from', this.value); }; qs('#fTo').onchange = function () { set('to', this.value); };
+    qs('#fType').onchange = function () { set('type', this.value); }; qs('#fCat').onchange = function () { set('cat', this.value); };
+    qs('#fQ').oninput = debounce(function () { var p = qs('#fQ').selectionStart; set('q', qs('#fQ').value); var n = qs('#fQ'); n.focus(); try { n.setSelectionRange(p, p); } catch (x) { } }, 350);
+    qs('#ebAddIn').onclick = function () { ebEntryModal(null, 'income'); }; qs('#ebAddEx').onclick = function () { ebEntryModal(null, 'expense'); };
+    qs('#ebCsvL').onclick = function () { ebCsv('e-books-ledger.csv', [['Date', 'Type', 'Category', 'Payee', 'Payee type', 'Method', 'Memo', 'Transaction', 'Amount', 'Receipt']].concat(rows.map(function (e) { var t = ebTxn(e.txnId); return [e.date, e.type, ebCat(e.categoryId).name, e.payeeName, e.payeeType, e.method, e.memo, t ? t.title : '', (e.type === 'expense' ? -e.amount : e.amount).toFixed(2), e.receiptName || '']; }))); };
+    qs('#ebPrintL').onclick = function () { ebPrint('Ledger' + ebRangeLabel(f.from, f.to), '<table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Payee</th><th>Memo</th><th class="r">Amount</th></tr></thead><tbody>' + rows.map(function (e) { return '<tr><td>' + h(fmtDate(e.date)) + '</td><td>' + h(ebCat(e.categoryId).name) + '</td><td>' + h(e.payeeName) + '</td><td>' + h(e.memo) + '</td><td class="r">' + (e.type === 'expense' ? '−' : '') + ebM(e.amount) + '</td></tr>'; }).join('') + '</tbody><tfoot><tr><td colspan="4">Income ' + ebM(tin) + ' · Expenses ' + ebM(tout) + '</td><td class="r"><b>' + ebM(tin - tout) + '</b></td></tr></tfoot></table>'); };
+    qsa('.ebt tr[data-id]').forEach(function (tr) {
+      var id = tr.getAttribute('data-id'), e = EB.data.entries.filter(function (x) { return x.id === id; })[0];
+      var ed = qs('.ebEd', tr), dl = qs('.ebDel', tr), rc = qs('.ebRc', tr);
+      ed.onclick = function () { ebEntryModal(e); };
+      dl.onclick = function () { ebDeleteEntry(e); };
+      if (rc) rc.onclick = function () { ebOpenReceipt(e); };
+    });
+  } };
+}
+function ebRangeLabel(from, to) { return from || to ? ' · ' + (from ? fmtDate(from) : 'start') + ' – ' + (to ? fmtDate(to) : 'today') : ''; }
+function ebDeleteEntry(e) {
+  confirmModal('Delete this entry?', h(ebCat(e.categoryId).name) + ' · ' + h(e.payeeName || '') + ' · <b>' + ebM(e.amount) + '</b> on ' + h(fmtDate(e.date)) + '.' + (e.source === 'import' ? '<br>It was imported from a transaction; you can import it again later.' : ''), 'Delete', function () {
+    return api('ebDeleteEntry', { id: e.id }).then(function () { qsa('.modal').forEach(function (m) { if (m.close) m.close(); }); return ebAfter('Entry deleted.'); });
+  });
+}
+function ebPayeeOptions(sel) {
+  var ag = EB.data.agents.filter(function (a) { return a.active || 'agent:' + a.id === sel; }), vs = EB.data.vendors.filter(function (v) { return !v.archived || 'vendor:' + v.id === sel; });
+  return '<option value="">No payee / other (type below)</option>' +
+    (ag.length ? '<optgroup label="Agents">' + ag.map(function (a) { return '<option value="agent:' + h(a.id) + '"' + (sel === 'agent:' + a.id ? ' selected' : '') + '>' + h(a.name) + '</option>'; }).join('') + '</optgroup>' : '') +
+    (vs.length ? '<optgroup label="Vendors">' + vs.map(function (v) { return '<option value="vendor:' + h(v.id) + '"' + (sel === 'vendor:' + v.id ? ' selected' : '') + '>' + h(v.name) + (v.is1099 ? ' (1099)' : '') + '</option>'; }).join('') + '</optgroup>' : '');
+}
+function ebEntryModal(e, type) {
+  e = e || { type: type, date: new Date().toISOString().slice(0, 10), amount: '', categoryId: '', payeeType: '', payeeId: '', payeeName: '', method: '', memo: '', txnId: '' };
+  var st = { type: e.type };
+  var txOpts = '<option value="">None</option>' + EB.data.txns.map(function (t) { return '<option value="' + h(t.id) + '"' + (t.id === e.txnId ? ' selected' : '') + '>' + h(t.title + (t.closedAt ? ' · closed ' + fmtDate(t.closedAt) : '')) + '</option>'; }).join('');
+  var m = modal('<h2>' + (e.id ? 'Edit entry' : 'New entry') + '</h2><div id="ee"></div>' +
+    '<div class="seg ebseg" role="group" aria-label="Type"><button type="button" data-t="income">Income</button><button type="button" data-t="expense">Expense</button></div>' +
+    '<div class="ebform"><label>Date<input type="date" id="eDate" value="' + h(e.date) + '" required></label>' +
+    '<label>Amount ($)<input type="text" inputmode="decimal" id="eAmt" value="' + h(e.amount ? Number(e.amount).toFixed(2) : '') + '" placeholder="0.00" autocomplete="off"></label>' +
+    '<label>Category<select id="eCat"></select></label>' +
+    '<label>Payee<select id="ePay">' + ebPayeeOptions(e.payeeType ? e.payeeType + ':' + e.payeeId : '') + '</select></label>' +
+    '<label id="ePnL">Payee / payer name (optional)<input type="text" id="ePn" maxlength="120" value="' + h(e.payeeType ? '' : e.payeeName) + '"></label>' +
+    '<label>Payment method<select id="eMeth"><option value="">—</option>' + (EB.data.methods || []).map(function (x) { return '<option' + (x === e.method ? ' selected' : '') + '>' + h(x) + '</option>'; }).join('') + '</select></label>' +
+    '<label class="full">Linked transaction (optional)<select id="eTx">' + txOpts + '</select></label>' +
+    '<label class="full">Memo<textarea id="eMemo" maxlength="500" rows="2">' + h(e.memo) + '</textarea></label>' +
+    '<label class="full">Receipt (optional · PDF, JPG or PNG)' + (e.receiptId ? '<span class="sub"> On file: ' + h(e.receiptName) + ' · choosing a file replaces it</span>' : '') + '<input type="file" id="eRc" accept="' + UP_ACCEPT + '"></label></div>' +
+    '<div class="actions">' + (e.id ? '<button class="ub" id="eDel">Delete</button><span class="hspace"></span>' : '') + '<button class="ub" id="eCn">Cancel</button><button class="btn" id="eSv">Save</button></div>', true);
+  function paintType() {
+    qsa('.ebseg button', m).forEach(function (b) { var on = b.getAttribute('data-t') === st.type; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+    var cur = qs('#eCat', m).value || e.categoryId, ok = EB.data.categories.some(function (c) { return c.id === cur && c.type === st.type; });
+    qs('#eCat', m).innerHTML = '<option value="">Pick a category</option>' + ebCatOptions(st.type, ok ? cur : '');
+  }
+  qsa('.ebseg button', m).forEach(function (b) { b.onclick = function () { st.type = b.getAttribute('data-t'); paintType(); }; });
+  var pn = function () { qs('#ePnL', m).style.display = qs('#ePay', m).value ? 'none' : ''; };
+  qs('#ePay', m).onchange = pn; pn(); paintType();
+  qs('#eCn', m).onclick = m.close;
+  if (e.id) qs('#eDel', m).onclick = function () { ebDeleteEntry(e); };
+  qs('#eSv', m).onclick = function () {
+    var b = this, pay = qs('#ePay', m).value.split(':'), file = qs('#eRc', m).files[0], err = function (x) { qs('#ee', m).innerHTML = '<div class="err">' + h(x) + '</div>'; b.disabled = false; };
+    if (file) { var bad = upCheck(file); if (bad) return err(bad); }
+    b.disabled = true;
+    var entry = { id: e.id || '', type: st.type, date: qs('#eDate', m).value, amount: qs('#eAmt', m).value, categoryId: qs('#eCat', m).value, payeeType: pay[0] || '', payeeId: pay[1] || '', payeeName: qs('#ePn', m).value, method: qs('#eMeth', m).value, memo: qs('#eMemo', m).value, txnId: qs('#eTx', m).value };
+    api('ebSaveEntry', { entry: entry }).then(function (d) {
+      if (!file) return;
+      return prepUpload(file).then(function (p) { return api('ebUploadReceipt', { entryId: d.entry.id, name: p.name, mime: 'application/pdf', base64: bytesToB64(p.bytes) }); });
+    }).then(function () { m.close(); return ebAfter(e.id ? 'Entry updated.' : 'Entry added.'); }).catch(function (x) { err(x.message); });
+  };
+}
+function ebOpenReceipt(e) {
+  var m = modal('<h2>Loading…</h2><div class="loading"><span class="spin"></span></div>', true);
+  api('ebGetReceipt', { entryId: e.id }).then(function (f) {
+    var bin = atob(f.base64), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    var url = URL.createObjectURL(new Blob([u], { type: f.mime })), pdf = /pdf/.test(f.mime);
+    qs('.box', m).innerHTML = '<button class="close" aria-label="Close">×</button><h2 style="padding-right:30px;word-break:break-word">' + h(f.name) + '</h2>' + (pdf ? '<div class="pdfv"></div>' : '<img src="' + url + '" alt="" style="max-width:100%">') + '<div class="actions"><a class="btn" href="' + url + '" download="' + h(f.name) + '">Download</a></div>';
+    var stop = pdf ? renderPdfPages(qs('.pdfv', m), u, f.name) : null;
+    qs('.close', m).onclick = function () { if (stop) stop(); m.close(); URL.revokeObjectURL(url); };
+  }).catch(function (x) { m.close(); toast(x.message, 1); });
+}
+
+/* ---- Import from TC ---- */
+function ebImportView() {
+  var ag = {}; EB.data.agents.forEach(function (a) { ag[a.id] = a; });
+  var list = EB.data.txns;
+  var html = '<p class="sub">Closed transactions. Check the ones to import: the gross commission is booked as <b>Commission Income</b> and the agent\'s payout as an <b>Agent Commission Payouts</b> expense paid to that agent, both linked to the transaction. Each part imports only once. Gross is estimated from the file\'s commission terms and the payout from the agent\'s split (Payees tab); edit either before importing.</p>';
+  if (!list.length) return { html: html + '<div class="empty">No closed transactions yet.</div>', wire: function () { } };
+  html += '<div class="ebbar"><label class="chk"><input type="checkbox" id="imAll"> Select all not yet imported</label><span class="hspace"></span><button class="btn" id="imGo" disabled>Import selected</button></div>' +
+    '<div class="ebtable"><table class="ebt ebim"><thead><tr><th></th><th>Transaction</th><th>Closed</th><th>Agent</th><th class="r">Gross commission</th><th class="r">Agent payout</th></tr></thead><tbody>' + list.map(function (t) {
+      var a = ag[t.agentId] || {}, done = t.importedIncome && t.importedPayout, sp = a.splitPct === '' || a.splitPct === undefined ? '' : Number(a.splitPct);
+      var pay = sp === '' ? '' : (Math.round(t.gross * sp) / 100).toFixed(2);
+      return '<tr data-id="' + h(t.id) + '" class="' + (done ? 'done' : '') + '"><td><input type="checkbox" class="imC" aria-label="Import ' + h(t.title) + '"' + (done ? ' disabled' : '') + '></td><td data-l="Transaction"><a href="#/t/' + h(t.id) + '">' + h(t.title) + '</a></td><td data-l="Closed">' + h(fmtDate(t.closedAt)) + '</td><td data-l="Agent">' + h(t.agentName || '—') + (sp !== '' ? ' <small class="muted">' + sp + '%</small>' : '') + '</td>' +
+        '<td data-l="Gross" class="r">' + (t.importedIncome ? '<span class="ebimp">imported</span>' : '<input class="imG" inputmode="decimal" value="' + (t.gross ? t.gross.toFixed(2) : '') + '" placeholder="0.00" aria-label="Gross commission">') + '</td>' +
+        '<td data-l="Payout" class="r">' + (t.importedPayout ? '<span class="ebimp">imported</span>' : (t.agentId ? '<input class="imP" inputmode="decimal" value="' + pay + '" placeholder="' + (sp === '' ? 'set split or type' : '0.00') + '" aria-label="Agent payout">' : '—')) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  return { html: html, wire: function () {
+    var go = qs('#imGo'), sync = function () { var n = qsa('.imC:checked').length; go.disabled = !n; go.textContent = n ? 'Import ' + n + ' selected' : 'Import selected'; };
+    qsa('.imC').forEach(function (c) { c.onchange = sync; });
+    qs('#imAll').onchange = function () { var v = this.checked; qsa('.imC:not([disabled])').forEach(function (c) { c.checked = v; }); sync(); };
+    go.onclick = function () {
+      var items = [], bad = '';
+      qsa('.ebim tr[data-id]').forEach(function (tr) {
+        if (!qs('.imC', tr).checked) return;
+        var it = { txnId: tr.getAttribute('data-id') }, g = qs('.imG', tr), p = qs('.imP', tr);
+        if (g && g.value.trim()) it.gross = g.value; if (p && p.value.trim()) it.payout = p.value;
+        if (it.gross === undefined && it.payout === undefined) bad = 'Enter a gross commission or payout for each checked transaction.';
+        items.push(it);
+      });
+      if (bad) return toast(bad, 1);
+      go.disabled = true;
+      api('ebImport', { items: items }).then(function (d) { return ebAfter('Imported ' + d.added + ' entr' + (d.added === 1 ? 'y' : 'ies') + (d.skipped ? ' · ' + d.skipped + ' already imported, skipped' : '') + '.'); }).catch(function (x) { go.disabled = false; toast(x.message, 1); });
+    };
+  } };
+}
+
+/* ---- Payees ---- */
+function ebTinCell(p) { return p.hasTin ? '•••-••-' + h(p.tinLast4) : '<span class="ebwarn">Missing</span>'; }
+function ebPayees() {
+  var html = '<h2 class="ebh2">Agents <small class="muted">from Transaction Center users</small></h2><div class="ebtable"><table class="ebt"><thead><tr><th>Agent</th><th class="hm">Email</th><th>Default split</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' +
+    EB.data.agents.map(function (a) { return '<tr data-a="' + h(a.id) + '"><td data-l="Agent">' + h(a.name) + (a.active ? '' : ' <small class="muted">inactive</small>') + '</td><td data-l="Email" class="hm">' + h(a.email) + '</td><td data-l="Split">' + (a.splitPct === '' ? '—' : h(a.splitPct) + '%') + '</td><td data-l="TIN">' + ebTinCell(a) + '</td><td data-l="Address" class="hm">' + h(a.address || '—') + '</td><td class="acts"><button class="ub sm ebAg">Edit</button></td></tr>'; }).join('') + '</tbody></table></div>' +
+    '<h2 class="ebh2">Vendors <button class="btn sm" id="vAdd">+ Vendor</button></h2>' +
+    (EB.data.vendors.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Vendor</th><th class="hm">Email / phone</th><th>1099</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' + EB.data.vendors.map(function (v) {
+      return '<tr data-v="' + h(v.id) + '" class="' + (v.archived ? 'arch' : '') + '"><td data-l="Vendor">' + h(v.name) + (v.archived ? ' <small class="muted">archived</small>' : '') + '</td><td data-l="Contact" class="hm">' + h([v.email, v.phone].filter(Boolean).join(' · ') || '—') + '</td><td data-l="1099">' + (v.is1099 ? '<span class="ebyes">Yes</span>' : 'No') + '</td><td data-l="TIN">' + (v.is1099 ? ebTinCell(v) : (v.hasTin ? '•••-••-' + h(v.tinLast4) : '—')) + '</td><td data-l="Address" class="hm">' + h(v.address || '—') + '</td><td class="acts"><button class="ub sm ebVe">Edit</button></td></tr>';
+    }).join('') + '</tbody></table></div>' : '<div class="empty">No vendors yet.</div>');
+  return { html: html, wire: function () {
+    qs('#vAdd').onclick = function () { ebPayeeModal('vendor', null); };
+    qsa('tr[data-a]').forEach(function (tr) { qs('.ebAg', tr).onclick = function () { ebPayeeModal('agent', EB.data.agents.filter(function (a) { return a.id === tr.getAttribute('data-a'); })[0]); }; });
+    qsa('tr[data-v]').forEach(function (tr) { qs('.ebVe', tr).onclick = function () { ebPayeeModal('vendor', EB.data.vendors.filter(function (v) { return v.id === tr.getAttribute('data-v'); })[0]); }; });
+  } };
+}
+function ebPayeeModal(kind, p) {
+  var ag = kind === 'agent'; p = p || { name: '', email: '', phone: '', address: '', is1099: true };
+  var tinHelp = p.hasTin ? 'On file: •••-••-' + h(p.tinLast4) + '. Type a new one to replace it.' : 'SSN or EIN, 9 digits. Stored encrypted; only the last 4 show here.';
+  var m = modal('<h2>' + (ag ? h(p.name) : (p.id ? 'Edit vendor' : 'New vendor')) + '</h2><div id="pe"></div><div class="ebform">' +
+    (ag ? '<p class="sub full">Name, email and phone come from the Users page.</p><label>Default payout split (% of gross)<input id="pSp" inputmode="decimal" value="' + h(p.splitPct === '' || p.splitPct === undefined ? '' : p.splitPct) + '" placeholder="e.g. 70"></label>' :
+      '<label class="full">Name<input id="pN" maxlength="120" value="' + h(p.name) + '"></label><label>Email<input id="pE" type="email" maxlength="120" value="' + h(p.email) + '"></label><label>Phone<input id="pPh" type="tel" maxlength="40" value="' + h(p.phone) + '"></label>') +
+    '<label class="full">Address (for 1099)<textarea id="pA" rows="2" maxlength="250">' + h(p.address) + '</textarea></label>' +
+    '<label>Taxpayer ID (TIN)<input id="pT" inputmode="numeric" autocomplete="off" maxlength="11" placeholder="' + (p.hasTin ? '•••-••-' + h(p.tinLast4) : '123-45-6789') + '"><span class="sub">' + tinHelp + '</span></label>' +
+    (p.hasTin ? '<label class="chk"><input type="checkbox" id="pTc"> Remove TIN on file</label>' : '') +
+    (ag ? '' : '<label class="chk full"><input type="checkbox" id="p99"' + (p.is1099 ? ' checked' : '') + '> 1099-eligible (include on 1099-NEC)</label>' + (p.id ? '<label class="chk full"><input type="checkbox" id="pAr"' + (p.archived ? ' checked' : '') + '> Archived (hidden from new entries)</label>' : '')) +
+    '</div><div class="actions"><button class="ub" id="pCn">Cancel</button><button class="btn" id="pSv">Save</button></div>', true);
+  qs('#pCn', m).onclick = m.close;
+  qs('#pSv', m).onclick = function () {
+    var b = this; b.disabled = true;
+    var tin = qs('#pT', m).value.trim(), clr = qs('#pTc', m) && qs('#pTc', m).checked;
+    var call = ag ? api('ebSaveAgentProfile', { profile: { userId: p.id, splitPct: qs('#pSp', m).value.trim(), address: qs('#pA', m).value, tin: tin, clearTin: clr } })
+      : api('ebSaveVendor', { vendor: { id: p.id || '', name: qs('#pN', m).value, email: qs('#pE', m).value.trim(), phone: qs('#pPh', m).value, address: qs('#pA', m).value, tin: tin, clearTin: clr, is1099: qs('#p99', m).checked, archived: !!(qs('#pAr', m) && qs('#pAr', m).checked) } });
+    call.then(function () { m.close(); return ebAfter('Saved.'); }).catch(function (x) { b.disabled = false; qs('#pe', m).innerHTML = '<div class="err">' + h(x.message) + '</div>'; });
+  };
+}
+
+/* ---- Categories ---- */
+function ebCats() {
+  var col = function (type, label) {
+    var cs = EB.data.categories.filter(function (c) { return c.type === type; });
+    return '<div class="ebcol"><h2 class="ebh2">' + label + ' <button class="btn sm ebCadd" data-t="' + type + '">+ Add</button></h2><ul class="ebcats">' + cs.map(function (c) {
+      var used = EB.data.entries.filter(function (e) { return e.categoryId === c.id; }).length;
+      return '<li data-c="' + h(c.id) + '" class="' + (c.archived ? 'arch' : '') + '"><span>' + h(c.name) + (c.archived ? ' <small class="muted">archived</small>' : '') + (used ? ' <small class="muted">' + used + '</small>' : '') + '</span><button class="ub sm cRen">Rename</button><button class="ub sm cArc">' + (c.archived ? 'Restore' : 'Archive') + '</button></li>';
+    }).join('') + '</ul></div>';
+  };
+  return { html: '<p class="sub">Archived categories stay on past entries and in reports but can\'t be picked for new ones.</p><div class="ebcols">' + col('income', 'Income') + col('expense', 'Expenses') + '</div>', wire: function () {
+    qsa('.ebCadd').forEach(function (b) { b.onclick = function () { var t = b.getAttribute('data-t'); promptModal('New ' + t + ' category', 'Name it the way you want it on reports.', 'Add', function (v) { return api('ebSaveCategory', { category: { type: t, name: v } }).then(function () { return ebAfter(); }); }, true); }; });
+    qsa('.ebcats li').forEach(function (li) {
+      var c = ebCat(li.getAttribute('data-c'));
+      qs('.cRen', li).onclick = function () { promptModal('Rename category', 'Past entries keep this category under its new name.', 'Save', function (v) { return api('ebSaveCategory', { category: { id: c.id, name: v, archived: c.archived } }).then(function () { return ebAfter(); }); }, true, c.name); };
+      qs('.cArc', li).onclick = function () { var b = this; b.disabled = true; api('ebSaveCategory', { category: { id: c.id, name: c.name, archived: !c.archived } }).then(function () { return ebAfter(c.archived ? 'Category restored.' : 'Category archived.'); }).catch(function (x) { b.disabled = false; toast(x.message, 1); }); };
+    });
+  } };
+}
+
+/* ---- 1099-NEC ---- */
+function eb1099View() {
+  var y = EB.year || String(ebYear() - (new Date().getMonth() < 3 ? 1 : 0)), years = [], cy = ebYear();
+  for (var i = cy; i >= cy - 6; i--) years.push(String(i));
+  var html = '<div class="ebbar"><label>Calendar year <select id="yY">' + years.map(function (x) { return '<option' + (x === y ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label><span class="hspace"></span><button class="ub" id="yCsv" disabled>Export CSV</button><button class="ub" id="yPa" disabled>Print all</button></div><div id="y99"><div class="loading"><span class="spin"></span>Loading…</div></div>';
+  return { html: html, wire: function () {
+    qs('#yY').onchange = function () { EB.year = this.value; page.keepScroll = true; ebRender(); };
+    api('eb1099', { year: y }).then(function (d) {
+      var host = qs('#y99'); if (!host) return;
+      var P = d.payees, over = P.filter(function (p) { return p.over; }), miss = over.filter(function (p) { return p.missingTin; });
+      host.innerHTML = '<div class="ebsum"><div><small>Payees paid</small><b>' + P.length + '</b></div><div><small>At or over $' + d.threshold + '</small><b>' + over.length + '</b></div><div class="' + (miss.length ? 'neg' : '') + '"><small>Missing TIN (over $' + d.threshold + ')</small><b>' + miss.length + '</b></div><div><small>Total paid</small><b>' + ebM(P.reduce(function (s, p) { return s + p.total; }, 0)) + '</b></div></div>' +
+        (miss.length ? '<div class="err">Missing taxpayer ID for ' + miss.map(function (p) { return h(p.name); }).join(', ').replace(/\.$/, '') + '. Add it on the Payees tab (request a W-9) before filing.</div>' : '') +
+        (P.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Payee</th><th>TIN</th><th class="hm">Address</th><th class="r">Box 1 total</th><th>$' + d.threshold + '+</th><th></th></tr></thead><tbody>' + P.map(function (p, k) {
+          return '<tr><td data-l="Payee">' + h(p.name) + ' <small class="muted">' + p.payeeType + '</small></td><td data-l="TIN">' + (p.tin ? '<span class="tinm" data-t="' + h(p.tin) + '">•••-••-' + h(p.tin.slice(-4)) + '</span>' : '<span class="ebwarn">Missing</span>') + '</td><td data-l="Address" class="hm">' + (p.address ? h(p.address) : '<span class="ebwarn">Missing</span>') + '</td><td data-l="Total" class="r"><b>' + ebM(p.total) + '</b></td><td data-l="Threshold">' + (p.over ? '<span class="ebflag">Over $' + d.threshold + '</span>' : '<span class="muted">Under</span>') + '</td><td class="acts"><button class="ub sm yPr" data-k="' + k + '">Print / PDF</button></td></tr>';
+        }).join('') + '</tbody></table></div><p class="sub">Totals are every expense paid to the agent or 1099-eligible vendor dated in ' + h(d.year) + '. This is a worksheet for 1099-NEC filing, not the IRS form itself.</p>' : '<div class="empty">No payments to agents or 1099 vendors in ' + h(d.year) + '.</div>');
+      var sheet = function (p) { return '<div class="ebp-page"><h2>1099-NEC worksheet · ' + h(d.year) + '</h2><table class="ebkv"><tr><th>Payer</th><td>' + h(d.payer.name) + '</td></tr><tr><th>Recipient</th><td>' + h(p.name) + ' (' + p.payeeType + ')</td></tr><tr><th>Recipient TIN</th><td>' + (p.tin ? h(p.tin) : '<b class="ebwarn">MISSING</b>') + '</td></tr><tr><th>Address</th><td>' + (p.address ? h(p.address) : '<b class="ebwarn">MISSING</b>') + '</td></tr><tr><th>Email</th><td>' + h(p.email || '') + '</td></tr><tr><th>Box 1 · Nonemployee compensation</th><td><b>' + ebM(p.total) + '</b></td></tr><tr><th>Payments</th><td>' + p.count + (p.fromTxns ? ' (' + ebM(p.fromTxns) + ' from transactions)' : '') + '</td></tr><tr><th>$' + d.threshold + ' threshold</th><td>' + (p.over ? 'Reportable' : 'Under threshold') + '</td></tr></table></div>'; };
+      qsa('.yPr', host).forEach(function (b) { b.onclick = function () { var p = P[+b.getAttribute('data-k')]; ebPrint('1099-NEC · ' + p.name, sheet(p)); }; });
+      qsa('.tinm', host).forEach(function (s) { s.title = 'Click to show'; s.onclick = function () { s.textContent = s.textContent.indexOf('•') >= 0 ? s.getAttribute('data-t') : '•••-••-' + s.getAttribute('data-t').slice(-4); }; });
+      var c = qs('#yCsv'), pa = qs('#yPa'); c.disabled = pa.disabled = !P.length;
+      c.onclick = function () { ebCsv('1099-NEC-' + d.year + '.csv', [['Year', 'Payee', 'Type', 'TIN', 'Address', 'Email', 'Box 1 total', 'Over threshold', 'Missing TIN']].concat(P.map(function (p) { return [d.year, p.name, p.payeeType, p.tin, p.address, p.email, p.total.toFixed(2), p.over ? 'Yes' : 'No', p.missingTin ? 'Yes' : 'No']; }))); };
+      pa.onclick = function () { ebPrint('1099-NEC worksheets · ' + d.year, P.map(sheet).join('')); };
+    }).catch(function (x) { var host = qs('#y99'); if (host) host.innerHTML = '<div class="err">' + h(x.message) + '</div>'; });
+  } };
+}
+
+/* ---- Reports ---- */
+function ebReports() {
+  var cy = String(ebYear()); if (!EB.rInit) { EB.rInit = 1; EB.rf = cy + '-01-01'; EB.rt = cy + '-12-31'; }
+  var from = EB.rf, to = EB.rt, E = EB.data.entries.filter(function (e) { return ebInRange(e, from, to); }), out = '', csv = [], ptitle = '';
+  var reps = [['pl', 'Profit & Loss'], ['cf', 'Cash Flow'], ['payee', 'Expenses by Payee']];
+  if (EB.rep === 'pl') {
+    var by = { income: {}, expense: {} }, tot = { income: 0, expense: 0 };
+    E.forEach(function (e) { by[e.type][e.categoryId] = (by[e.type][e.categoryId] || 0) + e.amount; tot[e.type] += e.amount; });
+    var sec = function (type, label) {
+      var ids = Object.keys(by[type]).sort(function (a, b) { return by[type][b] - by[type][a]; });
+      ids.forEach(function (id) { csv.push([label, ebCat(id).name, by[type][id].toFixed(2)]); });
+      csv.push(['Total ' + label, '', tot[type].toFixed(2)]);
+      return '<tr class="sec"><th colspan="2">' + label + '</th></tr>' + (ids.length ? ids.map(function (id) { return '<tr><td>' + h(ebCat(id).name) + '</td><td class="r">' + ebM(by[type][id]) + '</td></tr>'; }).join('') : '<tr><td class="muted">None</td><td class="r">' + ebM(0) + '</td></tr>') + '<tr class="tot"><td>Total ' + label + '</td><td class="r">' + ebM(tot[type]) + '</td></tr>';
+    };
+    csv.unshift(['Section', 'Category', 'Amount']);
+    var tb = '<table class="ebt ebrep"><tbody>' + sec('income', 'Income') + sec('expense', 'Expenses') + '<tr class="net ' + (tot.income - tot.expense < 0 ? 'neg' : '') + '"><td>Net income</td><td class="r">' + ebM(tot.income - tot.expense) + '</td></tr></tbody></table>';
+    csv.push(['Net income', '', (tot.income - tot.expense).toFixed(2)]);
+    var ex = Object.keys(by.expense).sort(function (a, b) { return by.expense[b] - by.expense[a]; }).slice(0, 10).map(function (id) { return { label: ebCat(id).name, a: by.expense[id], neg: true }; });
+    out = '<div class="ebrepg"><div>' + tb + '</div><div><h3>Income vs expenses</h3>' + ebBars([{ label: 'Income', a: tot.income }, { label: 'Expenses', a: tot.expense, neg: true }, { label: 'Net', a: tot.income - tot.expense, neg: tot.income - tot.expense < 0 }], { label: 'Income vs expenses' }) + '<h3>Top expense categories</h3>' + ebBars(ex, { label: 'Expenses by category' }) + '</div></div>';
+    ptitle = 'Profit & Loss'; EB._print = tb;
+  } else if (EB.rep === 'cf') {
+    var mo = {}, prior = 0;
+    EB.data.entries.forEach(function (e) { if (from && e.date < from) prior += e.type === 'income' ? e.amount : -e.amount; });
+    E.forEach(function (e) { var k = e.date.slice(0, 7); mo[k] = mo[k] || { i: 0, o: 0 }; mo[k][e.type === 'income' ? 'i' : 'o'] += e.amount; });
+    var keys = [], d0 = new Date((from || (E.length ? E.map(function (e) { return e.date; }).sort()[0] : cy + '-01-01')).slice(0, 7) + '-01T12:00:00'), d1 = (to || new Date().toISOString()).slice(0, 7);
+    for (var g = 0; g < 240; g++) { var k = d0.toISOString().slice(0, 7); if (k > d1) break; keys.push(k); d0.setMonth(d0.getMonth() + 1); }
+    var run = prior, mname = function (k) { return new Date(k + '-15T12:00:00').toLocaleString('en-US', { month: 'short', year: 'numeric' }); };
+    csv.push(['Month', 'Money in', 'Money out', 'Net', 'Running balance']);
+    var rowsH = keys.map(function (k) { var r = mo[k] || { i: 0, o: 0 }; run += r.i - r.o; csv.push([k, r.i.toFixed(2), r.o.toFixed(2), (r.i - r.o).toFixed(2), run.toFixed(2)]); return '<tr><td>' + h(mname(k)) + '</td><td class="r">' + ebM(r.i) + '</td><td class="r">' + ebM(r.o) + '</td><td class="r ' + (r.i - r.o < 0 ? 'neg' : '') + '">' + ebM(r.i - r.o) + '</td><td class="r"><b>' + ebM(run) + '</b></td></tr>'; }).join('');
+    var tb2 = '<table class="ebt ebrep"><thead><tr><th>Month</th><th class="r">In</th><th class="r">Out</th><th class="r">Net</th><th class="r">Running balance</th></tr></thead><tbody>' + (prior ? '<tr class="muted"><td>Opening balance (before ' + h(fmtDate(from)) + ')</td><td></td><td></td><td></td><td class="r">' + ebM(prior) + '</td></tr>' : '') + rowsH + '</tbody></table>';
+    out = '<div class="ebrepg"><div class="ebtable">' + tb2 + '</div><div><h3>Monthly in / out</h3>' + ebBars(keys.map(function (k) { var r = mo[k] || { i: 0, o: 0 }; return { label: mname(k), a: r.i, b: r.o }; }), { pair: true, label: 'Monthly cash flow' }) + '</div></div>';
+    ptitle = 'Cash Flow'; EB._print = tb2;
+  } else {
+    var pp = {}, tt = 0;
+    E.forEach(function (e) { if (e.type !== 'expense') return; var k = e.payeeName || '(no payee)'; pp[k] = pp[k] || { a: 0, n: 0, t: e.payeeType }; pp[k].a += e.amount; pp[k].n++; tt += e.amount; });
+    var ks = Object.keys(pp).sort(function (a, b) { return pp[b].a - pp[a].a; });
+    csv.push(['Payee', 'Payee type', 'Payments', 'Total', 'Share']);
+    var tb3 = '<table class="ebt ebrep"><thead><tr><th>Payee</th><th class="r">Payments</th><th class="r">Total</th><th class="r">Share</th></tr></thead><tbody>' + ks.map(function (k) { var sh = tt ? Math.round(pp[k].a / tt * 1000) / 10 : 0; csv.push([k, pp[k].t || 'other', pp[k].n, pp[k].a.toFixed(2), sh + '%']); return '<tr><td>' + h(k) + (pp[k].t === 'agent' ? ' <small class="muted">agent</small>' : '') + '</td><td class="r">' + pp[k].n + '</td><td class="r">' + ebM(pp[k].a) + '</td><td class="r">' + sh + '%</td></tr>'; }).join('') + '<tr class="tot"><td>Total expenses</td><td></td><td class="r">' + ebM(tt) + '</td><td></td></tr></tbody></table>';
+    out = '<div class="ebrepg"><div class="ebtable">' + tb3 + '</div><div><h3>Top payees</h3>' + ebBars(ks.slice(0, 12).map(function (k) { return { label: k, a: pp[k].a, neg: true }; }), { label: 'Expenses by payee' }) + '</div></div>';
+    ptitle = 'Expenses by Payee'; EB._print = tb3;
+  }
+  var html = '<div class="seg ebrseg" role="group" aria-label="Report">' + reps.map(function (r) { return '<button type="button" data-r="' + r[0] + '" class="' + (EB.rep === r[0] ? 'on' : '') + '" aria-pressed="' + (EB.rep === r[0]) + '">' + r[1] + '</button>'; }).join('') + '</div>' +
+    '<div class="ebfilt"><label>From<input type="date" id="rF" value="' + h(from) + '"></label><label>To<input type="date" id="rT" value="' + h(to) + '"></label><div class="ebpre"><button class="ub sm" data-p="ty">This year</button><button class="ub sm" data-p="ly">Last year</button><button class="ub sm" data-p="tm">This month</button><button class="ub sm" data-p="all">All time</button></div><span class="hspace"></span><button class="ub" id="rCsv">Export CSV</button><button class="ub" id="rPr">Print</button></div>' + out;
+  return { html: html, wire: function () {
+    var re = function () { page.keepScroll = true; ebRender(); };
+    qsa('.ebrseg button').forEach(function (b) { b.onclick = function () { EB.rep = b.getAttribute('data-r'); re(); }; });
+    qs('#rF').onchange = function () { EB.rf = this.value; re(); }; qs('#rT').onchange = function () { EB.rt = this.value; re(); };
+    qsa('.ebpre button').forEach(function (b) { b.onclick = function () { var p = b.getAttribute('data-p'), y = ebYear(), n = new Date(); if (p === 'ty') { EB.rf = y + '-01-01'; EB.rt = y + '-12-31'; } else if (p === 'ly') { EB.rf = (y - 1) + '-01-01'; EB.rt = (y - 1) + '-12-31'; } else if (p === 'tm') { var mm = n.toISOString().slice(0, 7); EB.rf = mm + '-01'; EB.rt = new Date(n.getFullYear(), n.getMonth() + 1, 0, 12).toISOString().slice(0, 10); } else { EB.rf = ''; EB.rt = ''; } re(); }; });
+    qs('#rCsv').onclick = function () { ebCsv('e-books-' + EB.rep + '-' + (from || 'all') + '_' + (to || 'today') + '.csv', csv); };
+    qs('#rPr').onclick = function () { ebPrint(ptitle + ebRangeLabel(from, to), EB._print + qs('.ebrepg > div:last-child').innerHTML); };
+  } };
+}
 
 /* ---------------- login / password ---------------- */
 function loginView(msg) {
@@ -568,8 +901,10 @@ function drawTab() {
   if (S.tab === 'checklist') {
     /* 1.5.0: categories are section subtitles; admins toggle Required per item; notes open in a popup; admins can delete attachments. */
     var html = '', lastPhase = null, lastCat = null, groups = 0, v15 = !!S.v150;
-    d.items.filter(function (it) { return it.active; }).forEach(function (it) {
-      var ph = phaseLabel(it.phase);
+    var act = d.items.filter(function (it) { return it.active; });
+    act = act.filter(function (it) { return !it.cancel; }).concat(act.filter(function (it) { return it.cancel; }));   // Cancellation always sits at the very end
+    act.forEach(function (it) {
+      var ph = it.cancel && lastPhase ? lastPhase : phaseLabel(it.phase);
       if (ph !== lastPhase) { if (groups++) html += '</div><div class="phsep" role="separator" aria-hidden="true"></div>'; html += '<div class="gb" style="padding:4px 0;margin-bottom:16px"><div class="phase">' + h(ph) + ' Checklist</div>'; lastPhase = ph; lastCat = null; }
       var cat = v15 ? itemCat(it) : '', rest = v15 ? formsRest(it) : it.forms;
       if (v15 && cat && cat !== lastCat) { html += '<div class="cat">' + h(cat) + '</div>'; lastCat = cat; }
@@ -1891,6 +2226,10 @@ function route() {
   S.txn = null;
   if (hs === '/new') { if (canCreate()) return newView(''); toast('Creating transaction files is switched off for your account.', 1); location.hash = '#/'; return; }
   if (hs === '/account') return passwordView(false);
+  var me = hs.match(/^\/ebooks(?:\/([a-z0-9]+))?\/?$/);
+  if (!me) EB.data = null;   // fresh numbers every time the owner opens E-Books
+  if (me && canEbooks()) return ebView(me[1] || 'ledger');
+  if (me) { location.hash = '#/'; return; }   // not the owner: no E-Books
   var mc = hs.match(/^\/crm\/c\/([A-Za-z0-9_-]+)$/);
   if (mc && canCrm()) return clientView(mc[1]);
   if (/^\/crm\/?$/.test(hs) && canCrm()) { CRM_UI.remPick = ''; return crmHome(); }
@@ -1905,7 +2244,7 @@ function route() {
 function render() {
   if (S.tcApi === undefined) {   // feature detection: TC (1.3.0+) and CRM (1.4.0+) only when the backend says it has them
     S.tcApi = false;
-    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); S.crmLender = !!(d && d.features && d.features.indexOf('crm_lender') >= 0); S.crmBday = !!(d && d.features && d.features.indexOf('crm_birthday') >= 0); S.batchReview = !!(d && d.features && d.features.indexOf('batch_review') >= 0); S.v150 = !!(d && d.features && d.features.indexOf('v150') >= 0); }, function () { }).then(render);
+    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); S.crmLender = !!(d && d.features && d.features.indexOf('crm_lender') >= 0); S.crmBday = !!(d && d.features && d.features.indexOf('crm_birthday') >= 0); S.batchReview = !!(d && d.features && d.features.indexOf('batch_review') >= 0); S.v150 = !!(d && d.features && d.features.indexOf('v150') >= 0); S.ebooks = !!(d && d.features && d.features.indexOf('ebooks') >= 0); }, function () { }).then(render);
   }
   if (!S.token) return loginView();
   if (!S.user) {
