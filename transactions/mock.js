@@ -638,6 +638,35 @@ A.ebSaveEntry = function (b, u) {
 A.ebDeleteEntry = function (b, u) { ebGate(u); var e = EBD.entries.filter(function (x) { return x.id === b.id && !x.deleted; })[0]; if (!e) Fail('Entry not found.'); e.deleted = true; return {}; };
 A.ebUploadReceipt = function (b, u) { ebGate(u); var e = EBD.entries.filter(function (x) { return x.id === b.entryId; })[0]; if (!e) Fail('Entry not found.'); e.receipt = { name: e.date + ' ' + (ebPName(e) || e.type) + ' ' + b.name, mime: b.mime, b64: b.base64 }; return { entry: ebEOut(e) }; };
 A.ebGetReceipt = function (b, u) { ebGate(u); var e = EBD.entries.filter(function (x) { return x.id === b.entryId; })[0]; if (!e || !e.receipt) Fail('No receipt on this entry.'); return { name: e.receipt.name, mime: e.receipt.mime, base64: e.receipt.b64 }; };
+/* 1.6.1 My E-Books (agents): same isolation as the server, every call scoped to the signed-in user. */
+var MEB_CATS = ['Auto/Mileage', 'Marketing', 'MLS/Dues', 'Licensing & Education', 'Phone', 'Meals', 'Supplies', 'Gifts', 'Other'];
+var MEBX = [
+  { id: 'AX1', agentId: 'U2', date: new Date().getFullYear() + '-02-03', amount: 182.4, category: 'Auto/Mileage', memo: '312 miles · showings', receipt: null, deleted: false },
+  { id: 'AX2', agentId: 'U2', date: new Date().getFullYear() + '-03-11', amount: 95, category: 'MLS/Dues', memo: 'Q1 MLS', receipt: null, deleted: false },
+  { id: 'AX3', agentId: 'U3', date: new Date().getFullYear() + '-01-20', amount: 40, category: 'Phone', memo: 'Sample agent private', receipt: null, deleted: false }
+];
+function mebGate(u) { if (!u || u.owner || !u.active || (u.role !== 'agent' && u.role !== 'admin')) Fail('My E-Books is for agents.', 'FORBIDDEN'); }
+function mebMine(u, id) { var e = MEBX.filter(function (x) { return x.id === id && !x.deleted && x.agentId === u.id; })[0]; if (!e) Fail('Expense not found.', 'NOT_FOUND'); return e; }
+function mebOut(e) { return { id: e.id, date: e.date, amount: e.amount, category: e.category, memo: e.memo, receipt: !!e.receipt, receiptName: e.receipt ? e.receipt.name : '' }; }
+A.mebLoad = function (b, u) {
+  mebGate(u); var prof = EBD.agents[u.id] || {}, split = prof.splitPct === undefined || prof.splitPct === '' ? null : Number(prof.splitPct);
+  var com = DB.txns.filter(function (t) { return t.status === 'Closed' && t.agentId === u.id; }).map(function (t) {
+    var pay = EBD.entries.filter(function (e) { return e.type === 'expense' && e.importKey === 'txn:' + t.id + ':payout:' + u.id; }).reduce(function (s, e) { return s + e.amount; }, null);
+    var g = ebGrossM(t), amt = pay !== null ? pay : (split !== null && g ? Math.round(g * split) / 100 : null);
+    return { txnId: t.id, title: title(t), type: t.type, closedAt: String(t.closedAt || '').slice(0, 10), year: String(t.closedAt || '').slice(0, 4), amount: amt, basis: pay !== null ? 'paid' : amt !== null ? 'split' : 'pending' };
+  });
+  return { categories: MEB_CATS, commission: com, expenses: MEBX.filter(function (e) { return e.agentId === u.id && !e.deleted; }).map(mebOut).sort(function (a, c) { return String(c.date).localeCompare(String(a.date)); }) };
+};
+A.mebSaveExpense = function (b, u) {
+  mebGate(u); var p = b.expense || {}, amt = Math.round(parseFloat(String(p.amount || '').replace(/[$,\s]/g, '')) * 100) / 100;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.date || ''))) Fail('Enter a valid date.'); if (!(amt > 0)) Fail('Enter an amount greater than $0.'); if (MEB_CATS.indexOf(p.category) < 0) Fail('Choose a category.');
+  var v = { date: p.date, amount: amt, category: p.category, memo: String(p.memo || '').trim().slice(0, 300) }, e;
+  if (p.id) { e = mebMine(u, p.id); Object.assign(e, v); } else { e = Object.assign({ id: nid('AX'), agentId: u.id, receipt: null, deleted: false }, v); MEBX.push(e); }
+  return { expense: mebOut(e) };
+};
+A.mebDeleteExpense = function (b, u) { mebGate(u); mebMine(u, b.id).deleted = true; return {}; };
+A.mebUploadReceipt = function (b, u) { mebGate(u); var e = mebMine(u, b.id); e.receipt = { name: e.date + ' ' + e.category + ' ' + b.name, mime: b.mime, b64: b.base64 }; return { expense: mebOut(e) }; };
+A.mebGetReceipt = function (b, u) { mebGate(u); var e = mebMine(u, b.id); if (!e.receipt) Fail('No receipt on this expense.'); return { name: e.receipt.name, mime: e.receipt.mime, base64: e.receipt.b64 }; };
 A.ebSaveCategory = function (b, u) {
   ebGate(u); var p = b.category || {}, name = String(p.name || '').trim().slice(0, 60); if (!name) Fail('Enter a category name.');
   var c = p.id ? EBD.cats.filter(function (x) { return x.id === p.id; })[0] : null; if (p.id && !c) Fail('Category not found.');

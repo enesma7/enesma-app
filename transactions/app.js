@@ -265,6 +265,7 @@ function shell(active, inner) {
   // CRM sits last, set apart from the transaction tabs (gold tab, divider before it).
   if (canCrm()) nav += '<a href="#/crm" class="crmtab' + (active === 'crm' ? ' on' : '') + '"' + (active === 'crm' ? ' aria-current="page"' : '') + '>CRM</a>';
   if (canEbooks()) nav += '<a href="#/ebooks" class="crmtab ebtab' + (active === 'ebooks' ? ' on' : '') + '"' + (active === 'ebooks' ? ' aria-current="page"' : '') + '><svg class="ebico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H11v17H5.5A1.5 1.5 0 0 1 4 18.5z M13 3h5.5A1.5 1.5 0 0 1 20 4.5v14a1.5 1.5 0 0 1-1.5 1.5H13z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M15 7.5h3M15 11h3M15 14.5h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>E-Books</span></a>';   // owner only, right of CRM, same gold tab
+  if (canMyEbooks()) nav += '<a href="#/mybooks" class="crmtab ebtab' + (active === 'mybooks' ? ' on' : '') + '"' + (active === 'mybooks' ? ' aria-current="page"' : '') + '><svg class="ebico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H11v17H5.5A1.5 1.5 0 0 1 4 18.5z M13 3h5.5A1.5 1.5 0 0 1 20 4.5v14a1.5 1.5 0 0 1-1.5 1.5H13z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M15 7.5h3M15 11h3M15 14.5h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>My E-Books</span></a>';   // agents: their own private book
   var tog = isDual() ? '<div class="rtog seg" role="group" aria-label="View as">' + [['agent', 'My Files'], ['tc', 'TC View']].map(function (x) { return '<button type="button" data-role="' + x[0] + '" class="' + (activeRole() === x[0] ? 'on' : '') + '" aria-pressed="' + (activeRole() === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' : '';
   return (DEMO ? '<div class="demo"><b>DEMO PREVIEW</b> · sample data only, nothing is saved · <a href="#" id="exitDemo" style="color:#FBFBFB">exit demo</a></div>' : '') +
     '<header id="hdr"><button class="nbtn" id="nbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><span></span><span></span><span></span></button>' +
@@ -316,6 +317,7 @@ function expectedPage() {
   if (hs === '/account') return '';
   if (/^\/crm(\/|$)/.test(hs) && canCrm()) return 'crm';
   if (/^\/ebooks(\/|$)/.test(hs) && canEbooks()) return 'ebooks';
+  if (/^\/mybooks\/?$/.test(hs) && canMyEbooks()) return 'mybooks';
   if (/^\/(review|users|archive)$/.test(hs) && isAdmin()) return hs.slice(1);
   if (/^\/review\/[A-Za-z0-9_-]+$/.test(hs) && isAdmin() && S.batchReview) return 'review';
   return 'dash';
@@ -323,6 +325,102 @@ function expectedPage() {
 function page(active, inner, after) { if (S.user && !S.user.mustChange && active !== expectedPage()) return; $app.innerHTML = shell(active, inner); wireShell(); if (!page.keepScroll) window.scrollTo(0, 0); page.keepScroll = false; if (after) after(); }
 function loading(active) { page(active, '<div class="loading"><span class="spin"></span>Loading…</div>'); }
 function failView(active, e) { page(active, '<div class="err">' + h(e.message) + '</div><a class="ub" href="#/">Back to transactions</a>'); }
+
+/* ---------------- My E-Books (backend 1.6.1, ping 'my_ebooks'): each agent's own private book. The server scopes every meb* call to the signed-in user. ---------------- */
+function canMyEbooks() { return !!S.user && !S.user.owner && (S.myEbooks || DEMO) && activeRole() !== 'tc' && (isAdmin() || myRoles().indexOf('agent') >= 0); }
+var MEB = { data: null, year: '' };
+function mebYears(d) {
+  var y = {}, cur = String(new Date().getFullYear()); y[cur] = 1;
+  d.commission.forEach(function (c) { if (c.year) y[c.year] = 1; }); d.expenses.forEach(function (e) { y[String(e.date).slice(0, 4)] = 1; });
+  return Object.keys(y).sort().reverse();
+}
+function mebView() {
+  loading('mybooks');
+  api('mebLoad', {}).then(function (d) { MEB.data = d; if (!MEB.year) MEB.year = String(new Date().getFullYear()); mebRender(); }).catch(function (e) { failView('mybooks', e); });
+}
+function mebAfter(msg) { return api('mebLoad', {}).then(function (d) { MEB.data = d; if (msg) toast(msg); page.keepScroll = true; mebRender(); }); }
+function mebRender() {
+  var d = MEB.data, Y = MEB.year;
+  var com = d.commission.filter(function (c) { return c.year === Y; }), ex = d.expenses.filter(function (e) { return String(e.date).slice(0, 4) === Y; });
+  var tin = com.reduce(function (s, c) { return s + (c.amount || 0); }, 0), tout = ex.reduce(function (s, e) { return s + e.amount; }, 0), pend = com.filter(function (c) { return c.amount === null; }).length;
+  var byCat = d.categories.map(function (c) { return { label: c, a: ex.filter(function (e) { return e.category === c; }).reduce(function (s, e) { return s + e.amount; }, 0), neg: true }; }).filter(function (r) { return r.a; });
+  var basis = { paid: 'Paid by brokerage', split: 'Estimated from your split', pending: 'Not set yet' };
+  var html = '<div class="ebooks"><div class="ebhead"><h1>My E-Books</h1><span class="ebown">Private · only you</span></div>' +
+    '<div class="ebbar"><label class="ebyr">Year <select id="mY">' + mebYears(d).map(function (y) { return '<option' + (y === Y ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select></label>' +
+    '<button class="btn red" id="mAdd">+ Expense</button><span class="hspace"></span><button class="ub" id="mCsv">Export CSV</button><button class="ub" id="mPrint">Print</button></div>' +
+    '<div class="ebsum"><div><small>Commission income</small><b>' + ebM(tin) + '</b></div><div><small>Expenses</small><b>' + ebM(tout) + '</b></div><div class="' + (tin - tout < 0 ? 'neg' : '') + '"><small>Net</small><b>' + ebM(tin - tout) + '</b></div><div><small>Closed files</small><b>' + com.length + '</b></div></div>' +
+    '<h2 class="ebh2">Commission earned</h2><p class="sub">From your closed transactions in ' + h(Y) + '. Read-only; the brokerage keeps these numbers.' + (pend ? ' ' + pend + ' file(s) have no amount yet.' : '') + '</p>' +
+    (com.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Closed</th><th>Transaction</th><th class="hm">Basis</th><th class="r">Amount</th></tr></thead><tbody>' + com.map(function (c) {
+      return '<tr><td data-l="Closed">' + h(fmtDate(c.closedAt)) + '</td><td data-l="Transaction"><a href="#/t/' + h(c.txnId) + '">' + h(c.title) + '</a></td><td data-l="Basis" class="hm"><small class="muted">' + basis[c.basis] + '</small></td><td data-l="Amount" class="r"><b>' + (c.amount === null ? '<span class="muted">—</span>' : ebM(c.amount)) + '</b></td></tr>';
+    }).join('') + '</tbody></table></div>' : '<div class="empty">No closed transactions in ' + h(Y) + '.</div>') +
+    '<h2 class="ebh2">My expenses</h2>' +
+    (ex.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th class="hm">Memo</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + ex.map(function (e) {
+      return '<tr data-id="' + h(e.id) + '"><td data-l="Date">' + h(fmtDate(e.date)) + '</td><td data-l="Category">' + h(e.category) + '</td><td data-l="Memo" class="hm">' + h(e.memo || '') + '</td><td data-l="Amount" class="r">' + ebM(-e.amount) + '</td>' +
+        '<td class="acts">' + (e.receipt ? '<button class="ub sm mRc">Receipt</button>' : '') + '<button class="ub sm mEd">Edit</button><button class="ub sm mDl" aria-label="Delete">×</button></td></tr>';
+    }).join('') + '</tbody></table></div>' : '<div class="empty">No expenses in ' + h(Y) + ' yet. Add one with + Expense.</div>') +
+    '<h2 class="ebh2">Tax summary ' + h(Y) + '</h2>' + mebSummaryTable(tin, tout, byCat) + (byCat.length ? '<div class="ebchart">' + ebBars(byCat) + '</div>' : '') + '</div>';
+  page('mybooks', html, function () {
+    qs('#mY').onchange = function () { MEB.year = this.value; mebRender(); };
+    qs('#mAdd').onclick = function () { mebModal(null); };
+    qs('#mCsv').onclick = function () {
+      var r = [['My E-Books tax summary', Y], [], ['Section', 'Date', 'Item', 'Category', 'Amount']];
+      com.forEach(function (c) { r.push(['Commission income', c.closedAt, c.title, basis[c.basis], c.amount === null ? '' : c.amount.toFixed(2)]); });
+      ex.forEach(function (e) { r.push(['Expense', e.date, e.memo || '', e.category, (-e.amount).toFixed(2)]); });
+      r.push([]); r.push(['Total commission income', '', '', '', tin.toFixed(2)]); byCat.forEach(function (c) { r.push(['Expenses: ' + c.label, '', '', '', (-c.a).toFixed(2)]); }); r.push(['Total expenses', '', '', '', (-tout).toFixed(2)]); r.push(['Net', '', '', '', (tin - tout).toFixed(2)]);
+      ebCsv('my-ebooks-' + Y + '.csv', r);
+    };
+    qs('#mPrint').onclick = function () { ebPrint('My E-Books · Tax summary ' + Y + ' · ' + (S.user.name || ''), mebSummaryTable(tin, tout, byCat) + (ex.length ? '<h2>Expenses</h2><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Memo</th><th class="r">Amount</th></tr></thead><tbody>' + ex.map(function (e) { return '<tr><td>' + h(fmtDate(e.date)) + '</td><td>' + h(e.category) + '</td><td>' + h(e.memo || '') + '</td><td class="r">' + ebM(-e.amount) + '</td></tr>'; }).join('') + '</tbody></table>' : '')); };
+    qsa('.ebt tr[data-id]').forEach(function (tr) {
+      var e = d.expenses.filter(function (x) { return x.id === tr.getAttribute('data-id'); })[0];
+      var b; if ((b = qs('.mEd', tr))) b.onclick = function () { mebModal(e); };
+      if ((b = qs('.mDl', tr))) b.onclick = function () { mebDelete(e); };
+      if ((b = qs('.mRc', tr))) b.onclick = function () { mebReceipt(e); };
+    });
+  });
+}
+function mebSummaryTable(tin, tout, byCat) {
+  return '<div class="ebtable"><table class="ebt mebsum"><tbody><tr><td data-l="">Commission income</td><td class="r"><b>' + ebM(tin) + '</b></td></tr>' +
+    byCat.map(function (c) { return '<tr><td data-l="">Expenses · ' + h(c.label) + '</td><td class="r">' + ebM(-c.a) + '</td></tr>'; }).join('') +
+    '<tr><td data-l="">Total expenses</td><td class="r"><b>' + ebM(-tout) + '</b></td></tr><tr><td data-l=""><b>Net</b></td><td class="r"><b' + (tin - tout < 0 ? ' class="neg"' : '') + '>' + ebM(tin - tout) + '</b></td></tr></tbody></table></div>';
+}
+function mebModal(e) {
+  e = e || { date: new Date().toISOString().slice(0, 10), amount: '', category: '', memo: '' };
+  var m = modal('<h2>' + (e.id ? 'Edit expense' : 'New expense') + '</h2><div id="me"></div><div class="ebform">' +
+    '<label>Date<input type="date" id="mDate" value="' + h(e.date) + '"></label>' +
+    '<label>Amount ($)<input type="text" inputmode="decimal" id="mAmt" value="' + h(e.amount ? Number(e.amount).toFixed(2) : '') + '" placeholder="0.00" autocomplete="off"></label>' +
+    '<label class="full">Category<select id="mCat"><option value="">Pick a category</option>' + MEB.data.categories.map(function (c) { return '<option' + (c === e.category ? ' selected' : '') + '>' + h(c) + '</option>'; }).join('') + '</select></label>' +
+    '<label class="full">Memo<textarea id="mMemo" maxlength="300" rows="2">' + h(e.memo || '') + '</textarea></label>' +
+    '<label class="full">Receipt (optional · PDF, JPG or PNG)' + (e.receipt ? '<span class="sub"> On file: ' + h(e.receiptName) + ' · choosing a file replaces it</span>' : '') + '<input type="file" id="mRc" accept="' + UP_ACCEPT + '"></label></div>' +
+    '<div class="actions"><button class="ub" id="mCn">Cancel</button><button class="btn" id="mSv">Save</button></div>', true);
+  qs('#mCn', m).onclick = m.close;
+  qs('#mSv', m).onclick = function () {
+    var b = this, file = qs('#mRc', m).files[0], err = function (x) { qs('#me', m).innerHTML = '<div class="err">' + h(x) + '</div>'; b.disabled = false; };
+    var amt = parseFloat(String(qs('#mAmt', m).value).replace(/[$,\s]/g, ''));
+    if (!(amt > 0)) return err('Enter an amount greater than $0.');
+    if (!qs('#mCat', m).value) return err('Choose a category.');
+    if (file) { var bad = upCheck(file); if (bad) return err(bad); }
+    b.disabled = true;
+    api('mebSaveExpense', { expense: { id: e.id || '', date: qs('#mDate', m).value, amount: qs('#mAmt', m).value, category: qs('#mCat', m).value, memo: qs('#mMemo', m).value } }).then(function (d) {
+      if (!file) return;
+      return prepUpload(file).then(function (p) { return api('mebUploadReceipt', { id: d.expense.id, name: p.name, mime: 'application/pdf', base64: bytesToB64(p.bytes) }); });
+    }).then(function () { m.close(); return mebAfter(e.id ? 'Expense updated.' : 'Expense added.'); }).catch(function (x) { err(x.message); });
+  };
+}
+function mebDelete(e) {
+  confirmModal('Delete this expense?', h(e.category) + ' · <b>' + ebM(e.amount) + '</b> on ' + h(fmtDate(e.date)) + '.', 'Delete', function () {
+    return api('mebDeleteExpense', { id: e.id }).then(function () { return mebAfter('Expense deleted.'); });
+  });
+}
+function mebReceipt(e) {
+  var m = modal('<h2>Loading…</h2><div class="loading"><span class="spin"></span></div>', true);
+  api('mebGetReceipt', { id: e.id }).then(function (f) {
+    var bin = atob(f.base64), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    var url = URL.createObjectURL(new Blob([u], { type: f.mime })), pdf = /pdf/.test(f.mime);
+    qs('.box', m).innerHTML = '<button class="close" aria-label="Close">×</button><h2 style="padding-right:30px;word-break:break-word">' + h(f.name) + '</h2>' + (pdf ? '<div class="pdfv"></div>' : '<img src="' + url + '" alt="" style="max-width:100%">') + '<div class="actions"><a class="btn" href="' + url + '" download="' + h(f.name) + '">Download</a></div>';
+    var stop = pdf ? renderPdfPages(qs('.pdfv', m), u, f.name) : null;
+    qs('.close', m).onclick = function () { if (stop) stop(); m.close(); URL.revokeObjectURL(url); };
+  }).catch(function (x) { m.close(); toast(x.message, 1); });
+}
 
 /* ---------------- E-Books (1.6.0): owner-only bookkeeping. The server refuses every eb* call from anyone but the owner. ---------------- */
 function canEbooks() { return !!S.user && !!S.user.owner && isAdmin() && (S.ebooks || DEMO); }
@@ -2230,6 +2328,7 @@ function route() {
   if (!me) EB.data = null;   // fresh numbers every time the owner opens E-Books
   if (me && canEbooks()) return ebView(me[1] || 'ledger');
   if (me) { location.hash = '#/'; return; }   // not the owner: no E-Books
+  if (/^\/mybooks\/?$/.test(hs)) { if (canMyEbooks()) return mebView(); location.hash = '#/'; return; }
   var mc = hs.match(/^\/crm\/c\/([A-Za-z0-9_-]+)$/);
   if (mc && canCrm()) return clientView(mc[1]);
   if (/^\/crm\/?$/.test(hs) && canCrm()) { CRM_UI.remPick = ''; return crmHome(); }
@@ -2244,7 +2343,7 @@ function route() {
 function render() {
   if (S.tcApi === undefined) {   // feature detection: TC (1.3.0+) and CRM (1.4.0+) only when the backend says it has them
     S.tcApi = false;
-    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); S.crmLender = !!(d && d.features && d.features.indexOf('crm_lender') >= 0); S.crmBday = !!(d && d.features && d.features.indexOf('crm_birthday') >= 0); S.batchReview = !!(d && d.features && d.features.indexOf('batch_review') >= 0); S.v150 = !!(d && d.features && d.features.indexOf('v150') >= 0); S.ebooks = !!(d && d.features && d.features.indexOf('ebooks') >= 0); }, function () { }).then(render);
+    return api('ping').then(function (d) { S.tcApi = !!(d && d.features && d.features.indexOf('tc') >= 0); S.crmApi = !!(d && d.features && d.features.indexOf('crm') >= 0); S.crmTc = !!(d && d.features && d.features.indexOf('crm_tc') >= 0); S.crmLender = !!(d && d.features && d.features.indexOf('crm_lender') >= 0); S.crmBday = !!(d && d.features && d.features.indexOf('crm_birthday') >= 0); S.batchReview = !!(d && d.features && d.features.indexOf('batch_review') >= 0); S.v150 = !!(d && d.features && d.features.indexOf('v150') >= 0); S.ebooks = !!(d && d.features && d.features.indexOf('ebooks') >= 0); S.myEbooks = !!(d && d.features && d.features.indexOf('my_ebooks') >= 0); }, function () { }).then(render);
   }
   if (!S.token) return loginView();
   if (!S.user) {

@@ -465,3 +465,10 @@ nav.main a.crmtab.ebtab{margin-left:8px;display:inline-flex;align-items:center;g
 nav.main a.crmtab.ebtab:before{display:none}
 nav.main a.ebtab .ebico{flex:none;display:block}
 @media (max-width:899px){nav.main a.crmtab.ebtab{margin:8px 0 0;display:flex}}
+/* v39: My E-Books (agents) */
+.ebh2{font-size:18px;margin:26px 0 4px}
+.ebyr{display:inline-flex;align-items:center;gap:8px;font-weight:600}
+.ebyr select{min-width:96px}
+.mebsum td:first-child{width:70%}
+.ebchart{margin-top:14px}
+.neg{color:#9A0007}
