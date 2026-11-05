@@ -117,7 +117,7 @@
   function setSession(token, user) {
     S.token = token || ''; S.user = token ? user : null;
     try { if (token) { localStorage.setItem('es_token', token); localStorage.setItem('es_user', JSON.stringify(user)); } else { localStorage.removeItem('es_token'); localStorage.removeItem('es_user'); } } catch (e) { }
-    if (!token) clearCookie('enesma_sso');
+    // enesma_sso is the Hub/TC session. Dropping a dead E-Sign token must not log the agent out of Hub or TC.
     chrome();
   }
   var isAdmin = function () { return S.user && S.user.role === 'admin'; };
@@ -948,15 +948,21 @@
   }
 
   function tryHubSso(next) {
-    if (S.token || S._ssoTried) return next();
-    var tc = getCookie('enesma_sso');
+    if (S._ssoTried) return next();
+    var tc = getCookie('enesma_sso') || '';
+    if (!tc) {
+      try { tc = sessionStorage.getItem('hub_t') || sessionStorage.getItem('tc_t') || ''; } catch (e) { }
+    }
     if (!tc) return next();
     S._ssoTried = true;
     loading('Signing you in…');
+    // Exchange even when a leftover es_token exists — a stale local E-Sign session used to
+    // skip loginWithToken, then AUTH cleared the shared cookie and dumped the user on #/login.
     api('loginWithToken', { tcToken: tc }).then(function (d) {
       applyTcTokens(d);
       setSession(d.token, d.user);
       S.gmail = d.gmail || { connected: true, legacy: true };
+      if (/^#\/?login(\?|$)/.test(location.hash || '')) history.replaceState(null, '', (location.pathname || '/esign/') + '#/');
       render();
     }).catch(function () { next(); });
   }

@@ -29,7 +29,7 @@ See `/workspace/transaction-center/backend-v170/DEPLOY.md` and `/workspace/esign
 
 Deploy order:
 
-1. This Pages frontend (Hub + Transaction Center `app.js?v=41` + E-Sign `app.js?v=8`).
+1. This Pages frontend (Hub + Transaction Center `app.js?v=41` + E-Sign `app.js?v=9`).
 2. E-Sign Apps Script 1.2.0 (`loginWithToken` + OTP passthrough).
 3. Transaction Center Apps Script 1.7.0 (OTP + TrustedDevices). Run `migrate170`. Confirm `ping` reports `1.7.0` and feature `login_otp`.
 
