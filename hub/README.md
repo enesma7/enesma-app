@@ -8,13 +8,17 @@ This folder is served by GitHub Pages as:
 
 **https://app.enesmarealty.com/hub/**
 
-Keep the current Google Site on `agent.enesmarealty.com` until this rebuild is verified. The Pages custom domain for this repo is `app.enesmarealty.com` (one custom domain per site). Pointing `agent.enesmarealty.com` at the same Pages site will conflict unless one of these is set up later:
+The Pages custom domain for this repo is `app.enesmarealty.com` (one custom domain per site). Do not put `agent.enesmarealty.com` in the root `CNAME` file — that would take live Transaction Center and E-Sign off `app.enesmarealty.com`.
 
-1. **Recommended:** a Cloudflare Worker or proxy that serves `agent.enesmarealty.com` from `/hub/` on this Pages site (paths under `/hub/` rewritten to `/`).
-2. A second GitHub repo whose only CNAME is `agent.enesmarealty.com`.
+`agent.enesmarealty.com` still points at the old public Google Site (GoDaddy CNAME → `ghs.googlehosted.com`). Enrique wants that hostname to become the main Hub login URL. The zone's nameservers are still GoDaddy (`ns43` / `ns44.domaincontrol.com`); Cloudflare is not in front of the domain yet.
+
+How to put the new Hub on `agent.enesmarealty.com` without breaking `app`:
+
+1. **Recommended long-term:** a Cloudflare Worker that serves `agent.enesmarealty.com` from `/hub/` on this Pages site (see [agent-rewrite-worker.js](agent-rewrite-worker.js)).
+2. A second GitHub repo whose only CNAME is `agent.enesmarealty.com` (smallest DNS change if Cloudflare is not wanted yet).
 3. A GoDaddy forward (the URL the agent sees would change; last resort).
 
-Do not change GoDaddy DNS until visual QA against `/workspace/agent-hub-inventory/` is done.
+Exact DNS, Search Console notes, Enrique-only steps, and rollback: [CUTOVER.md](CUTOVER.md).
 
 ## Auth
 
