@@ -52,18 +52,19 @@ Dropdowns:
 
 Preferred Partners is **not** in the nav. It is linked from the home tile grid and the footer Support column.
 
-After sign-in, a slim apps bar sits under the header with gold-outline pills in title case: Transaction Center, E-Sign, My E-Books (absolute URLs on `app.enesmarealty.com`). The outline is the Aztec Gold gradient; hover and focus fill the pill with that gradient and switch the type to Rocket Black. On viewports ≤700px the three pills stack full-width so they stay tappable instead of wrapping into an orphan row.
+There is no apps bar under the header. Transaction Center, E-Sign, and My E-Books are reached from the home tiles and the section pages (Compliance and Technology), not from a second row of pills.
 
 ## Cards and photos
 
 - Home and section tiles: 2 columns, `aspect-ratio: 16 / 9`, `border-radius: 8px`, photo background, dark gradient overlay, 36×2px gold dash, then title + subtitle aligned bottom-left.
 - Event cards: same 16:9 / 8px radius language, grayscale photo, month + large day top-left, gold dash, title, then `time · platform · host · price`.
-- Add to iPhone / Add to Android: the approved gold lockups (`hub/assets/add-iphone.png`, `hub/assets/add-android.png`) — black Apple / Android mark, black type, gold pill. Side by side on desktop (max 420px each). On viewports ≤700px they stack, full content width on phones. Links stay `config.js` `ADD_IOS` / `ADD_ANDROID`.
+- Add to iPhone / Add to Android: the approved gold lockups (`hub/assets/add-iphone.png`, `hub/assets/add-android.png`) — black Apple / Android mark, black type, gold pill. The pair is horizontally centered on the page with equal space on both sides. On viewports ≤700px they stack, still centered. Links stay `config.js` `ADD_IOS` / `ADD_ANDROID`.
+- Home, Compliance, Marketing templates, Technology, Office Listings, Training, and Preferred Partners use the previous Google Site card art in `hub/assets/sites/` (photo or logo baked into the card). Marketing puts Templates first and Logos then Colors underneath. The training disclaimer sits under the video cards. Compliance shows Transaction Center once, with that lockup centered in the card.
 - Footer: black rounded card (~10px) inside the page gutter, four columns (brand + Hub + Support + Broker), then a light “© 2026 ENESMA Realty. For agent use only.” line.
 
 ## Gold vs red
 
-- **Gold** is the accent: 2px rules under section titles, 36px dashes on tiles/events, pill fills, icon strokes, nav hover, apps-bar hover fill.
+- **Gold** is the accent: 2px rules under section titles, 36px dashes on tiles/events, pill fills, icon strokes, nav hover.
 - **Red** is reserved for errors (login / OTP) and for E-Sign / destructive patterns on sibling apps. Do not use red as a decorative accent on marketing pages.
 
 ## Sign-in (new vs live Google Site)

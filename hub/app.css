@@ -74,28 +74,6 @@ button, input { font: inherit; }
 .menu-btn { display: none; }
 .menu-btn span { display: block; width: 18px; height: 1.5px; background: var(--white); margin: 4px 0; }
 
-.apps-bar {
-  background: var(--black); color: var(--white);
-  display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; gap: 12px;
-  padding: 12px 24px 14px;
-  border-top: 1px solid rgba(234,213,158,.4);
-}
-.apps-bar a {
-  color: var(--white); text-decoration: none;
-  font-size: 13.5px; font-weight: 500; letter-spacing: .01em; line-height: 1; white-space: nowrap;
-  display: inline-flex; align-items: center; justify-content: center;
-  min-height: 40px; min-width: 132px; padding: 10px 18px;
-  border-radius: 999px; border: 1.5px solid transparent;
-  background:
-    linear-gradient(var(--black), var(--black)) padding-box,
-    var(--gold) border-box;
-}
-.apps-bar a:hover,
-.apps-bar a:focus-visible {
-  background: var(--gold); color: var(--black); outline: none;
-}
-.apps-bar a:focus-visible { box-shadow: 0 0 0 2px var(--black), 0 0 0 4px #EAD59E; }
-
 /* ---------- Login ---------- */
 .login-page { min-height: 100vh; background: var(--black); color: var(--white); display: flex; flex-direction: column; }
 .login-page .top { position: static; }
@@ -154,6 +132,18 @@ button, input { font: inherit; }
 .prose { font-size: 16px; line-height: 1.6; max-width: 760px; margin: 0 auto; }
 .prose p { margin: 0 0 14px; }
 .prose a { color: var(--black); text-decoration: underline; }
+.shot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+.shot { display: block; border-radius: var(--radius); overflow: hidden; background: var(--black); }
+.shot img { width: 100%; height: auto; }
+.shot:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0,0,7,.16); }
+.shot:focus-visible { outline: 2px solid var(--black); outline-offset: 3px; }
+.shot-single { width: min(920px, 100%); margin: 0 auto; }
+.logo-pair { margin-bottom: 56px; }
+.logo-stage { border-radius: 6px; padding: 28px; margin: 0 0 14px; display: grid; place-items: center; min-height: 120px; }
+.logo-stage img { height: 64px; width: auto; }
+.logo-stage.dark { background: var(--black); }
+.logo-stage.light { background: var(--white); border: 1px solid #ececec; }
+.train-note { margin-top: 48px; }
 
 /* ---------- Tiles ---------- */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
@@ -197,11 +187,11 @@ button, input { font: inherit; }
 .event p { margin: 0; font-size: 13.5px; color: rgba(251,251,251,.86); }
 
 .pills {
-  display: flex; justify-content: center; align-items: center; gap: 16px;
-  width: min(880px, calc(100% - 48px)); margin: 0 auto 48px;
+  display: flex; justify-content: center; align-items: center; gap: 28px;
+  width: 100%; margin: 4px auto 56px; padding: 0 24px;
 }
 .pill {
-  display: block; flex: 1 1 0; max-width: 420px; min-width: 0;
+  display: block; flex: 0 1 340px; width: min(340px, calc(50% - 14px)); max-width: 340px;
   padding: 0; background: none; border-radius: 999px; line-height: 0;
 }
 .pill img { width: 100%; height: auto; }
@@ -282,23 +272,15 @@ button, input { font: inherit; }
   .nav { display: none; position: absolute; left: 0; right: 0; top: 100%; background: var(--black); padding: 8px 16px 18px; flex-direction: column; align-items: flex-start; }
   .top.nav-open .nav { display: flex; }
   .drop-menu { position: static; box-shadow: none; padding-left: 8px; }
-  .grid-2, .holidays, .tech-grid, .partners, .swatches { grid-template-columns: 1fr; }
+  .grid-2, .holidays, .tech-grid, .partners, .swatches, .shot-grid { grid-template-columns: 1fr; }
   .foot { grid-template-columns: 1fr; padding: 28px 22px; }
   .agent, .listing-card { grid-template-columns: 1fr; }
   .listing-card div { padding: 8px 16px 20px; }
   .wrap { width: min(var(--max), calc(100% - 32px)); }
   .hero { min-height: 340px; }
-  .pills { width: min(880px, calc(100% - 32px)); }
+  .pills { padding: 0 16px; gap: 16px; }
 }
 @media (max-width: 700px) {
-  .apps-bar {
-    flex-direction: column; align-items: stretch; gap: 8px;
-    padding: 12px 16px 14px;
-  }
-  .apps-bar a { width: 100%; min-width: 0; min-height: 44px; }
-  .pills {
-    flex-direction: column; align-items: stretch;
-    width: min(480px, calc(100% - 32px)); gap: 12px; margin-bottom: 40px;
-  }
-  .pill { max-width: none; width: 100%; }
+  .pills { flex-direction: column; align-items: center; gap: 12px; margin-bottom: 40px; }
+  .pill { width: min(420px, 100%); max-width: 420px; flex-basis: auto; }
 }
