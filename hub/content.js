@@ -233,18 +233,18 @@ window.HUB_CONTENT = {
   },
   "officeDocs": [
     {
-      "title": "Commission Disbursement Authorization (CDA)",
-      "sub": "Brokerage CDA form",
+      "title": "CDA",
+      "sub": "Commission Disbursement Authorization",
       "href": "https://app.enesmarealty.com/forms/cda.html"
     },
     {
-      "title": "Invoice",
-      "sub": "Brokerage invoice form",
+      "title": "General Invoice",
+      "sub": "Fillable invoice PDF",
       "href": "https://app.enesmarealty.com/forms/invoice.html"
     },
     {
-      "title": "Office document",
-      "sub": "Open in Google Drive",
+      "title": "W-9 (ENESMA Realty)",
+      "sub": "Signed Form W-9 (PDF)",
       "href": "https://drive.google.com/file/d/1G_DYvqW-0zl9-BmsEExCjLPYLKZp-2T0/view"
     }
   ],
@@ -451,46 +451,46 @@ window.HUB_CONTENT = {
   ],
   "calcTiles": [
     {
-      "href": "#/calculators/flip-calculator",
-      "img": "assets/tiles/calculators-flip.jpg",
-      "title": "Flip Calculator",
-      "sub": "Purchase, rehab and resale"
-    },
-    {
       "href": "#/calculators/net-sheet",
       "img": "assets/tiles/calculators-net.jpg",
       "title": "Net Sheet",
-      "sub": "Seller net estimate"
+      "sub": "Seller net proceeds estimate"
     },
     {
       "href": "#/calculators/mortgage-calculator",
       "img": "assets/tiles/calculators-mortgage.jpg",
       "title": "Mortgage Calculator",
-      "sub": "Payment and amortization"
+      "sub": "Monthly payment estimate"
+    },
+    {
+      "href": "#/calculators/flip-calculator",
+      "img": "assets/tiles/calculators-flip.jpg",
+      "title": "Flip Calculator",
+      "sub": "Fix-and-flip profit estimate"
     },
     {
       "href": "#/calculators/cap-rate-calculator",
       "img": "assets/tiles/calculators-cap-rate.jpg",
       "title": "Cap Rate Calculator",
-      "sub": "NOI and capitalization rate"
+      "sub": "NOI and cap rate estimate"
     }
   ],
   "calcs": {
     "/calculators/flip-calculator": {
       "title": "FLIP CALCULATOR",
-      "src": "https://calculators.enesmarealty.com/flip-calculator.html"
+      "key": "flip"
     },
     "/calculators/net-sheet": {
       "title": "NET SHEET",
-      "src": "https://calculators.enesmarealty.com/net-sheet.html"
+      "key": "net"
     },
     "/calculators/mortgage-calculator": {
       "title": "MORTGAGE CALCULATOR",
-      "src": "https://calculators.enesmarealty.com/mortgage-calculator.html"
+      "key": "mortgage"
     },
     "/calculators/cap-rate-calculator": {
       "title": "CAP RATE CALCULATOR",
-      "src": "https://calculators.enesmarealty.com/cap-rate-calculator.html"
+      "key": "cap"
     }
   },
   "partners": [
@@ -541,6 +541,15 @@ window.HUB_CONTENT = {
       "webLabel": "enriqueesparza.com",
       "dre": "01926362",
       "img": "assets/agents/enrique.jpg",
+      "social": [
+        { "label": "Facebook", "href": "https://www.facebook.com/enesma7/" },
+        { "label": "Instagram", "href": "https://www.instagram.com/enesma7/" },
+        { "label": "TikTok", "href": "https://www.tiktok.com/@enesma7" },
+        { "label": "X", "href": "https://x.com/enesma909" },
+        { "label": "LinkedIn", "href": "https://www.linkedin.com/in/enesma7" },
+        { "label": "YouTube", "href": "https://www.youtube.com/@enesma7" },
+        { "label": "Zillow", "href": "https://www.zillow.com/profile/ENESMA#reviews" }
+      ],
       "bioHtml": "<p>Enrique Esparza is a California real estate broker (DRE# 01926362) and the broker behind ENESMA Realty. Licensed by the California Department of Real Estate and actively selling since 2013, he also holds a Mortgage Loan Officer license (NMLS# 01941113), so he understands both sides of the transaction. Born and raised in Southern California, Enrique knows the local markets and adapts quickly to the changes the industry demands. In 2016 he became a manager at a Southern California brokerage of more than 100 agents, where he helped agents adopt new technology and grow their businesses. In 2020 he became the designated Managing Broker of Realty ONE Group Homelink in Diamond Bar. Fluent in English and Spanish, Enrique builds his business on integrity, honesty, and knowledge, and more than 77% of it comes from referrals. His promise to clients and agents alike: underpromise and overdeliver.</p>"
     },
     {
@@ -553,6 +562,11 @@ window.HUB_CONTENT = {
       "webLabel": "LiliaAmador.com",
       "dre": "02022136",
       "img": "assets/agents/lilia.jpg",
+      "social": [
+        { "label": "Facebook", "href": "https://www.facebook.com/p/Lilia-Amador-Realtor-100057598563607/" },
+        { "label": "Instagram", "href": "https://www.instagram.com/my_realtor_lilia/" },
+        { "label": "Zillow", "href": "https://www.zillow.com/profile/Lilia%20Amador#reviews" }
+      ],
       "bioHtml": ""
     }
   ],
@@ -624,6 +638,26 @@ window.HUB_CONTENT = {
       { "img": "assets/sites/training-04.jpg", "href": "https://www.youtube.com/watch?v=XexTWgCtWvc", "ext": true, "alt": "How to Turn the Low-Rate Objection Into a Listing Opportunity" },
       { "img": "assets/sites/training-05.jpg", "href": "https://www.youtube.com/watch?v=hLlDVn105fQ", "ext": true, "alt": "Less Friction, More Connection: The Control Selling Method" },
       { "img": "assets/sites/training-06.jpg", "href": "https://www.youtube.com/watch?v=O9aRgMHk4pE", "ext": true, "alt": "Building a Brand That’s Authentically YOU" }
+    ],
+    "checklists": [
+      { "img": "assets/sites/checklists-01.jpg", "href": "https://docs.google.com/spreadsheets/d/1fbhbV_oPWSRhm5eJ0ITe6ovrTqskNqMl4sbtWqYgSWY/edit", "ext": true, "alt": "Residential Listing 1-4 Units. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-02.jpg", "href": "https://docs.google.com/spreadsheets/d/1CdxoLeaDF285_ccua86FzcGOC_wqkaAQZIuxQomTWoA/edit", "ext": true, "alt": "Residential Sales 1-4 Units. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-03.jpg", "href": "https://docs.google.com/spreadsheets/d/1g8Ie8FKAL8frtrr221kH3if0lPbqtFja74KDyFh9nwk/edit", "ext": true, "alt": "Residential Lease Listing. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-04.jpg", "href": "https://docs.google.com/spreadsheets/d/114hmy0N_fi352wFS9vdeJXzRpDmbHm_h0BbNQEIkYO8/edit", "ext": true, "alt": "Residential Lease. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-05.jpg", "href": "https://docs.google.com/spreadsheets/d/1ZO1z551v0Xd0IEEY579TMMDevQBkAhityByT_6Eowxk/edit", "ext": true, "alt": "Land Listing. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-06.jpg", "href": "https://docs.google.com/spreadsheets/d/1QGuyaY11bwMJJdz0FObBQqUwq0qT_k_Glr5CjGt-ZUk/edit", "ext": true, "alt": "Commercial Listing. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-07.jpg", "href": "https://docs.google.com/spreadsheets/d/1cTY19PaWglgoo1wOGZlaZdvtIDj-Ca7dyR2V6VDtmg0/edit", "ext": true, "alt": "Commercial Lease Listing. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-08.jpg", "href": "https://docs.google.com/spreadsheets/d/1dYi5fhfjDtXuxaXDNIbtrSLjr0jNfsScJ3WnMzKJyjU/edit", "ext": true, "alt": "Commercial Lease. View, or File, Make a copy" }
+    ],
+    "officeDocs": [
+      { "img": "assets/sites/officedocs-01.jpg", "href": "https://app.enesmarealty.com/forms/cda.html", "ext": true, "alt": "CDA. Commission Disbursement Authorization" },
+      { "img": "assets/sites/officedocs-02.jpg", "href": "https://app.enesmarealty.com/forms/invoice.html", "ext": true, "alt": "General Invoice. Fillable invoice PDF" },
+      { "img": "assets/sites/officedocs-03.jpg", "href": "https://drive.google.com/file/d/1G_DYvqW-0zl9-BmsEExCjLPYLKZp-2T0/view", "ext": true, "alt": "W-9 (ENESMA Realty). Signed Form W-9 (PDF)" }
+    ],
+    "calcs": [
+      { "img": "assets/sites/calcs-01.jpg", "href": "#/calculators/net-sheet", "alt": "Net Sheet. Seller net proceeds estimate" },
+      { "img": "assets/sites/calcs-02.jpg", "href": "#/calculators/mortgage-calculator", "alt": "Mortgage Calculator. Monthly payment estimate" },
+      { "img": "assets/sites/calcs-03.jpg", "href": "#/calculators/flip-calculator", "alt": "Flip Calculator. Fix-and-flip profit estimate" }
     ],
     "partners": [
       { "img": "assets/sites/partners-01.jpg", "href": "https://safeguardescrowinc.com", "ext": true, "alt": "Jennifer Kent, Safeguard Escrow. 909-966-4488" },
