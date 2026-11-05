@@ -47,7 +47,7 @@ Dropdowns:
 
 - Compliance: Transaction Checklists, C.A.R. Legal Hotline, Office Documents, Office Policies
 - Marketing: Templates, Holidays
-- Calculators: Flip Calculator, Net Sheet, Mortgage Calculator
+- Calculators: Flip Calculator, Net Sheet, Mortgage Calculator, Cap Rate Calculator
 - Agents: Enrique Esparza, Lilia Amador
 
 Preferred Partners is **not** in the nav. It is linked from the home tile grid and the footer Support column.

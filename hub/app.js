@@ -81,6 +81,7 @@
             '<a href="#/calculators/flip-calculator">Flip Calculator</a>' +
             '<a href="#/calculators/net-sheet">Net Sheet</a>' +
             '<a href="#/calculators/mortgage-calculator">Mortgage Calculator</a>' +
+            '<a href="#/calculators/cap-rate-calculator">Cap Rate Calculator</a>' +
           '</div>' +
         '</div>' +
         '<a href="#/refer" class="' + on('/refer') + '">Refer</a>' +
@@ -137,7 +138,8 @@
       { t: 'Technology', s: 'CRM, MLS and tools', h: '#/technology' },
       { t: 'Office Listings', s: 'Current ENESMA listings', h: '#/listings' },
       { t: 'Training Library', s: 'Recorded sessions and coaching', h: '#/training' },
-      { t: 'Calculators', s: 'Flip, net sheet and mortgage', h: '#/calculators' },
+      { t: 'Calculators', s: 'Flip, net sheet, mortgage and cap rate', h: '#/calculators' },
+      { t: 'Cap Rate Calculator', s: 'NOI and capitalization rate', h: '#/calculators/cap-rate-calculator' },
       { t: 'Refer an Agent', s: 'Referral addendum and incentives', h: '#/refer' },
       { t: 'Agents', s: 'ENESMA agents', h: '#/agents' },
       { t: 'Preferred Partners', s: 'Escrow, lenders, inspectors and more', h: '#/preferred-partners' }
@@ -365,6 +367,7 @@
       '/calculators/flip-calculator': 'Flip Calculator',
       '/calculators/net-sheet': 'Net Sheet',
       '/calculators/mortgage-calculator': 'Mortgage Calculator',
+      '/calculators/cap-rate-calculator': 'Cap Rate Calculator',
       '/refer': 'REFER AN AGENT',
       '/agents': 'REAL ESTATE AGENTS',
       '/agents/enrique-esparza': 'Enrique Esparza',

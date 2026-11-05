@@ -40,7 +40,7 @@ window.HUB_CONTENT = {
       "href": "#/calculators",
       "img": "assets/tiles/calculators-flip.jpg",
       "title": "Calculators",
-      "sub": "Flip, net sheet & mortgage"
+      "sub": "Flip, net sheet, mortgage & cap rate"
     },
     {
       "href": "https://app.enesmarealty.com/officehubs/",
@@ -467,6 +467,12 @@ window.HUB_CONTENT = {
       "img": "assets/tiles/calculators-mortgage.jpg",
       "title": "Mortgage Calculator",
       "sub": "Payment and amortization"
+    },
+    {
+      "href": "#/calculators/cap-rate-calculator",
+      "img": "assets/tiles/calculators-cap-rate.jpg",
+      "title": "Cap Rate Calculator",
+      "sub": "NOI and capitalization rate"
     }
   ],
   "calcs": {
@@ -481,6 +487,10 @@ window.HUB_CONTENT = {
     "/calculators/mortgage-calculator": {
       "title": "MORTGAGE CALCULATOR",
       "src": "https://calculators.enesmarealty.com/mortgage-calculator.html"
+    },
+    "/calculators/cap-rate-calculator": {
+      "title": "CAP RATE CALCULATOR",
+      "src": "https://calculators.enesmarealty.com/cap-rate-calculator.html"
     }
   },
   "partners": [
