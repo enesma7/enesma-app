@@ -244,7 +244,7 @@ window.HUB_CONTENT = {
     {
       "title": "W-9 (ENESMA Realty)",
       "sub": "Signed Form W-9 (PDF)",
-      "href": "https://drive.google.com/file/d/1G_DYvqW-0zl9-BmsEExCjLPYLKZp-2T0/view"
+      "href": "https://app.enesmarealty.com/forms/w9.pdf"
     }
   ],
   "policiesDocId": "1xMf-fWcDDWO_8Immu_g65xBlFHfGKBpwJFJ3nCD-3K4",
@@ -588,32 +588,32 @@ window.HUB_CONTENT = {
   },
   "site": {
     "home": [
-      { "img": "assets/sites/home-01.jpg", "href": "#/compliance", "alt": "Compliance. Contracts, disclosures & addenda" },
-      { "img": "assets/sites/home-02.jpg", "href": "#/marketing-templates", "alt": "Marketing. Logos, colors & templates" },
-      { "img": "assets/sites/home-03.jpg", "href": "#/technology", "alt": "Technology. CRM, MLS & the tools we use" },
-      { "img": "assets/sites/home-04.jpg", "href": "#/listings", "alt": "Office Listings. Current ENESMA listings" },
-      { "img": "assets/sites/home-05.jpg", "href": "#/training", "alt": "Training Library. Recorded sessions & coaching" },
-      { "img": "assets/sites/home-06.jpg", "href": "#/preferred-partners", "alt": "Preferred Partners. Escrow, lenders, inspectors & more" },
-      { "img": "assets/sites/home-07.jpg", "href": "#/calculators", "alt": "Calculators. Flip, net sheet & mortgage" },
-      { "img": "assets/sites/home-08.jpg", "href": "#/office-hubs", "alt": "Office Hubs. Reserve a desk or the conference room" },
-      { "img": "assets/sites/home-09.jpg", "href": "#/agents/enrique-esparza", "alt": "Contact the Broker. Enrique Esparza, DRE# 01926362" }
+      { "img": "assets/sites/home-01.jpg", "href": "#/compliance", "alt": "Compliance. Contracts, disclosures & addenda", "title": "Compliance", "sub": "Contracts, disclosures & addenda" },
+      { "img": "assets/sites/home-02.jpg", "href": "#/marketing-templates", "alt": "Marketing. Logos, colors & templates", "title": "Marketing", "sub": "Logos, colors & templates" },
+      { "img": "assets/sites/home-03.jpg", "href": "#/technology", "alt": "Technology. CRM, MLS & the tools we use", "title": "Technology", "sub": "CRM, MLS & the tools we use" },
+      { "img": "assets/sites/home-04.jpg", "href": "#/listings", "alt": "Office Listings. Current ENESMA listings", "title": "Office Listings", "sub": "Current ENESMA listings" },
+      { "img": "assets/sites/home-05.jpg", "href": "#/training", "alt": "Training Library. Recorded sessions & coaching", "title": "Training Library", "sub": "Recorded sessions & coaching" },
+      { "img": "assets/sites/home-06.jpg", "href": "#/preferred-partners", "alt": "Preferred Partners. Escrow, lenders, inspectors & more", "title": "Preferred Partners", "sub": "Escrow, lenders, inspectors & more" },
+      { "img": "assets/sites/home-07.jpg", "href": "#/calculators", "alt": "Calculators. Flip, net sheet & mortgage", "title": "Calculators", "sub": "Flip, net sheet & mortgage" },
+      { "img": "assets/sites/home-08.jpg", "href": "#/office-hubs", "alt": "Office Hubs. Reserve a desk or the conference room", "title": "Office Hubs", "sub": "Reserve a desk or the conference room" },
+      { "img": "assets/sites/home-09.jpg", "href": "#/agents/enrique-esparza", "alt": "Contact the Broker. Enrique Esparza, DRE# 01926362", "title": "Contact the Broker", "sub": "Enrique Esparza, DRE# 01926362" }
     ],
     "compliance": [
-      { "img": "assets/sites/compliance-01.jpg", "href": "https://app.enesmarealty.com/transactions/", "ext": true, "alt": "Transaction Center. From contract to close, all in one place." },
-      { "img": "assets/sites/compliance-checklists.jpg", "href": "#/compliance/transaction-checklists", "alt": "Transaction Checklists. Required documents for every file type" },
-      { "img": "assets/sites/compliance-03.jpg", "href": "#/compliance/office-documents", "alt": "Office Documents. Brokerage forms & agreements" },
-      { "img": "assets/sites/compliance-04.jpg", "href": "#/compliance/c-a-r-legal-hotline", "alt": "C.A.R. Legal Hotline. Member Legal Services (213) 739-8282" },
-      { "img": "assets/sites/compliance-05.jpg", "href": "#/compliance/office-policies", "alt": "Office Policies. Procedures & compliance" }
+      { "img": "assets/sites/compliance-01.jpg", "href": "https://app.enesmarealty.com/transactions/", "ext": true, "alt": "Transaction Center. From contract to close, all in one place.", "foot": "From contract to close, all in one place.", "steps": ["Upload", "Track", "Review", "Close"] },
+      { "img": "assets/sites/compliance-checklists.jpg", "href": "#/compliance/transaction-checklists", "alt": "Transaction Checklists. Required documents for every file type", "title": "Transaction Checklists", "sub": "Required documents for every file type" },
+      { "img": "assets/sites/compliance-03.jpg", "href": "#/compliance/office-documents", "alt": "Office Documents. Brokerage forms & agreements", "title": "Office Documents", "sub": "Brokerage forms & agreements" },
+      { "img": "assets/sites/compliance-04.jpg", "href": "#/compliance/c-a-r-legal-hotline", "alt": "C.A.R. Legal Hotline. Member Legal Services (213) 739-8282", "title": "C.A.R. Legal Hotline", "sub": "Member Legal Services · (213) 739-8282" },
+      { "img": "assets/sites/compliance-05.jpg", "href": "#/compliance/office-policies", "alt": "Office Policies. Procedures & compliance", "title": "Office Policies", "sub": "Procedures & compliance" }
     ],
     "marketing": [
-      { "img": "assets/sites/tpl-holidays.jpg", "href": "#/marketing-templates/holidays", "alt": "Holidays. Seasonal posts and greetings" },
-      { "img": "assets/sites/tpl-just-listed.jpg", "href": "https://www.canva.com/d/64BPKTuts5rDZBb", "ext": true, "alt": "Just Listed. New listing announcements" },
-      { "img": "assets/sites/tpl-open-house.jpg", "href": "https://www.canva.com/d/qFj7fK9tmUXN1D6", "ext": true, "alt": "Open House" },
-      { "img": "assets/sites/tpl-escrow.jpg", "href": "https://www.canva.com/d/yPcu-VutS3-LN8I", "ext": true, "alt": "In Escrow" },
-      { "img": "assets/sites/tpl-sold.jpg", "href": "https://www.canva.com/d/-wPqZ3vqCepP3zP", "ext": true, "alt": "Sold" },
-      { "img": "assets/sites/tpl-card.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Business Card. ENESMA-branded cards" },
-      { "img": "assets/sites/tpl-email.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Email Signature. DRE-compliant signatures" },
-      { "img": "assets/sites/tpl-decks.jpg", "href": "https://www.canva.com/folder/FAHXRHXspD4", "ext": true, "alt": "Presentations. Listing and buyer decks" }
+      { "img": "assets/sites/tpl-holidays.jpg", "href": "#/marketing-templates/holidays", "alt": "Holidays. Seasonal posts & greetings", "title": "Holidays", "sub": "Seasonal posts & greetings" },
+      { "img": "assets/sites/tpl-just-listed.jpg", "href": "https://www.canva.com/d/64BPKTuts5rDZBb", "ext": true, "alt": "Just Listed. New listing announcements", "title": "Just Listed", "sub": "New listing announcements" },
+      { "img": "assets/sites/tpl-open-house.jpg", "href": "https://www.canva.com/d/qFj7fK9tmUXN1D6", "ext": true, "alt": "Open House. Open house stories", "title": "Open House", "sub": "Open house stories" },
+      { "img": "assets/sites/tpl-escrow.jpg", "href": "https://www.canva.com/d/yPcu-VutS3-LN8I", "ext": true, "alt": "In Escrow. In-escrow announcements", "title": "In Escrow", "sub": "In-escrow announcements" },
+      { "img": "assets/sites/tpl-sold.jpg", "href": "https://www.canva.com/d/-wPqZ3vqCepP3zP", "ext": true, "alt": "Sold. Sold announcements", "title": "Sold", "sub": "Sold announcements" },
+      { "img": "assets/sites/tpl-card.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Business Card. ENESMA-branded cards", "title": "Business Card", "sub": "ENESMA-branded cards" },
+      { "img": "assets/sites/tpl-email.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Email Signature. DRE-compliant signatures", "title": "Email Signature", "sub": "DRE-compliant signatures" },
+      { "img": "assets/sites/tpl-decks.jpg", "href": "https://www.canva.com/folder/FAHXRHXspD4", "ext": true, "alt": "Presentations. Listing & buyer decks", "title": "Presentations", "sub": "Listing & buyer decks" }
     ],
     "technology": [
       { "img": "assets/sites/technology-01.jpg", "href": "https://go.crmls.org", "ext": true, "alt": "CRMLS. MLS search, listings & Matrix" },
@@ -623,7 +623,7 @@ window.HUB_CONTENT = {
       { "img": "assets/sites/technology-05.jpg", "href": "https://cloudcma.com/login", "ext": true, "alt": "Cloud CMA. CMAs, presentations and flyers" },
       { "img": "assets/sites/technology-06.jpg", "href": "https://x.ai/pricing", "ext": true, "alt": "Grok Bot. AI organization" },
       { "img": "assets/sites/technology-07.jpg", "href": "https://chatgpt.com", "ext": true, "alt": "ChatGPT by OpenAI. Listing copy, emails & scripts" },
-      { "img": "assets/sites/technology-08.jpg", "href": "https://app.enesmarealty.com/esign/", "ext": true, "alt": "E-Sign. Send, sign and store, all in one place." }
+      { "img": "assets/sites/technology-08.jpg", "href": "https://app.enesmarealty.com/esign/", "ext": true, "alt": "E-Sign. Send, sign and store, all in one place.", "foot": "Send, sign and store — all in one place.", "steps": ["Upload", "Place", "Sign", "Store"] }
     ],
     "listing": {
       "img": "assets/sites/listings-01.jpg",
@@ -639,24 +639,25 @@ window.HUB_CONTENT = {
       { "img": "assets/sites/training-06.jpg", "href": "https://www.youtube.com/watch?v=O9aRgMHk4pE", "ext": true, "alt": "Building a Brand That’s Authentically YOU" }
     ],
     "checklists": [
-      { "img": "assets/sites/checklists-01.jpg", "href": "https://docs.google.com/spreadsheets/d/1fbhbV_oPWSRhm5eJ0ITe6ovrTqskNqMl4sbtWqYgSWY/edit", "ext": true, "alt": "Residential Listing 1-4 Units. View, or File, Make a copy" },
-      { "img": "assets/sites/checklists-02.jpg", "href": "https://docs.google.com/spreadsheets/d/1CdxoLeaDF285_ccua86FzcGOC_wqkaAQZIuxQomTWoA/edit", "ext": true, "alt": "Residential Sales 1-4 Units. View, or File, Make a copy" },
-      { "img": "assets/sites/checklists-03.jpg", "href": "https://docs.google.com/spreadsheets/d/1g8Ie8FKAL8frtrr221kH3if0lPbqtFja74KDyFh9nwk/edit", "ext": true, "alt": "Residential Lease Listing. View, or File, Make a copy" },
-      { "img": "assets/sites/checklists-04.jpg", "href": "https://docs.google.com/spreadsheets/d/114hmy0N_fi352wFS9vdeJXzRpDmbHm_h0BbNQEIkYO8/edit", "ext": true, "alt": "Residential Lease. View, or File, Make a copy" },
-      { "img": "assets/sites/checklists-05.jpg", "href": "https://docs.google.com/spreadsheets/d/1ZO1z551v0Xd0IEEY579TMMDevQBkAhityByT_6Eowxk/edit", "ext": true, "alt": "Land Listing. View, or File, Make a copy" },
-      { "img": "assets/sites/checklists-06.jpg", "href": "https://docs.google.com/spreadsheets/d/1QGuyaY11bwMJJdz0FObBQqUwq0qT_k_Glr5CjGt-ZUk/edit", "ext": true, "alt": "Commercial Listing. View, or File, Make a copy" },
-      { "img": "assets/sites/checklists-07.jpg", "href": "https://docs.google.com/spreadsheets/d/1cTY19PaWglgoo1wOGZlaZdvtIDj-Ca7dyR2V6VDtmg0/edit", "ext": true, "alt": "Commercial Lease Listing. View, or File, Make a copy" },
-      { "img": "assets/sites/checklists-08.jpg", "href": "https://docs.google.com/spreadsheets/d/1dYi5fhfjDtXuxaXDNIbtrSLjr0jNfsScJ3WnMzKJyjU/edit", "ext": true, "alt": "Commercial Lease. View, or File, Make a copy" }
+      { "img": "assets/sites/checklists-01.jpg", "href": "https://docs.google.com/spreadsheets/d/1fbhbV_oPWSRhm5eJ0ITe6ovrTqskNqMl4sbtWqYgSWY/edit", "ext": true, "alt": "Residential Listing 1-4 Units. View, or File > Make a copy", "kicker": "Checklist · Listing", "title": "Residential Listing 1-4 Units", "sub": "View, or File > Make a copy" },
+      { "img": "assets/sites/checklists-02.jpg", "href": "https://docs.google.com/spreadsheets/d/1CdxoLeaDF285_ccua86FzcGOC_wqkaAQZIuxQomTWoA/edit", "ext": true, "alt": "Residential Sales 1-4 Units. View, or File > Make a copy", "kicker": "Checklist · Transaction", "title": "Residential Sales 1-4 Units", "sub": "View, or File > Make a copy" },
+      { "img": "assets/sites/checklists-03.jpg", "href": "https://docs.google.com/spreadsheets/d/1g8Ie8FKAL8frtrr221kH3if0lPbqtFja74KDyFh9nwk/edit", "ext": true, "alt": "Residential Lease Listing. View, or File > Make a copy", "kicker": "Checklist · Listing", "title": "Residential Lease Listing", "sub": "View, or File > Make a copy" },
+      { "img": "assets/sites/checklists-04.jpg", "href": "https://docs.google.com/spreadsheets/d/114hmy0N_fi352wFS9vdeJXzRpDmbHm_h0BbNQEIkYO8/edit", "ext": true, "alt": "Residential Lease. View, or File > Make a copy", "kicker": "Checklist · Transaction", "title": "Residential Lease", "sub": "View, or File > Make a copy" },
+      { "img": "assets/sites/checklists-05.jpg", "href": "https://docs.google.com/spreadsheets/d/1ZO1z551v0Xd0IEEY579TMMDevQBkAhityByT_6Eowxk/edit", "ext": true, "alt": "Land Listing. View, or File > Make a copy", "kicker": "Checklist · Listing", "title": "Land Listing", "sub": "View, or File > Make a copy" },
+      { "img": "assets/sites/checklists-06.jpg", "href": "https://docs.google.com/spreadsheets/d/1QGuyaY11bwMJJdz0FObBQqUwq0qT_k_Glr5CjGt-ZUk/edit", "ext": true, "alt": "Commercial Listing. View, or File > Make a copy", "kicker": "Checklist · Listing", "title": "Commercial Listing", "sub": "View, or File > Make a copy" },
+      { "img": "assets/sites/checklists-07.jpg", "href": "https://docs.google.com/spreadsheets/d/1cTY19PaWglgoo1wOGZlaZdvtIDj-Ca7dyR2V6VDtmg0/edit", "ext": true, "alt": "Commercial Lease Listing. View, or File > Make a copy", "kicker": "Checklist · Listing", "title": "Commercial Lease Listing", "sub": "View, or File > Make a copy" },
+      { "img": "assets/sites/checklists-08.jpg", "href": "https://docs.google.com/spreadsheets/d/1dYi5fhfjDtXuxaXDNIbtrSLjr0jNfsScJ3WnMzKJyjU/edit", "ext": true, "alt": "Commercial Lease. View, or File > Make a copy", "kicker": "Checklist · Transaction", "title": "Commercial Lease", "sub": "View, or File > Make a copy" }
     ],
     "officeDocs": [
-      { "img": "assets/sites/officedocs-01.jpg", "href": "https://app.enesmarealty.com/forms/cda.html", "ext": true, "alt": "CDA. Commission Disbursement Authorization" },
-      { "img": "assets/sites/officedocs-02.jpg", "href": "https://app.enesmarealty.com/forms/invoice.html", "ext": true, "alt": "General Invoice. Fillable invoice PDF" },
-      { "img": "assets/sites/officedocs-03.jpg", "href": "https://drive.google.com/file/d/1G_DYvqW-0zl9-BmsEExCjLPYLKZp-2T0/view", "ext": true, "alt": "W-9 (ENESMA Realty). Signed Form W-9 (PDF)" }
+      { "img": "assets/sites/officedocs-01.jpg", "href": "https://app.enesmarealty.com/forms/cda.html", "ext": true, "alt": "CDA. Commission Disbursement Authorization", "title": "CDA", "sub": "Commission Disbursement Authorization" },
+      { "img": "assets/sites/officedocs-02.jpg", "href": "https://app.enesmarealty.com/forms/invoice.html", "ext": true, "alt": "General Invoice. Fillable invoice PDF", "title": "General Invoice", "sub": "Fillable invoice PDF" },
+      { "img": "assets/sites/officedocs-03.jpg", "href": "https://app.enesmarealty.com/forms/w9.pdf", "ext": true, "alt": "W-9 (ENESMA Realty). Signed Form W-9 (PDF)", "title": "W-9 (ENESMA Realty)", "sub": "Signed Form W-9 (PDF)" }
     ],
     "calcs": [
-      { "img": "assets/sites/calcs-01.jpg", "href": "#/calculators/net-sheet", "alt": "Net Sheet. Seller net proceeds estimate" },
-      { "img": "assets/sites/calcs-02.jpg", "href": "#/calculators/mortgage-calculator", "alt": "Mortgage Calculator. Monthly payment estimate" },
-      { "img": "assets/sites/calcs-03.jpg", "href": "#/calculators/flip-calculator", "alt": "Flip Calculator. Fix-and-flip profit estimate" }
+      { "img": "assets/sites/calcs-01.jpg", "href": "#/calculators/net-sheet", "alt": "Net Sheet. Seller net proceeds estimate", "title": "Net Sheet", "sub": "Seller net proceeds estimate" },
+      { "img": "assets/sites/calcs-02.jpg", "href": "#/calculators/mortgage-calculator", "alt": "Mortgage Calculator. Monthly payment estimate", "title": "Mortgage Calculator", "sub": "Monthly payment estimate" },
+      { "img": "assets/sites/calcs-03.jpg", "href": "#/calculators/flip-calculator", "alt": "Flip Calculator. Fix-and-flip profit estimate", "title": "Flip Calculator", "sub": "Fix-and-flip profit estimate" },
+      { "img": "assets/sites/calcs-04.jpg", "href": "#/calculators/cap-rate-calculator", "alt": "Cap Rate Calculator. NOI and cap rate estimate", "title": "Cap Rate Calculator", "sub": "NOI and cap rate estimate" }
     ],
     "partners": [
       { "img": "assets/sites/partners-01.jpg", "href": "https://safeguardescrowinc.com", "ext": true, "alt": "Jennifer Kent, Safeguard Escrow. 909-966-4488" },

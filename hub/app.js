@@ -102,7 +102,19 @@
     var href = t.href || '#/';
     var ext = t.ext || /^https?:|^mailto:/i.test(href);
     var open = ext ? ' target="_blank" rel="noopener"' : '';
-    return '<a class="shot" href="' + h(href) + '"' + open + '><img src="' + h(t.img) + '" alt="' + h(t.alt || '') + '"></a>';
+    var cap = '';
+    if (t.steps && t.steps.length) {
+      cap = '<span class="cap cap-steps"><span class="tag">' + h(t.foot || '') + '</span><span class="rail">' +
+        t.steps.map(function (s) { return '<span>' + h(s) + '</span>'; }).join('') + '</span></span>';
+    } else if (t.title) {
+      cap = '<span class="cap"><span class="dash"></span>' +
+        (t.kicker ? '<span class="kicker">' + h(t.kicker) + '</span>' : '') +
+        '<span class="t">' + h(t.title) + '</span>' +
+        (t.sub ? '<span class="s">' + h(t.sub) + '</span>' : '') + '</span>';
+    }
+    var cls = 'shot' + (cap ? ' has-cap' : '');
+    var alt = cap && t.title ? '' : (t.alt || '');
+    return '<a class="' + cls + '" href="' + h(href) + '"' + open + '><img src="' + h(t.img) + '" alt="' + h(alt) + '">' + cap + '</a>';
   }
   function shotGrid(items) {
     return '<div class="shot-grid">' + (items || []).map(shotLink).join('') + '</div>';
@@ -261,10 +273,8 @@
       '<div class="prose train-note">' + (C.trainingDisclaimer || '') + '</div></div></section>';
   }
   function pageCalcs() {
-    var links = ((C.site && C.site.calcs) || []).map(shotLink).join('');
-    var cap = (C.calcTiles || []).filter(function (t) { return t.href.indexOf('cap-rate') >= 0; })[0];
     return pageHero('CALCULATORS', 'assets/banners/calculators.jpg') +
-      '<section class="section"><div class="wrap"><div class="shot-grid">' + links + (cap ? tile(cap) : '') + '</div></div></section>';
+      '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.calcs) + '</div></section>';
   }
   function pageCalcEmbed(info) {
     return '<section class="calc-stage" data-calc="' + h(info.key) + '"><div id="calc-host" class="calc-root"></div></section>';
