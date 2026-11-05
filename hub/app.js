@@ -98,12 +98,13 @@
         '</div>' +
       '</nav></header>';
   }
-  function appsBar() {
-    return '<div class="apps-bar">' +
-      '<a href="' + h(CFG.TC) + '">Transaction Center</a>' +
-      '<a href="' + h(CFG.ESIGN) + '">E-Sign</a>' +
-      '<a href="' + h(CFG.MYBOOKS) + '">My E-Books</a>' +
-      '</div>';
+  function shotGrid(items) {
+    return '<div class="shot-grid">' + (items || []).map(function (t) {
+      var href = t.href || '#/';
+      var ext = t.ext || /^https?:|^mailto:/i.test(href);
+      var open = ext ? ' target="_blank" rel="noopener"' : '';
+      return '<a class="shot" href="' + h(href) + '"' + open + '><img src="' + h(t.img) + '" alt="' + h(t.alt || '') + '"></a>';
+    }).join('') + '</div>';
   }
   function footerHtml() {
     return '<div class="foot-wrap"><footer class="foot">' +
@@ -163,15 +164,16 @@
         '<div class="dash"></div><h3>' + h(e.title) + '</h3><p>' + h(e.meta) + '</p></div></a>';
     }).join('') : '<p class="note" style="text-align:center">No upcoming free C.A.R. or CVAR events in the next 30 days.</p>';
     return '<section class="hero" style="background-image:url(\'assets/hero.jpg\')"><img class="lockup" src="assets/hero-lockup.png" alt="ENESMA Realty Agent Hub. Underpromise &amp; Overdeliver."></section>' +
-      '<section class="section"><div class="wrap">' + sectionHead('Agent Resources', 'Forms, tools, and support to help you close with confidence.') + grid(C.homeTiles) + '</div></section>' +
+      '<section class="section"><div class="wrap">' + sectionHead('Agent Resources', 'Forms, tools, and support to help you close with confidence.') + shotGrid(C.site && C.site.home) + '</div></section>' +
       '<section class="section" style="padding-top:0"><div class="wrap">' + sectionHead('Upcoming Events', '') +
       (ev.length ? '<div class="grid-2">' + evHtml + '</div>' : evHtml) + '</div></section>' +
-      '<div class="pills"><a class="pill" href="' + h(CFG.ADD_IOS) + '" target="_blank" rel="noopener">Add to iPhone</a>' +
-      '<a class="pill" href="' + h(CFG.ADD_ANDROID) + '" target="_blank" rel="noopener">Add to Android</a></div>';
+      '<div class="pills" aria-label="Add the Hub to your phone">' +
+      '<a class="pill" href="' + h(CFG.ADD_IOS) + '" target="_blank" rel="noopener"><img src="assets/add-iphone.png" width="1169" height="229" alt="Add to iPhone"></a>' +
+      '<a class="pill" href="' + h(CFG.ADD_ANDROID) + '" target="_blank" rel="noopener"><img src="assets/add-android.png" width="1169" height="229" alt="Add to Android"></a></div>';
   }
   function pageCompliance() {
     return pageHero('COMPLIANCE', 'assets/banners/compliance.jpg') +
-      '<section class="section"><div class="wrap">' + grid(C.complianceTiles) + '</div></section>';
+      '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.compliance) + '</div></section>';
   }
   function pageChecklists() {
     var cards = (C.checklists || []).map(function (x) {
@@ -221,20 +223,18 @@
       return '<figure class="swatch"><div class="chip" style="background:' + h(bg) + (c.hex === '#FBFBFB' ? ';border-bottom:1px solid #ececec' : '') + '"></div>' +
         '<figcaption><b>' + h(c.name) + '</b><code>' + h(c.hex) + '</code>' + (c.note ? '<span style="display:block;color:#6b6b70;margin-top:4px">' + h(c.note) + '</span>' : '') + '</figcaption></figure>';
     }).join('');
-    var canva = (C.canva || []).map(function (x) {
-      return '<a class="card-plain" href="' + h(x.href) + '" target="_blank" rel="noopener"><h3>' + h(x.title) + '</h3><p>' + h(x.sub) + '</p></a>';
-    }).join('');
     return pageHero('MARKETING', 'assets/banners/marketing.jpg') +
       '<section class="section"><div class="wrap">' +
+      sectionHead('Templates', 'Canva designs and holiday graphics.') +
+      shotGrid(C.site && C.site.marketing) +
+      '<div style="height:56px"></div>' +
       sectionHead('Logos', 'Download the wordmark for dark or light backgrounds.') +
-      '<div class="grid-2" style="margin-bottom:48px">' +
-        '<a class="card-plain" href="assets/logo-white.png" download><div style="background:#000007;border-radius:6px;padding:22px;margin-bottom:12px;display:grid;place-items:center"><img src="assets/logo-white.png" alt="White wordmark" style="height:64px;width:auto"></div><h3>White wordmark</h3><p>Use on black or photography.</p></a>' +
-        '<a class="card-plain" href="assets/logo-black.png" download><div style="background:#FBFBFB;border-radius:6px;padding:22px;margin-bottom:12px;display:grid;place-items:center"><img src="assets/logo-black.png" alt="Black wordmark" style="height:64px;width:auto"></div><h3>Black wordmark</h3><p>Use on light backgrounds.</p></a>' +
+      '<div class="grid-2 logo-pair">' +
+        '<a class="card-plain" href="assets/logo-white.png" download><div class="logo-stage dark"><img src="assets/logo-white.png" alt="White wordmark"></div><h3>White wordmark</h3><p>Use on black or photography.</p></a>' +
+        '<a class="card-plain" href="assets/logo-black.png" download><div class="logo-stage light"><img src="assets/logo-black.png" alt="Black wordmark"></div><h3>Black wordmark</h3><p>Use on light backgrounds.</p></a>' +
       '</div>' +
       sectionHead('Colors', 'Official ENESMA brand palette.') +
       '<div class="swatches">' + colors + '</div>' +
-      sectionHead('Templates', 'Open a Canva design or folder.') +
-      '<div class="grid-2">' + canva + '<a class="card-plain" href="#/marketing-templates/holidays"><h3>Holidays</h3><p>Right-click or press and hold an image to save it.</p></a></div>' +
       '</div></section>';
   }
   function pageHolidays() {
@@ -247,27 +247,19 @@
       '<div class="holidays">' + figs + '</div></div></section>';
   }
   function pageTech() {
-    var cards = (C.tech || []).map(function (t) {
-      var logo = t.img ? '<img src="' + h(t.img) + '" alt="">' : '<div class="word">' + h(t.word || t.title) + '</div>';
-      return '<a class="tech-card" href="' + h(t.href) + '" target="_blank" rel="noopener"><div class="logo-box">' + logo + '</div><div class="dash"></div><h3>' + h(t.title) + '</h3><p>' + h(t.sub) + '</p></a>';
-    }).join('');
     return pageHero('TECHNOLOGY', 'assets/banners/technology.jpg') +
-      '<section class="section"><div class="wrap"><div class="tech-grid">' + cards + '</div></div></section>';
+      '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.technology) + '</div></section>';
   }
   function pageListings() {
-    var L = C.listing || {};
+    var L = (C.site && C.site.listing) || {};
     return pageHero('OFFICE LISTINGS', 'assets/banners/listings.jpg') +
-      '<section class="section"><div class="wrap"><a class="listing-card" href="' + h(L.href) + '" target="_blank" rel="noopener">' +
-      '<img src="' + h(L.img) + '" alt="' + h(L.title) + '"><div><h2>' + h(L.title) + '</h2><p>' + h(L.sub) + '</p><p class="note">' + h(L.agent) + '</p></div></a></div></section>';
+      '<section class="section"><div class="wrap"><div class="shot-single"><a class="shot" href="' + h(L.href) + '" target="_blank" rel="noopener">' +
+      '<img src="' + h(L.img) + '" alt="' + h(L.alt || '') + '"></a></div></div></section>';
   }
   function pageTraining() {
-    var cards = (C.training || []).map(function (t) {
-      return '<a class="tile" href="https://www.youtube.com/watch?v=' + h(t.id) + '" target="_blank" rel="noopener" style="background-image:url(\'assets/training/' + h(t.id) + '.jpg\')">' +
-        '<div class="cap"><div class="dash"></div><h3>' + h(t.title) + '</h3></div></a>';
-    }).join('');
     return pageHero('TRAINING LIBRARY', 'assets/banners/training.jpg') +
-      '<section class="section"><div class="wrap"><div class="prose">' + (C.trainingDisclaimer || '') + '</div>' +
-      '<div class="grid-2" style="margin-top:28px">' + cards + '</div></div></section>';
+      '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.training) +
+      '<div class="prose train-note">' + (C.trainingDisclaimer || '') + '</div></div></section>';
   }
   function pageCalcs() {
     return pageHero('CALCULATORS', 'assets/banners/calculators.jpg') +
@@ -314,12 +306,8 @@
       (a.bioHtml || '') + '</div></div></div></section>';
   }
   function pagePartners() {
-    var cards = (C.partners || []).map(function (p) {
-      var ext = /^https?:|^mailto:/i.test(p.href);
-      return '<a class="card-plain" href="' + h(p.href) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '><h3>' + h(p.title) + '</h3><p>' + h(p.sub) + '</p></a>';
-    }).join('');
     return pageHero('PREFERRED PARTNERS', 'assets/banners/partners.jpg') +
-      '<section class="section"><div class="wrap"><div class="partners">' + cards + '</div></div></section>';
+      '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.partners) + '</div></section>';
   }
   function page404() {
     return '<section class="section"><div class="wrap" style="text-align:center"><h2>Page not found</h2><div class="gold-rule"></div><p><a href="#/">Back to the Hub</a></p></div></section>';
@@ -526,7 +514,7 @@
   function renderApp() {
     view = 'app';
     document.title = titles() + ' · ENESMA Realty';
-    $app.innerHTML = headerHtml() + appsBar() + pageFor(path()) + footerHtml() + searchOverlay();
+    $app.innerHTML = headerHtml() + pageFor(path()) + footerHtml() + searchOverlay();
     bindChrome();
     window.scrollTo(0, 0);
   }

@@ -507,7 +507,7 @@ window.HUB_CONTENT = {
     {
       "title": "Integrity Home Finance",
       "sub": "Preferred lender",
-      "href": "https://gemcorp.com"
+      "href": "https://www.gemcorp.com/branch/integrity-home-finance"
     },
     {
       "title": "Jorge Mesa · Pacific Coast Title",
@@ -572,5 +572,67 @@ window.HUB_CONTENT = {
     "capNote": "The cap reduction continues year over year as long as you keep the production level that qualified you for it. Production is measured over the preceding 12 months and reviewed each year on your hire anniversary. If that level isn’t maintained, the incentive is adjusted or discontinued.",
     "gci": "You receive a bonus equal to 1% of the total gross commission income (GCI) the referred agent generates. The bonus lasts one (1) year from the referred agent’s hire date, then expires automatically, regardless of your production level, and is not paid on any transaction that closes after the referred agent has reached their annual cap.",
     "legal": "Benefits are governed by the Referral Addendum in Exhibit B of the ENESMA Realty Independent Contractor Agreement. If this page and the agreement differ, the agreement controls."
+  },
+  "site": {
+    "home": [
+      { "img": "assets/sites/home-01.jpg", "href": "#/compliance", "alt": "Compliance. Contracts, disclosures & addenda" },
+      { "img": "assets/sites/home-02.jpg", "href": "#/marketing-templates", "alt": "Marketing. Logos, colors & templates" },
+      { "img": "assets/sites/home-03.jpg", "href": "#/technology", "alt": "Technology. CRM, MLS & the tools we use" },
+      { "img": "assets/sites/home-04.jpg", "href": "#/listings", "alt": "Office Listings. Current ENESMA listings" },
+      { "img": "assets/sites/home-05.jpg", "href": "#/training", "alt": "Training Library. Recorded sessions & coaching" },
+      { "img": "assets/sites/home-06.jpg", "href": "#/preferred-partners", "alt": "Preferred Partners. Escrow, lenders, inspectors & more" },
+      { "img": "assets/sites/home-07.jpg", "href": "#/calculators", "alt": "Calculators. Flip, net sheet & mortgage" },
+      { "img": "assets/sites/home-08.jpg", "href": "https://app.enesmarealty.com/officehubs/", "ext": true, "alt": "Office Hubs. Reserve a desk or the conference room" },
+      { "img": "assets/sites/home-09.jpg", "href": "#/agents/enrique-esparza", "alt": "Contact the Broker. Enrique Esparza, DRE# 01926362" }
+    ],
+    "compliance": [
+      { "img": "assets/sites/compliance-01.jpg", "href": "https://app.enesmarealty.com/transactions/", "ext": true, "alt": "Transaction Center. From contract to close, all in one place." },
+      { "img": "assets/sites/compliance-02.jpg", "href": "#/compliance/transaction-checklists", "alt": "Transaction Checklists. Required documents for every file type" },
+      { "img": "assets/sites/compliance-03.jpg", "href": "#/compliance/office-documents", "alt": "Office Documents. Brokerage forms & agreements" },
+      { "img": "assets/sites/compliance-04.jpg", "href": "#/compliance/c-a-r-legal-hotline", "alt": "C.A.R. Legal Hotline. Member Legal Services (213) 739-8282" },
+      { "img": "assets/sites/compliance-05.jpg", "href": "#/compliance/office-policies", "alt": "Office Policies. Procedures & compliance" }
+    ],
+    "marketing": [
+      { "img": "assets/sites/marketing-01.jpg", "href": "#/marketing-templates/holidays", "alt": "Holidays. Seasonal posts & greetings" },
+      { "img": "assets/sites/marketing-02.jpg", "href": "https://www.canva.com/d/64BPKTuts5rDZBb", "ext": true, "alt": "Just Listed. New listing announcements" },
+      { "img": "assets/sites/marketing-03.jpg", "href": "https://www.canva.com/d/qFj7fK9tmUXN1D6", "ext": true, "alt": "Open House" },
+      { "img": "assets/sites/marketing-04.jpg", "href": "https://www.canva.com/d/yPcu-VutS3-LN8I", "ext": true, "alt": "In Escrow" },
+      { "img": "assets/sites/marketing-05.jpg", "href": "https://www.canva.com/d/-wPqZ3vqCepP3zP", "ext": true, "alt": "Sold" },
+      { "img": "assets/sites/marketing-06.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Business Card. ENESMA-branded cards" },
+      { "img": "assets/sites/marketing-07.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Email Signature. DRE-compliant signatures" },
+      { "img": "assets/sites/marketing-08.jpg", "href": "https://www.canva.com/folder/FAHXRHXspD4", "ext": true, "alt": "Presentations. Listing & buyer decks" }
+    ],
+    "technology": [
+      { "img": "assets/sites/technology-01.jpg", "href": "https://go.crmls.org", "ext": true, "alt": "CRMLS. MLS search, listings & Matrix" },
+      { "img": "assets/sites/technology-02.jpg", "href": "https://www.car.org/transactions/rst?src=homepage", "ext": true, "alt": "zipForm. C.A.R. transaction forms" },
+      { "img": "assets/sites/technology-03.jpg", "href": "https://www.canva.com", "ext": true, "alt": "Canva. Flyers, social & presentations" },
+      { "img": "assets/sites/technology-04.jpg", "href": "https://www.capcut.com/", "ext": true, "alt": "CapCut" },
+      { "img": "assets/sites/technology-05.jpg", "href": "https://cloudcma.com/login", "ext": true, "alt": "Cloud CMA. CMAs, presentations and flyers" },
+      { "img": "assets/sites/technology-06.jpg", "href": "https://x.ai/pricing", "ext": true, "alt": "Grok Bot. AI organization" },
+      { "img": "assets/sites/technology-07.jpg", "href": "https://chatgpt.com", "ext": true, "alt": "ChatGPT by OpenAI. Listing copy, emails & scripts" },
+      { "img": "assets/sites/technology-08.jpg", "href": "https://app.enesmarealty.com/esign/", "ext": true, "alt": "E-Sign. Send, sign and store, all in one place." }
+    ],
+    "listing": {
+      "img": "assets/sites/listings-01.jpg",
+      "href": "https://www.zillow.com/homedetails/1140-Pacific-Ave-UNIT-19-Long-Beach-CA-90813/21236727_zpid/",
+      "alt": "1140 Pacific Ave #19, Long Beach. Condo for sale. Enrique Esparza (909) 212-2994"
+    },
+    "training": [
+      { "img": "assets/sites/training-01.jpg", "href": "https://www.youtube.com/watch?v=Hc5W07EB9U8", "ext": true, "alt": "Why Most Agents Fail & Others Succeed – 14 Systems" },
+      { "img": "assets/sites/training-02.jpg", "href": "https://www.youtube.com/watch?v=4b013QoA4so", "ext": true, "alt": "Tips and Advice Every New Real Estate Agent Needs to Know" },
+      { "img": "assets/sites/training-03.jpg", "href": "https://www.youtube.com/watch?v=OcH4asRyj4w", "ext": true, "alt": "The Social Media Blueprint for Real Estate Agents" },
+      { "img": "assets/sites/training-04.jpg", "href": "https://www.youtube.com/watch?v=XexTWgCtWvc", "ext": true, "alt": "How to Turn the Low-Rate Objection Into a Listing Opportunity" },
+      { "img": "assets/sites/training-05.jpg", "href": "https://www.youtube.com/watch?v=hLlDVn105fQ", "ext": true, "alt": "Less Friction, More Connection: The Control Selling Method" },
+      { "img": "assets/sites/training-06.jpg", "href": "https://www.youtube.com/watch?v=O9aRgMHk4pE", "ext": true, "alt": "Building a Brand That’s Authentically YOU" }
+    ],
+    "partners": [
+      { "img": "assets/sites/partners-01.jpg", "href": "https://safeguardescrowinc.com", "ext": true, "alt": "Jennifer Kent, Safeguard Escrow. 909-966-4488" },
+      { "img": "assets/sites/partners-02.jpg", "href": "https://eileenmiraballoans.com/", "ext": true, "alt": "Eileen Mirabal, Exclusive Mortgage" },
+      { "img": "assets/sites/partners-03.jpg", "href": "https://www.gemcorp.com/branch/integrity-home-finance", "ext": true, "alt": "Mike Berrios, Integrity Home Finance" },
+      { "img": "assets/sites/partners-04.jpg", "href": "mailto:jorge@teammeza.com", "ext": true, "alt": "Jorge Mesa, Pacific Coast Title. 562-343-3725" },
+      { "img": "assets/sites/partners-05.jpg", "href": "mailto:hugo4title@gmail.com", "ext": true, "alt": "Hugo Lopez, Pacific Coast Title" },
+      { "img": "assets/sites/partners-06.jpg", "href": "mailto:heclopez@firstam.com", "ext": true, "alt": "Hector Lopez, First American NHD" },
+      { "img": "assets/sites/partners-07.jpg", "href": "https://grafekprinting.com", "ext": true, "alt": "Grafek Printing" }
+    ]
   }
 };
