@@ -385,13 +385,14 @@
     view = 'login';
     document.title = 'Sign in · AGENT HUB';
     $app.innerHTML = loginShell(
-      '<h1>Sign in</h1><p class="sub">Use the same email and password as Transaction Center. A code may be emailed when you sign in from a new device.</p>' +
+      '<h1 class="solo">Sign in</h1>' +
       (msg ? '<div class="err">' + h(msg) + '</div>' : '') +
       '<form id="lf" autocomplete="on">' +
       '<div class="f"><label for="lu">Email</label><input id="lu" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" required></div>' +
       '<div class="f"><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password" required></div>' +
       '<button class="btn wide" id="lb">Sign in</button>' +
-      '<p class="fine"><a href="#" id="lc">First time or forgot password?</a></p></form>'
+      '<p class="fine"><a href="#" id="lc">First time or forgot password?</a></p>' +
+      '<p class="fine disclosure">Use the same email and password as Transaction Center. A code may be emailed when you sign in from a new device.</p></form>'
     );
     qs('#lc').onclick = function (e) { e.preventDefault(); renderForgot(qs('#lu').value.trim()); };
     qs('#lf').onsubmit = function (e) {
