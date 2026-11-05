@@ -5,10 +5,10 @@
  * from the backend (setup() stores them), so normally only API_URL needs to be set.
  * The office access code is never stored here or anywhere in this repo. */
 window.OH_CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbxnTNpjbCLtHquypxArOnFK-9lQIlBd_lUAK5_NDeaUx4jAhYjxsaIahtbaff4bN8DoNw/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbwUEzjuEUKXYCYvOX5lIqnIwJ8gNsLs8yspIRy5Cce-dA_5HDlLPx9eWiqXSR31JV81ow/exec',
   CALENDARS: {
-    'rc-desk1': '263811bf9ba5c1d0d1310ed2170fb598d7c7d9ff3a1278f42bb87bca44fde342@group.calendar.google.com',
-    'rc-desk2': '7b909c69620258f9d78919042a39b9297b2cb9a8fc3b9fee7b7044372cd76b20@group.calendar.google.com',
-    'rc-conf': 'd4e387b0c603d2f73a619c5e78f3caa5c62731e99a86c4cf0ecd44d6b71b41ef@group.calendar.google.com'
+    'rc-desk1': 'c_f9965b9958b8be2f7076b7e9a66ed5e1c970b38dccebf91c492f803d15bcb0e0@group.calendar.google.com',
+    'rc-desk2': 'c_dffbf0e86732ed44a608944ba64d9754d764fd890411ad674a2ea775c89b6632@group.calendar.google.com',
+    'rc-conf': 'c_c0b6ace7e39df9e123296afcde775fac724b619fcd9486fd8522ec4639cce9cc@group.calendar.google.com'
   }
 };
