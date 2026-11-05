@@ -43,8 +43,7 @@ window.HUB_CONTENT = {
       "sub": "Flip, net sheet, mortgage & cap rate"
     },
     {
-      "href": "https://app.enesmarealty.com/officehubs/",
-      "ext": true,
+      "href": "#/office-hubs",
       "img": "assets/tiles/officehubs.jpg",
       "title": "Office Hubs",
       "sub": "Reserve a desk or the conference room"
@@ -388,7 +387,7 @@ window.HUB_CONTENT = {
       "title": "CapCut",
       "sub": "Short-form video editing",
       "href": "https://www.capcut.com/",
-      "word": "CapCut"
+      "img": "assets/tech/capcut.png"
     },
     {
       "title": "CloudCMA",
@@ -410,9 +409,9 @@ window.HUB_CONTENT = {
     },
     {
       "title": "E-Sign",
-      "sub": "ENESMA electronic signatures",
+      "sub": "Send, sign and store",
       "href": "https://app.enesmarealty.com/esign/",
-      "word": "E-Sign"
+      "img": "assets/tech/esign.svg"
     }
   ],
   "listing": {
@@ -596,25 +595,25 @@ window.HUB_CONTENT = {
       { "img": "assets/sites/home-05.jpg", "href": "#/training", "alt": "Training Library. Recorded sessions & coaching" },
       { "img": "assets/sites/home-06.jpg", "href": "#/preferred-partners", "alt": "Preferred Partners. Escrow, lenders, inspectors & more" },
       { "img": "assets/sites/home-07.jpg", "href": "#/calculators", "alt": "Calculators. Flip, net sheet & mortgage" },
-      { "img": "assets/sites/home-08.jpg", "href": "https://app.enesmarealty.com/officehubs/", "ext": true, "alt": "Office Hubs. Reserve a desk or the conference room" },
+      { "img": "assets/sites/home-08.jpg", "href": "#/office-hubs", "alt": "Office Hubs. Reserve a desk or the conference room" },
       { "img": "assets/sites/home-09.jpg", "href": "#/agents/enrique-esparza", "alt": "Contact the Broker. Enrique Esparza, DRE# 01926362" }
     ],
     "compliance": [
       { "img": "assets/sites/compliance-01.jpg", "href": "https://app.enesmarealty.com/transactions/", "ext": true, "alt": "Transaction Center. From contract to close, all in one place." },
-      { "img": "assets/sites/compliance-02.jpg", "href": "#/compliance/transaction-checklists", "alt": "Transaction Checklists. Required documents for every file type" },
+      { "img": "assets/sites/compliance-checklists.jpg", "href": "#/compliance/transaction-checklists", "alt": "Transaction Checklists. Required documents for every file type" },
       { "img": "assets/sites/compliance-03.jpg", "href": "#/compliance/office-documents", "alt": "Office Documents. Brokerage forms & agreements" },
       { "img": "assets/sites/compliance-04.jpg", "href": "#/compliance/c-a-r-legal-hotline", "alt": "C.A.R. Legal Hotline. Member Legal Services (213) 739-8282" },
       { "img": "assets/sites/compliance-05.jpg", "href": "#/compliance/office-policies", "alt": "Office Policies. Procedures & compliance" }
     ],
     "marketing": [
-      { "img": "assets/sites/marketing-01.jpg", "href": "#/marketing-templates/holidays", "alt": "Holidays. Seasonal posts & greetings" },
-      { "img": "assets/sites/marketing-02.jpg", "href": "https://www.canva.com/d/64BPKTuts5rDZBb", "ext": true, "alt": "Just Listed. New listing announcements" },
-      { "img": "assets/sites/marketing-03.jpg", "href": "https://www.canva.com/d/qFj7fK9tmUXN1D6", "ext": true, "alt": "Open House" },
-      { "img": "assets/sites/marketing-04.jpg", "href": "https://www.canva.com/d/yPcu-VutS3-LN8I", "ext": true, "alt": "In Escrow" },
-      { "img": "assets/sites/marketing-05.jpg", "href": "https://www.canva.com/d/-wPqZ3vqCepP3zP", "ext": true, "alt": "Sold" },
-      { "img": "assets/sites/marketing-06.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Business Card. ENESMA-branded cards" },
-      { "img": "assets/sites/marketing-07.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Email Signature. DRE-compliant signatures" },
-      { "img": "assets/sites/marketing-08.jpg", "href": "https://www.canva.com/folder/FAHXRHXspD4", "ext": true, "alt": "Presentations. Listing & buyer decks" }
+      { "img": "assets/sites/tpl-holidays.jpg", "href": "#/marketing-templates/holidays", "alt": "Holidays. Seasonal posts and greetings" },
+      { "img": "assets/sites/tpl-just-listed.jpg", "href": "https://www.canva.com/d/64BPKTuts5rDZBb", "ext": true, "alt": "Just Listed. New listing announcements" },
+      { "img": "assets/sites/tpl-open-house.jpg", "href": "https://www.canva.com/d/qFj7fK9tmUXN1D6", "ext": true, "alt": "Open House" },
+      { "img": "assets/sites/tpl-escrow.jpg", "href": "https://www.canva.com/d/yPcu-VutS3-LN8I", "ext": true, "alt": "In Escrow" },
+      { "img": "assets/sites/tpl-sold.jpg", "href": "https://www.canva.com/d/-wPqZ3vqCepP3zP", "ext": true, "alt": "Sold" },
+      { "img": "assets/sites/tpl-card.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Business Card. ENESMA-branded cards" },
+      { "img": "assets/sites/tpl-email.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Email Signature. DRE-compliant signatures" },
+      { "img": "assets/sites/tpl-decks.jpg", "href": "https://www.canva.com/folder/FAHXRHXspD4", "ext": true, "alt": "Presentations. Listing and buyer decks" }
     ],
     "technology": [
       { "img": "assets/sites/technology-01.jpg", "href": "https://go.crmls.org", "ext": true, "alt": "CRMLS. MLS search, listings & Matrix" },

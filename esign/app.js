@@ -166,6 +166,8 @@
     $nav.classList.toggle('hidden', !inApp); $user.classList.toggle('hidden', !inApp); $new.classList.toggle('hidden', !inApp);
     document.body.classList.toggle('signing', S.route === 'sign');
     if (inApp) $user.textContent = initials(S.user.name) || '?';
+    var onb = $nav.querySelector('a[data-r="onboarding"]');
+    if (onb) onb.hidden = !isAdmin();
     Array.prototype.forEach.call($nav.querySelectorAll('a'), function (a) { a.classList.toggle('on', a.dataset.r === S.section); });
   }
   $user.addEventListener('click', function (e) {
@@ -195,8 +197,9 @@
     if (!API) { S.section = ''; chrome(); return comingSoon(); }
     if (r.name === 'sign') { S.section = ''; chrome(); return ROUTES.sign(r); }
     if (!S.token || r.name === 'login') { S.section = ''; S.route = 'login'; chrome(); if (S.token && r.name === 'login') return go('#/'); return ROUTES.login(r); }
-    if (S.gmail === null && (r.name === 'new' || r.name === 'onboarding' || r.name === 'connect' || r.name === 'profile')) { loading(); return refreshMe().then(render, function (er) { fatal(er, render); }); }
-    if ((r.name === 'new' || r.name === 'onboarding') && S.gmail && !S.gmail.connected) { S.section = 'envelopes'; S.afterConnect = location.hash; chrome(); return ROUTES.connect({ q: { blocked: '1' } }); }
+    if (r.name === 'onboarding' && !isAdmin()) { S.section = 'envelopes'; chrome(); return go('#/'); }
+    if (S.gmail === null && (r.name === 'new' || r.name === 'connect' || r.name === 'profile')) { loading(); return refreshMe().then(render, function (er) { fatal(er, render); }); }
+    if (r.name === 'new' && S.gmail && !S.gmail.connected) { S.section = 'envelopes'; S.afterConnect = location.hash; chrome(); return ROUTES.connect({ q: { blocked: '1' } }); }
     var fn = ROUTES[r.name || 'envelopes'] || ROUTES.envelopes;
     S.section = { '': 'envelopes', envelopes: 'envelopes', envelope: 'envelopes', 'new': 'envelopes', templates: 'templates', template: 'templates', onboarding: 'onboarding', documents: 'documents' }[r.name] || 'envelopes';
     chrome(); fn(r);
@@ -722,71 +725,66 @@
             t.canEdit ? h('button', { class: 'btn sm plain', type: 'button', onclick: function () { confirmBox('Delete template?', '“' + t.name + '” will no longer be available. Envelopes already sent are not affected.', 'Delete', true).then(function (ok) { if (ok) api('deleteTemplate', { id: t.id }).then(function () { toast('Template deleted'); ROUTES.templates(); }).catch(function (e) { toast(e.message); }); }); } }, 'Delete') : null));
       }
       var onb = ts.filter(function (t) { return t.category === 'onboarding'; }), gen = ts.filter(function (t) { return t.category !== 'onboarding'; });
-      add($app, [h('div', { class: 'head' }, h('div', null, h('span', { class: 'rule' }), h('h1', null, 'Templates'), h('p', { class: 'sub' }, 'Reusable documents with roles and fields already placed.')),
+      var bits = [h('div', { class: 'head' }, h('div', null, h('span', { class: 'rule' }), h('h1', null, 'Templates'), h('p', { class: 'sub' }, 'Reusable documents with roles and fields already placed.')),
         h('div', { class: 'toolbar', style: { margin: 0 } }, isAdmin() ? h('a', { class: 'btn ghost', href: '#/template/new?cat=onboarding' }, 'New onboarding template') : null, h('a', { class: 'btn red', href: '#/template/new' }, 'New template'))),
-        h('h2', null, 'General'), gen.length ? h('div', { class: 'cards' }, gen.map(card)) : h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No templates yet'), 'Save documents you send often — listing agreements, disclosures — with fields already placed.')),
-        h('h2', { style: { marginTop: '28px' } }, 'Onboarding'), onb.length ? h('div', { class: 'cards' }, onb.map(card)) : h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No onboarding templates yet'), isAdmin() ? 'Upload each new-hire document once (ICA, W-9, policies…) as an onboarding template, then send them all from Onboarding in a few clicks.' : 'Your broker adds these.'))]);
+        h('h2', null, 'General'), gen.length ? h('div', { class: 'cards' }, gen.map(card)) : h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No templates yet'), 'Save documents you send often — listing agreements, disclosures — with fields already placed.'))];
+      if (isAdmin()) bits.push(h('h2', { style: { marginTop: '28px' } }, 'Onboarding'), onb.length ? h('div', { class: 'cards' }, onb.map(card)) : h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No onboarding templates yet'), 'Onboarding templates can be added here once the corporation DRE# packet is ready.')));
+      add($app, bits);
     }).catch(function (e) { fatal(e, ROUTES.templates); });
   };
 
-  /* ---------- onboarding packet ---------- */
+  /* ---------- onboarding tracker (admin) ---------- */
+  function inviteName(r) {
+    if (!r) return '';
+    var parts = [r.firstName || r.first, r.middleName || r.middle, r.lastName || r.last, r.suffix].filter(Boolean);
+    return parts.length ? parts.join(' ') : (r.name || '');
+  }
+  function onboardingLabel(e, hire, owner) {
+    var given = e.onboardingStatus || e.inviteStatus;
+    var known = { invited: 'Invited', in_progress: 'In progress', owner_signed: 'Owner signed', completed: 'Completed', declined: 'Declined' };
+    if (given && known[given]) return known[given];
+    if (given && /invited|in progress|owner signed|completed|declined/i.test(given)) return given;
+    var rs = e.recipients || [];
+    if (e.status === 'declined' || e.status === 'voided' || rs.some(function (r) { return r.status === 'declined'; })) return 'Declined';
+    if (e.status === 'completed') return 'Completed';
+    var ownerSigned = owner && (owner.status === 'signed' || owner.state === 'signed');
+    if (ownerSigned) return 'Owner signed';
+    var moved = rs.some(function (r) { return r.status === 'viewed' || r.status === 'signed' || r.viewedAt || r.signedAt; });
+    if (moved || e.status === 'finalizing') return 'In progress';
+    return 'Invited';
+  }
+  function fromEnvelope(e) {
+    var rs = (e.recipients || []).slice().sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+    var owner = rs[0] || null;
+    var hire = rs.length > 1 ? rs[rs.length - 1] : owner;
+    var updated = e.updatedAt || e.completedAt || (hire && (hire.signedAt || hire.viewedAt || hire.declinedAt)) || e.sentAt || '';
+    return { id: e.id, name: inviteName(hire), email: (hire && hire.email) || '', status: onboardingLabel(e, hire, owner), invitedAt: e.invitedAt || e.sentAt || e.createdAt || '', updatedAt: updated };
+  }
+  function isOnboardingEnv(e) {
+    return /onboarding/i.test((e.name || '') + ' ' + (e.subject || '') + ' ' + (e.category || ''));
+  }
   ROUTES.onboarding = function () {
-    loading('Loading onboarding templates…');
-    api('listTemplates').then(function (d) {
-      clear($app); var ts = (d.templates || []).filter(function (t) { return t.category === 'onboarding'; });
-      add($app, [h('span', { class: 'rule' }), h('h1', null, 'Onboarding'), h('p', { class: 'sub' }, 'Send a new hire their whole onboarding packet as one envelope.'), testBar()]);
-      if (!isAdmin()) return $app.appendChild(h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'For admins'), 'Onboarding packets are sent by an ENESMA admin.')));
-      if (!ts.length) return $app.appendChild(h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'Add your onboarding documents first'), 'Create one onboarding template per document (ICA, W-9, policy acknowledgements…).', h('div', { style: { marginTop: '14px' } }, h('a', { class: 'btn red', href: '#/template/new?cat=onboarding' }, 'New onboarding template')))));
-      var sel = {}; ts.forEach(function (t) { sel[t.id] = true; });
-      var hn = h('input', { type: 'text', maxlength: 120, autocomplete: 'off', placeholder: 'Full legal name' }), he = h('input', { type: 'email', autocomplete: 'off', placeholder: 'Personal email' });
-      var rolesEl = h('div'), msg = h('div'), roleVals = {};
-      function roleList() {   // merge roles by label across the chosen templates
-        var out = [], idx = {};
-        ts.filter(function (t) { return sel[t.id]; }).forEach(function (t) { t.roles.forEach(function (r) { var k = r.label.trim().toLowerCase(); if (!(k in idx)) { idx[k] = out.length; out.push({ k: k, label: r.label, order: r.order, defaultName: r.defaultName, defaultEmail: r.defaultEmail }); } else out[idx[k]].order = Math.min(out[idx[k]].order, r.order); }); });
-        return out.sort(function (a, b) { return a.order - b.order; });
-      }
-      function hireKey(list) { var m = list.filter(function (r) { return /hire|agent|associate|new|recruit|employee|contractor/i.test(r.label) && !r.defaultEmail; })[0] || list.filter(function (r) { return !r.defaultEmail; })[0]; return m ? m.k : null; }
-      function drawRoles() {
-        clear(rolesEl); var list = roleList(), hk = hireKey(list);
-        list.filter(function (r) { return r.k !== hk; }).forEach(function (r) {
-          var v = roleVals[r.k] = roleVals[r.k] || { name: r.defaultName || '', email: r.defaultEmail || '' };
-          rolesEl.appendChild(h('div', { class: 'row2', style: { marginBottom: '10px' } }, h('div', null, h('label', null, r.label + ' — name'), h('input', { type: 'text', value: v.name, oninput: function (e) { v.name = e.target.value; } })), h('div', null, h('label', null, r.label + ' — email'), h('input', { type: 'email', value: v.email, oninput: function (e) { v.email = e.target.value; } }))));
-        });
-        if (hk) rolesEl.insertBefore(h('p', { class: 'hint' }, 'The new hire signs as “' + list.filter(function (r) { return r.k === hk; })[0].label + '”.'), rolesEl.firstChild);
-      }
-      var picks = h('div', { class: 'list' }, ts.map(function (t) { return h('label', { class: 'item check', style: { cursor: 'pointer', display: 'flex' } }, h('input', { type: 'checkbox', checked: true, onchange: function (e) { sel[t.id] = e.target.checked; drawRoles(); } }), h('div', { style: { minWidth: 0 } }, h('div', { class: 't' }, t.name), h('div', { class: 'm' }, t.pages + (t.pages === 1 ? ' page · ' : ' pages · ') + t.roles.map(function (r) { return r.label; }).join(', ')))); }));
-      var btn = h('button', { class: 'btn red', type: 'button', onclick: send }, 'Send onboarding packet');
-      add($app, [h('div', { class: 'detail' }, h('div', { class: 'card' }, h('h2', null, '1. New hire'), h('div', { class: 'f' }, h('label', null, 'Name'), hn), h('div', { class: 'f' }, h('label', null, 'Email'), he), h('h2', { style: { marginTop: '18px' } }, '2. Other signers'), rolesEl),
-        h('div', { class: 'card' }, h('h2', null, '3. Documents'), h('p', { class: 'hint', style: { marginTop: '-6px' } }, 'Combined into one envelope, in this order.'), picks)), msg, h('div', { class: 'actions' }, h('span', { class: 'sp' }), btn)]);
-      drawRoles();
-      async function send() {
-        clear(msg); var chosen = ts.filter(function (t) { return sel[t.id]; });
-        if (!hn.value.trim() || !emailOk(he.value)) return msg.appendChild(errBox('Enter the new hire’s name and a valid email.'));
-        if (!chosen.length) return msg.appendChild(errBox('Pick at least one document.'));
-        var list = roleList(), hk = hireKey(list), who = {};
-        for (var i = 0; i < list.length; i++) {
-          var r = list[i], v = r.k === hk ? { name: hn.value.trim(), email: he.value.trim() } : roleVals[r.k];
-          if (!v || !v.name.trim() || !emailOk(v.email)) return msg.appendChild(errBox('Enter a name and email for ' + r.label + '.'));
-          who[r.k] = { key: 'o' + (i + 1), name: v.name.trim(), email: v.email.trim(), roleLabel: r.label, order: r.order };
-        }
-        var emails = {}; for (var k in who) { var em = who[k].email.toLowerCase(); if (emails[em]) return msg.appendChild(errBox(who[k].email + ' is used for two roles.')); emails[em] = 1; }
-        busy(btn, true, 'Building packet…');
-        try {
-          var full = [], bytes = [];
-          for (var j = 0; j < chosen.length; j++) { var x = await loadTemplateForWizard(chosen[j].id); full.push(x.t); bytes.push(x.bytes); }
-          var m = await mergePdfs(bytes), fields = [];
-          full.forEach(function (t, ti) {
-            var keyOf = {}; t.roles.forEach(function (r) { keyOf[r.key] = who[r.label.trim().toLowerCase()].key; });
-            t.fields.forEach(function (f) { fields.push({ type: f.type, recipient: keyOf[f.recipient], page: f.page + m.offsets[ti], x: f.x, y: f.y, w: f.w, h: f.h, required: isReq(f), label: f.label || '' }); });
-          });
-          var seq = full.some(function (t) { return t.orderMode === 'sequential'; });
-          busy(btn, true, 'Sending…');
-          var d2 = await api('createEnvelope', { name: 'Onboarding – ' + hn.value.trim(), subject: 'Welcome to ENESMA Realty – your onboarding documents', templateId: full[0].id, orderMode: seq ? 'sequential' : 'parallel', pages: m.pages, fields: fields, pdf: b64FromBytes(m.bytes),
-            message: 'Welcome to ENESMA Realty! Please review and sign your onboarding documents.', recipients: Object.keys(who).map(function (k) { return who[k]; }) });
-          toast('Onboarding packet sent'); go('#/envelope/' + d2.envelope.id);
-        } catch (e) { busy(btn, false); msg.appendChild(errBox(e.message)); }
-      }
-    }).catch(function (e) { fatal(e, ROUTES.onboarding); });
+    if (!isAdmin()) { go('#/'); return; }
+    loading('Loading onboarding…');
+    function draw(rows) {
+      clear($app);
+      add($app, [h('span', { class: 'rule' }), h('h1', null, 'Onboarding'), h('p', { class: 'sub' }, 'Agents invited to onboard, and where each packet stands.'), testBar()]);
+      if (!rows.length) return $app.appendChild(h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No one invited yet'), 'Invites will show up here once onboarding packets are sent.')));
+      var body = rows.map(function (r) {
+        var who = r.id ? h('a', { href: '#/envelope/' + encodeURIComponent(r.id) }, r.name || '—') : (r.name || '—');
+        return h('tr', null, h('td', null, who), h('td', null, r.email || '—'), h('td', null, r.status || 'Invited'), h('td', null, fmt(r.invitedAt, false) || '—'), h('td', null, fmt(r.updatedAt, false) || '—'));
+      });
+      $app.appendChild(h('div', { class: 'ob-wrap' }, h('table', { class: 'ob-table' }, h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', null, 'Email'), h('th', null, 'Status'), h('th', null, 'Invited'), h('th', null, 'Last update'))), h('tbody', null, body))));
+    }
+    api('listOnboarding').then(function (d) {
+      var raw = d.invites || d.agents || d.rows || [];
+      draw(raw.map(function (r) { return { id: r.envelopeId || r.id || '', name: inviteName(r), email: r.email || '', status: onboardingLabel(r, r, null), invitedAt: r.invitedAt || r.sentAt || r.createdAt || '', updatedAt: r.updatedAt || r.completedAt || '' }; }));
+    }).catch(function (e) {
+      if (e.code === 'AUTH') return fatal(e, ROUTES.onboarding);
+      api('listEnvelopes', { scope: 'all' }).then(function (d) {
+        draw((d.envelopes || []).filter(isOnboardingEnv).map(fromEnvelope));
+      }).catch(function (er) { fatal(er, ROUTES.onboarding); });
+    });
   };
 
   /* ---------- documents ---------- */

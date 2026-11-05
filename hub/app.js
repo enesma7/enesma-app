@@ -139,6 +139,7 @@
       { t: 'Holidays', s: 'Holiday social graphics', h: '#/marketing-templates/holidays' },
       { t: 'Technology', s: 'CRM, MLS and tools', h: '#/technology' },
       { t: 'Office Listings', s: 'Current ENESMA listings', h: '#/listings' },
+      { t: 'Office Hubs', s: 'Reserve a desk or the conference room', h: '#/office-hubs' },
       { t: 'Training Library', s: 'Recorded sessions and coaching', h: '#/training' },
       { t: 'Calculators', s: 'Flip, net sheet, mortgage and cap rate', h: '#/calculators' },
       { t: 'Cap Rate Calculator', s: 'NOI and capitalization rate', h: '#/calculators/cap-rate-calculator' },
@@ -209,34 +210,44 @@
     var colors = (C.colors || []).map(function (c) {
       var bg = c.bg || c.hex;
       return '<figure class="swatch"><div class="chip" style="background:' + h(bg) + (c.hex === '#FBFBFB' ? ';border-bottom:1px solid #ececec' : '') + '"></div>' +
-        '<figcaption><b>' + h(c.name) + '</b><code>' + h(c.hex) + '</code>' + (c.note ? '<span style="display:block;color:#6b6b70;margin-top:4px">' + h(c.note) + '</span>' : '') + '</figcaption></figure>';
+        '<figcaption><b>' + h(c.name) + '</b><code>' + h(c.hex) + '</code></figcaption></figure>';
+    }).join('');
+    var logos = [
+      { src: 'assets/logo-white.png', name: 'White', stage: 'dark' },
+      { src: 'assets/logo-black.png', name: 'Black', stage: 'light' },
+      { src: 'assets/logo-gold.png', name: 'Aztec Gold', stage: 'dark' },
+      { src: 'assets/logo-red.png', name: 'Illyrian Red', stage: 'light' }
+    ].map(function (l) {
+      return '<a class="card-plain logo-dl" href="' + h(l.src) + '" download><span class="logo-stage ' + l.stage + '"><img src="' + h(l.src) + '" alt="' + h(l.name) + ' wordmark"></span><h3>' + h(l.name) + '</h3></a>';
     }).join('');
     return pageHero('MARKETING', 'assets/banners/marketing.jpg') +
       '<section class="section"><div class="wrap">' +
       sectionHead('Templates', 'Canva designs and holiday graphics.') +
       shotGrid(C.site && C.site.marketing) +
       '<div style="height:56px"></div>' +
-      sectionHead('Logos', 'Download the wordmark for dark or light backgrounds.') +
-      '<div class="grid-2 logo-pair">' +
-        '<a class="card-plain" href="assets/logo-white.png" download><div class="logo-stage dark"><img src="assets/logo-white.png" alt="White wordmark"></div><h3>White wordmark</h3><p>Use on black or photography.</p></a>' +
-        '<a class="card-plain" href="assets/logo-black.png" download><div class="logo-stage light"><img src="assets/logo-black.png" alt="Black wordmark"></div><h3>Black wordmark</h3><p>Use on light backgrounds.</p></a>' +
-      '</div>' +
-      sectionHead('Colors', 'Official ENESMA brand palette.') +
+      sectionHead('Logos', '') +
+      '<div class="grid-2 logo-pair">' + logos + '</div>' +
+      sectionHead('Colors', '') +
       '<div class="swatches">' + colors + '</div>' +
+      '<p class="save-hint">Press and hold a wordmark, or right-click it, to save the image.</p>' +
       '</div></section>';
   }
   function pageHolidays() {
     var figs = (C.holidays || []).map(function (x) {
       return '<figure><img src="' + h(x.img) + '" alt="' + h(x.title) + '"><figcaption>' + h(x.title) + '</figcaption></figure>';
     }).join('');
-    return pageHero('HOLIDAYS', 'assets/banners/marketing.jpg') +
+    return pageHero('HOLIDAYS', 'assets/banners/holidays.jpg') +
       '<section class="section"><div class="wrap">' +
-      '<p class="save-hint">Right-click or press and hold an image to save it. Add your name, phone and DRE# in the space at the bottom.</p>' +
-      '<div class="holidays">' + figs + '</div></div></section>';
+      '<div class="holidays">' + figs + '</div>' +
+      '<p class="save-hint">Right-click or press and hold an image to save it. Add your name, phone and DRE# in the space at the bottom.</p></div></section>';
   }
   function pageTech() {
+    var cards = (C.tech || []).map(function (t) {
+      var logo = t.img ? '<img src="' + h(t.img) + '" alt="">' : '<div class="word">' + h(t.word || t.title) + '</div>';
+      return '<a class="tech-card" href="' + h(t.href) + '" target="_blank" rel="noopener"><div class="logo-box">' + logo + '</div><div class="dash"></div><h3>' + h(t.title) + '</h3><p>' + h(t.sub) + '</p></a>';
+    }).join('');
     return pageHero('TECHNOLOGY', 'assets/banners/technology.jpg') +
-      '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.technology) + '</div></section>';
+      '<section class="section"><div class="wrap"><div class="tech-grid">' + cards + '</div></div></section>';
   }
   function pageListings() {
     var L = (C.site && C.site.listing) || {};
@@ -306,8 +317,14 @@
       (a.bioHtml || '') + '</div></div></div></section>';
   }
   function pagePartners() {
-    return pageHero('PREFERRED PARTNERS', 'assets/banners/partners.jpg') +
+    return pageHero('PREFERRED PARTNERS', 'assets/banners/partners-hero.jpg') +
       '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.partners) + '</div></section>';
+  }
+  function pageOfficeHubs() {
+    return pageHero('OFFICE HUBS', 'assets/banners/officehubs.jpg') +
+      '<section class="section" style="padding-top:28px"><div class="wrap">' +
+      '<iframe class="hub-frame" src="' + h(CFG.OFFICEHUBS || 'https://app.enesmarealty.com/officehubs/') + '" title="Office Hubs"></iframe>' +
+      '</div></section>';
   }
   function page404() {
     return '<section class="section"><div class="wrap" style="text-align:center"><h2>Page not found</h2><div class="gold-rule"></div><p><a href="#/">Back to the Hub</a></p></div></section>';
@@ -324,6 +341,7 @@
     if (p === '/marketing-templates/holidays') return pageHolidays();
     if (p === '/technology') return pageTech();
     if (p === '/listings') return pageListings();
+    if (p === '/office-hubs') return pageOfficeHubs();
     if (p === '/training') return pageTraining();
     if (p === '/calculators') return pageCalcs();
     if (C.calcs && C.calcs[p]) return pageCalcEmbed(C.calcs[p]);
@@ -350,6 +368,7 @@
       '/marketing-templates/holidays': 'HOLIDAYS',
       '/technology': 'TECHNOLOGY',
       '/listings': 'OFFICE LISTINGS',
+      '/office-hubs': 'OFFICE HUBS',
       '/training': 'TRAINING LIBRARY',
       '/calculators': 'CALCULATORS',
       '/calculators/flip-calculator': 'Flip Calculator',
