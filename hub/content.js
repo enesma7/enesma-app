@@ -43,8 +43,7 @@ window.HUB_CONTENT = {
       "sub": "Flip, net sheet, mortgage & cap rate"
     },
     {
-      "href": "https://app.enesmarealty.com/officehubs/",
-      "ext": true,
+      "href": "#/office-hubs",
       "img": "assets/tiles/officehubs.jpg",
       "title": "Office Hubs",
       "sub": "Reserve a desk or the conference room"
@@ -233,18 +232,18 @@ window.HUB_CONTENT = {
   },
   "officeDocs": [
     {
-      "title": "Commission Disbursement Authorization (CDA)",
-      "sub": "Brokerage CDA form",
+      "title": "CDA",
+      "sub": "Commission Disbursement Authorization",
       "href": "https://app.enesmarealty.com/forms/cda.html"
     },
     {
-      "title": "Invoice",
-      "sub": "Brokerage invoice form",
+      "title": "General Invoice",
+      "sub": "Fillable invoice PDF",
       "href": "https://app.enesmarealty.com/forms/invoice.html"
     },
     {
-      "title": "Office document",
-      "sub": "Open in Google Drive",
+      "title": "W-9 (ENESMA Realty)",
+      "sub": "Signed Form W-9 (PDF)",
       "href": "https://drive.google.com/file/d/1G_DYvqW-0zl9-BmsEExCjLPYLKZp-2T0/view"
     }
   ],
@@ -388,7 +387,7 @@ window.HUB_CONTENT = {
       "title": "CapCut",
       "sub": "Short-form video editing",
       "href": "https://www.capcut.com/",
-      "word": "CapCut"
+      "img": "assets/tech/capcut.png"
     },
     {
       "title": "CloudCMA",
@@ -410,9 +409,9 @@ window.HUB_CONTENT = {
     },
     {
       "title": "E-Sign",
-      "sub": "ENESMA electronic signatures",
+      "sub": "Send, sign and store",
       "href": "https://app.enesmarealty.com/esign/",
-      "word": "E-Sign"
+      "img": "assets/tech/esign.svg"
     }
   ],
   "listing": {
@@ -451,46 +450,46 @@ window.HUB_CONTENT = {
   ],
   "calcTiles": [
     {
-      "href": "#/calculators/flip-calculator",
-      "img": "assets/tiles/calculators-flip.jpg",
-      "title": "Flip Calculator",
-      "sub": "Purchase, rehab and resale"
-    },
-    {
       "href": "#/calculators/net-sheet",
       "img": "assets/tiles/calculators-net.jpg",
       "title": "Net Sheet",
-      "sub": "Seller net estimate"
+      "sub": "Seller net proceeds estimate"
     },
     {
       "href": "#/calculators/mortgage-calculator",
       "img": "assets/tiles/calculators-mortgage.jpg",
       "title": "Mortgage Calculator",
-      "sub": "Payment and amortization"
+      "sub": "Monthly payment estimate"
+    },
+    {
+      "href": "#/calculators/flip-calculator",
+      "img": "assets/tiles/calculators-flip.jpg",
+      "title": "Flip Calculator",
+      "sub": "Fix-and-flip profit estimate"
     },
     {
       "href": "#/calculators/cap-rate-calculator",
       "img": "assets/tiles/calculators-cap-rate.jpg",
       "title": "Cap Rate Calculator",
-      "sub": "NOI and capitalization rate"
+      "sub": "NOI and cap rate estimate"
     }
   ],
   "calcs": {
     "/calculators/flip-calculator": {
       "title": "FLIP CALCULATOR",
-      "src": "https://calculators.enesmarealty.com/flip-calculator.html"
+      "key": "flip"
     },
     "/calculators/net-sheet": {
       "title": "NET SHEET",
-      "src": "https://calculators.enesmarealty.com/net-sheet.html"
+      "key": "net"
     },
     "/calculators/mortgage-calculator": {
       "title": "MORTGAGE CALCULATOR",
-      "src": "https://calculators.enesmarealty.com/mortgage-calculator.html"
+      "key": "mortgage"
     },
     "/calculators/cap-rate-calculator": {
       "title": "CAP RATE CALCULATOR",
-      "src": "https://calculators.enesmarealty.com/cap-rate-calculator.html"
+      "key": "cap"
     }
   },
   "partners": [
@@ -541,6 +540,15 @@ window.HUB_CONTENT = {
       "webLabel": "enriqueesparza.com",
       "dre": "01926362",
       "img": "assets/agents/enrique.jpg",
+      "social": [
+        { "label": "Facebook", "href": "https://www.facebook.com/enesma7/" },
+        { "label": "Instagram", "href": "https://www.instagram.com/enesma7/" },
+        { "label": "TikTok", "href": "https://www.tiktok.com/@enesma7" },
+        { "label": "X", "href": "https://x.com/enesma909" },
+        { "label": "LinkedIn", "href": "https://www.linkedin.com/in/enesma7" },
+        { "label": "YouTube", "href": "https://www.youtube.com/@enesma7" },
+        { "label": "Zillow", "href": "https://www.zillow.com/profile/ENESMA#reviews" }
+      ],
       "bioHtml": "<p>Enrique Esparza is a California real estate broker (DRE# 01926362) and the broker behind ENESMA Realty. Licensed by the California Department of Real Estate and actively selling since 2013, he also holds a Mortgage Loan Officer license (NMLS# 01941113), so he understands both sides of the transaction. Born and raised in Southern California, Enrique knows the local markets and adapts quickly to the changes the industry demands. In 2016 he became a manager at a Southern California brokerage of more than 100 agents, where he helped agents adopt new technology and grow their businesses. In 2020 he became the designated Managing Broker of Realty ONE Group Homelink in Diamond Bar. Fluent in English and Spanish, Enrique builds his business on integrity, honesty, and knowledge, and more than 77% of it comes from referrals. His promise to clients and agents alike: underpromise and overdeliver.</p>"
     },
     {
@@ -553,6 +561,11 @@ window.HUB_CONTENT = {
       "webLabel": "LiliaAmador.com",
       "dre": "02022136",
       "img": "assets/agents/lilia.jpg",
+      "social": [
+        { "label": "Facebook", "href": "https://www.facebook.com/p/Lilia-Amador-Realtor-100057598563607/" },
+        { "label": "Instagram", "href": "https://www.instagram.com/my_realtor_lilia/" },
+        { "label": "Zillow", "href": "https://www.zillow.com/profile/Lilia%20Amador#reviews" }
+      ],
       "bioHtml": ""
     }
   ],
@@ -582,25 +595,25 @@ window.HUB_CONTENT = {
       { "img": "assets/sites/home-05.jpg", "href": "#/training", "alt": "Training Library. Recorded sessions & coaching" },
       { "img": "assets/sites/home-06.jpg", "href": "#/preferred-partners", "alt": "Preferred Partners. Escrow, lenders, inspectors & more" },
       { "img": "assets/sites/home-07.jpg", "href": "#/calculators", "alt": "Calculators. Flip, net sheet & mortgage" },
-      { "img": "assets/sites/home-08.jpg", "href": "https://app.enesmarealty.com/officehubs/", "ext": true, "alt": "Office Hubs. Reserve a desk or the conference room" },
+      { "img": "assets/sites/home-08.jpg", "href": "#/office-hubs", "alt": "Office Hubs. Reserve a desk or the conference room" },
       { "img": "assets/sites/home-09.jpg", "href": "#/agents/enrique-esparza", "alt": "Contact the Broker. Enrique Esparza, DRE# 01926362" }
     ],
     "compliance": [
       { "img": "assets/sites/compliance-01.jpg", "href": "https://app.enesmarealty.com/transactions/", "ext": true, "alt": "Transaction Center. From contract to close, all in one place." },
-      { "img": "assets/sites/compliance-02.jpg", "href": "#/compliance/transaction-checklists", "alt": "Transaction Checklists. Required documents for every file type" },
+      { "img": "assets/sites/compliance-checklists.jpg", "href": "#/compliance/transaction-checklists", "alt": "Transaction Checklists. Required documents for every file type" },
       { "img": "assets/sites/compliance-03.jpg", "href": "#/compliance/office-documents", "alt": "Office Documents. Brokerage forms & agreements" },
       { "img": "assets/sites/compliance-04.jpg", "href": "#/compliance/c-a-r-legal-hotline", "alt": "C.A.R. Legal Hotline. Member Legal Services (213) 739-8282" },
       { "img": "assets/sites/compliance-05.jpg", "href": "#/compliance/office-policies", "alt": "Office Policies. Procedures & compliance" }
     ],
     "marketing": [
-      { "img": "assets/sites/marketing-01.jpg", "href": "#/marketing-templates/holidays", "alt": "Holidays. Seasonal posts & greetings" },
-      { "img": "assets/sites/marketing-02.jpg", "href": "https://www.canva.com/d/64BPKTuts5rDZBb", "ext": true, "alt": "Just Listed. New listing announcements" },
-      { "img": "assets/sites/marketing-03.jpg", "href": "https://www.canva.com/d/qFj7fK9tmUXN1D6", "ext": true, "alt": "Open House" },
-      { "img": "assets/sites/marketing-04.jpg", "href": "https://www.canva.com/d/yPcu-VutS3-LN8I", "ext": true, "alt": "In Escrow" },
-      { "img": "assets/sites/marketing-05.jpg", "href": "https://www.canva.com/d/-wPqZ3vqCepP3zP", "ext": true, "alt": "Sold" },
-      { "img": "assets/sites/marketing-06.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Business Card. ENESMA-branded cards" },
-      { "img": "assets/sites/marketing-07.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Email Signature. DRE-compliant signatures" },
-      { "img": "assets/sites/marketing-08.jpg", "href": "https://www.canva.com/folder/FAHXRHXspD4", "ext": true, "alt": "Presentations. Listing & buyer decks" }
+      { "img": "assets/sites/tpl-holidays.jpg", "href": "#/marketing-templates/holidays", "alt": "Holidays. Seasonal posts and greetings" },
+      { "img": "assets/sites/tpl-just-listed.jpg", "href": "https://www.canva.com/d/64BPKTuts5rDZBb", "ext": true, "alt": "Just Listed. New listing announcements" },
+      { "img": "assets/sites/tpl-open-house.jpg", "href": "https://www.canva.com/d/qFj7fK9tmUXN1D6", "ext": true, "alt": "Open House" },
+      { "img": "assets/sites/tpl-escrow.jpg", "href": "https://www.canva.com/d/yPcu-VutS3-LN8I", "ext": true, "alt": "In Escrow" },
+      { "img": "assets/sites/tpl-sold.jpg", "href": "https://www.canva.com/d/-wPqZ3vqCepP3zP", "ext": true, "alt": "Sold" },
+      { "img": "assets/sites/tpl-card.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Business Card. ENESMA-branded cards" },
+      { "img": "assets/sites/tpl-email.jpg", "href": "https://www.canva.com/folder/FAHXRGyUyy0", "ext": true, "alt": "Email Signature. DRE-compliant signatures" },
+      { "img": "assets/sites/tpl-decks.jpg", "href": "https://www.canva.com/folder/FAHXRHXspD4", "ext": true, "alt": "Presentations. Listing and buyer decks" }
     ],
     "technology": [
       { "img": "assets/sites/technology-01.jpg", "href": "https://go.crmls.org", "ext": true, "alt": "CRMLS. MLS search, listings & Matrix" },
@@ -624,6 +637,26 @@ window.HUB_CONTENT = {
       { "img": "assets/sites/training-04.jpg", "href": "https://www.youtube.com/watch?v=XexTWgCtWvc", "ext": true, "alt": "How to Turn the Low-Rate Objection Into a Listing Opportunity" },
       { "img": "assets/sites/training-05.jpg", "href": "https://www.youtube.com/watch?v=hLlDVn105fQ", "ext": true, "alt": "Less Friction, More Connection: The Control Selling Method" },
       { "img": "assets/sites/training-06.jpg", "href": "https://www.youtube.com/watch?v=O9aRgMHk4pE", "ext": true, "alt": "Building a Brand That’s Authentically YOU" }
+    ],
+    "checklists": [
+      { "img": "assets/sites/checklists-01.jpg", "href": "https://docs.google.com/spreadsheets/d/1fbhbV_oPWSRhm5eJ0ITe6ovrTqskNqMl4sbtWqYgSWY/edit", "ext": true, "alt": "Residential Listing 1-4 Units. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-02.jpg", "href": "https://docs.google.com/spreadsheets/d/1CdxoLeaDF285_ccua86FzcGOC_wqkaAQZIuxQomTWoA/edit", "ext": true, "alt": "Residential Sales 1-4 Units. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-03.jpg", "href": "https://docs.google.com/spreadsheets/d/1g8Ie8FKAL8frtrr221kH3if0lPbqtFja74KDyFh9nwk/edit", "ext": true, "alt": "Residential Lease Listing. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-04.jpg", "href": "https://docs.google.com/spreadsheets/d/114hmy0N_fi352wFS9vdeJXzRpDmbHm_h0BbNQEIkYO8/edit", "ext": true, "alt": "Residential Lease. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-05.jpg", "href": "https://docs.google.com/spreadsheets/d/1ZO1z551v0Xd0IEEY579TMMDevQBkAhityByT_6Eowxk/edit", "ext": true, "alt": "Land Listing. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-06.jpg", "href": "https://docs.google.com/spreadsheets/d/1QGuyaY11bwMJJdz0FObBQqUwq0qT_k_Glr5CjGt-ZUk/edit", "ext": true, "alt": "Commercial Listing. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-07.jpg", "href": "https://docs.google.com/spreadsheets/d/1cTY19PaWglgoo1wOGZlaZdvtIDj-Ca7dyR2V6VDtmg0/edit", "ext": true, "alt": "Commercial Lease Listing. View, or File, Make a copy" },
+      { "img": "assets/sites/checklists-08.jpg", "href": "https://docs.google.com/spreadsheets/d/1dYi5fhfjDtXuxaXDNIbtrSLjr0jNfsScJ3WnMzKJyjU/edit", "ext": true, "alt": "Commercial Lease. View, or File, Make a copy" }
+    ],
+    "officeDocs": [
+      { "img": "assets/sites/officedocs-01.jpg", "href": "https://app.enesmarealty.com/forms/cda.html", "ext": true, "alt": "CDA. Commission Disbursement Authorization" },
+      { "img": "assets/sites/officedocs-02.jpg", "href": "https://app.enesmarealty.com/forms/invoice.html", "ext": true, "alt": "General Invoice. Fillable invoice PDF" },
+      { "img": "assets/sites/officedocs-03.jpg", "href": "https://drive.google.com/file/d/1G_DYvqW-0zl9-BmsEExCjLPYLKZp-2T0/view", "ext": true, "alt": "W-9 (ENESMA Realty). Signed Form W-9 (PDF)" }
+    ],
+    "calcs": [
+      { "img": "assets/sites/calcs-01.jpg", "href": "#/calculators/net-sheet", "alt": "Net Sheet. Seller net proceeds estimate" },
+      { "img": "assets/sites/calcs-02.jpg", "href": "#/calculators/mortgage-calculator", "alt": "Mortgage Calculator. Monthly payment estimate" },
+      { "img": "assets/sites/calcs-03.jpg", "href": "#/calculators/flip-calculator", "alt": "Flip Calculator. Fix-and-flip profit estimate" }
     ],
     "partners": [
       { "img": "assets/sites/partners-01.jpg", "href": "https://safeguardescrowinc.com", "ext": true, "alt": "Jennifer Kent, Safeguard Escrow. 909-966-4488" },

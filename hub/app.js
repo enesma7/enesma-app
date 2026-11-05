@@ -98,13 +98,14 @@
         '</div>' +
       '</nav></header>';
   }
+  function shotLink(t) {
+    var href = t.href || '#/';
+    var ext = t.ext || /^https?:|^mailto:/i.test(href);
+    var open = ext ? ' target="_blank" rel="noopener"' : '';
+    return '<a class="shot" href="' + h(href) + '"' + open + '><img src="' + h(t.img) + '" alt="' + h(t.alt || '') + '"></a>';
+  }
   function shotGrid(items) {
-    return '<div class="shot-grid">' + (items || []).map(function (t) {
-      var href = t.href || '#/';
-      var ext = t.ext || /^https?:|^mailto:/i.test(href);
-      var open = ext ? ' target="_blank" rel="noopener"' : '';
-      return '<a class="shot" href="' + h(href) + '"' + open + '><img src="' + h(t.img) + '" alt="' + h(t.alt || '') + '"></a>';
-    }).join('') + '</div>';
+    return '<div class="shot-grid">' + (items || []).map(shotLink).join('') + '</div>';
   }
   function footerHtml() {
     return '<div class="foot-wrap"><footer class="foot">' +
@@ -138,6 +139,7 @@
       { t: 'Holidays', s: 'Holiday social graphics', h: '#/marketing-templates/holidays' },
       { t: 'Technology', s: 'CRM, MLS and tools', h: '#/technology' },
       { t: 'Office Listings', s: 'Current ENESMA listings', h: '#/listings' },
+      { t: 'Office Hubs', s: 'Reserve a desk or the conference room', h: '#/office-hubs' },
       { t: 'Training Library', s: 'Recorded sessions and coaching', h: '#/training' },
       { t: 'Calculators', s: 'Flip, net sheet, mortgage and cap rate', h: '#/calculators' },
       { t: 'Cap Rate Calculator', s: 'NOI and capitalization rate', h: '#/calculators/cap-rate-calculator' },
@@ -176,15 +178,8 @@
       '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.compliance) + '</div></section>';
   }
   function pageChecklists() {
-    var cards = (C.checklists || []).map(function (x) {
-      var src = 'https://docs.google.com/spreadsheets/d/' + x.id + '/preview';
-      var open = 'https://docs.google.com/spreadsheets/d/' + x.id + '/edit';
-      return '<div style="margin:0 0 28px"><h3 style="margin:0 0 10px">' + h(x.title) + '</h3>' +
-        '<p class="note" style="margin:0 0 10px"><a href="' + h(open) + '" target="_blank" rel="noopener">Open in Google Sheets</a> · File › Make a copy</p>' +
-        '<iframe class="embed" src="' + h(src) + '" title="' + h(x.title) + '" loading="lazy"></iframe></div>';
-    }).join('');
     return pageHero('TRANSACTION CHECKLISTS', 'assets/banners/compliance.jpg') +
-      '<section class="section"><div class="wrap">' + cards + '</div></section>';
+      '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.checklists) + '</div></section>';
   }
   function pageLegal() {
     var L = C.legal || {};
@@ -192,63 +187,67 @@
       return '<h3>' + h(it.q) + '</h3>' + it.a;
     }).join('');
     return pageHero('C.A.R. LEGAL HOTLINE', 'assets/banners/compliance.jpg') +
-      '<section class="section"><div class="wrap"><div class="prose">' +
-      '<h2 style="text-align:center;margin:0 0 8px">' + h(L.title || 'Member Legal Services') + '</h2>' +
-      '<p style="text-align:center"><a href="tel:+12137398282">' + h(L.tel) + '</a><br>' + h(L.revised) + '</p>' +
-      '<p>Designated REALTORS®, Broker/Owners, and Office Managers may also call <a href="tel:+12137398350">' + h(L.brokerTel) + '</a>.</p></div>' +
+      '<section class="section"><div class="wrap">' +
+      '<div class="hotline-card"><p class="kicker">' + h(L.title || 'Member Legal Services') + '</p>' +
+      '<a class="tel" href="tel:+12137398282">' + h(L.tel) + '</a>' +
+      '<p>' + h(L.revised) + '</p>' +
+      '<p class="note">Designated REALTORS®, Broker/Owners, and Office Managers may also call <a href="tel:+12137398350">' + h(L.brokerTel) + '</a>.</p></div>' +
       '<div class="qa">' + qa + '</div></div></section>';
   }
   function pageOfficeDocs() {
-    var cards = (C.officeDocs || []).map(function (d) {
-      return '<a class="card-plain" href="' + h(d.href) + '" target="_blank" rel="noopener"><h3>' + h(d.title) + '</h3><p>' + h(d.sub) + '</p></a>';
-    }).join('');
     return pageHero('OFFICE DOCUMENTS', 'assets/banners/compliance.jpg') +
-      '<section class="section"><div class="wrap"><div class="grid-2">' + cards + '</div></div></section>';
+      '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.officeDocs) + '</div></section>';
   }
   function pagePolicies() {
     var id = C.policiesDocId;
-    var preview = 'https://docs.google.com/document/d/' + id + '/preview';
     var pdf = 'https://docs.google.com/document/d/' + id + '/export?format=pdf';
-    return pageHero('OFFICE POLICIES', 'assets/banners/policies.jpg') +
-      '<section class="section"><div class="wrap">' +
-      '<div class="section-head"><h2>Office Policies &amp; Procedures Manual</h2><div class="gold-rule"></div>' +
-      '<p>ENESMA Realty · DRE# 01926362 · Broker Enrique Esparza</p></div>' +
-      '<p class="note" style="text-align:center;margin:0 0 18px"><a href="' + h(pdf) + '" target="_blank" rel="noopener">Download PDF</a> · <a href="' + h('https://docs.google.com/document/d/' + id + '/edit') + '" target="_blank" rel="noopener">Open in Google Docs</a></p>' +
-      '<iframe class="embed" src="' + h(preview) + '" title="Office Policies &amp; Procedures Manual" loading="lazy"></iframe>' +
-      '</div></section>';
+    var doc = window.HUB_POLICIES || '';
+    var btn = '<p class="policy-actions"><a class="btn gold" href="' + h(pdf) + '" target="_blank" rel="noopener">Download PDF</a></p>';
+    doc = doc.replace('UNDERPROMISE &amp; OVERDELIVER</p>', 'UNDERPROMISE &amp; OVERDELIVER</p>' + btn);
+    return '<section class="section"><div class="wrap policy-doc">' + doc + '</div></section>';
   }
   function pageMarketing() {
     var colors = (C.colors || []).map(function (c) {
       var bg = c.bg || c.hex;
       return '<figure class="swatch"><div class="chip" style="background:' + h(bg) + (c.hex === '#FBFBFB' ? ';border-bottom:1px solid #ececec' : '') + '"></div>' +
-        '<figcaption><b>' + h(c.name) + '</b><code>' + h(c.hex) + '</code>' + (c.note ? '<span style="display:block;color:#6b6b70;margin-top:4px">' + h(c.note) + '</span>' : '') + '</figcaption></figure>';
+        '<figcaption><b>' + h(c.name) + '</b><code>' + h(c.hex) + '</code></figcaption></figure>';
+    }).join('');
+    var logos = [
+      { src: 'assets/logo-white.png', name: 'White', stage: 'dark' },
+      { src: 'assets/logo-black.png', name: 'Black', stage: 'light' },
+      { src: 'assets/logo-gold.png', name: 'Aztec Gold', stage: 'dark' },
+      { src: 'assets/logo-red.png', name: 'Illyrian Red', stage: 'light' }
+    ].map(function (l) {
+      return '<a class="card-plain logo-dl" href="' + h(l.src) + '" download><span class="logo-stage ' + l.stage + '"><img src="' + h(l.src) + '" alt="' + h(l.name) + ' wordmark"></span><h3>' + h(l.name) + '</h3></a>';
     }).join('');
     return pageHero('MARKETING', 'assets/banners/marketing.jpg') +
       '<section class="section"><div class="wrap">' +
       sectionHead('Templates', 'Canva designs and holiday graphics.') +
       shotGrid(C.site && C.site.marketing) +
       '<div style="height:56px"></div>' +
-      sectionHead('Logos', 'Download the wordmark for dark or light backgrounds.') +
-      '<div class="grid-2 logo-pair">' +
-        '<a class="card-plain" href="assets/logo-white.png" download><div class="logo-stage dark"><img src="assets/logo-white.png" alt="White wordmark"></div><h3>White wordmark</h3><p>Use on black or photography.</p></a>' +
-        '<a class="card-plain" href="assets/logo-black.png" download><div class="logo-stage light"><img src="assets/logo-black.png" alt="Black wordmark"></div><h3>Black wordmark</h3><p>Use on light backgrounds.</p></a>' +
-      '</div>' +
-      sectionHead('Colors', 'Official ENESMA brand palette.') +
+      sectionHead('Logos', '') +
+      '<div class="grid-2 logo-pair">' + logos + '</div>' +
+      sectionHead('Colors', '') +
       '<div class="swatches">' + colors + '</div>' +
+      '<p class="save-hint">Press and hold a wordmark, or right-click it, to save the image.</p>' +
       '</div></section>';
   }
   function pageHolidays() {
     var figs = (C.holidays || []).map(function (x) {
       return '<figure><img src="' + h(x.img) + '" alt="' + h(x.title) + '"><figcaption>' + h(x.title) + '</figcaption></figure>';
     }).join('');
-    return pageHero('HOLIDAYS', 'assets/banners/marketing.jpg') +
+    return pageHero('HOLIDAYS', 'assets/banners/holidays.jpg') +
       '<section class="section"><div class="wrap">' +
-      '<p class="save-hint">Right-click or press and hold an image to save it. Add your name, phone and DRE# in the space at the bottom.</p>' +
-      '<div class="holidays">' + figs + '</div></div></section>';
+      '<div class="holidays">' + figs + '</div>' +
+      '<p class="save-hint">Right-click or press and hold an image to save it. Add your name, phone and DRE# in the space at the bottom.</p></div></section>';
   }
   function pageTech() {
+    var cards = (C.tech || []).map(function (t) {
+      var logo = t.img ? '<img src="' + h(t.img) + '" alt="">' : '<div class="word">' + h(t.word || t.title) + '</div>';
+      return '<a class="tech-card" href="' + h(t.href) + '" target="_blank" rel="noopener"><div class="logo-box">' + logo + '</div><div class="dash"></div><h3>' + h(t.title) + '</h3><p>' + h(t.sub) + '</p></a>';
+    }).join('');
     return pageHero('TECHNOLOGY', 'assets/banners/technology.jpg') +
-      '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.technology) + '</div></section>';
+      '<section class="section"><div class="wrap"><div class="tech-grid">' + cards + '</div></div></section>';
   }
   function pageListings() {
     var L = (C.site && C.site.listing) || {};
@@ -262,31 +261,42 @@
       '<div class="prose train-note">' + (C.trainingDisclaimer || '') + '</div></div></section>';
   }
   function pageCalcs() {
+    var links = ((C.site && C.site.calcs) || []).map(shotLink).join('');
+    var cap = (C.calcTiles || []).filter(function (t) { return t.href.indexOf('cap-rate') >= 0; })[0];
     return pageHero('CALCULATORS', 'assets/banners/calculators.jpg') +
-      '<section class="section"><div class="wrap">' + grid(C.calcTiles) + '</div></section>';
+      '<section class="section"><div class="wrap"><div class="shot-grid">' + links + (cap ? tile(cap) : '') + '</div></div></section>';
   }
   function pageCalcEmbed(info) {
-    return pageHero(info.title, 'assets/banners/calculators.jpg') +
-      '<section class="section"><div class="wrap"><iframe class="embed" src="' + h(info.src) + '" title="' + h(info.title) + '" loading="lazy"></iframe></div></section>';
+    return '<section class="calc-stage" data-calc="' + h(info.key) + '"><div id="calc-host" class="calc-root"></div></section>';
+  }
+  function socialRow(items) {
+    if (!items || !items.length) return '';
+    return '<div class="socials">' + items.map(function (s) {
+      return '<a href="' + h(s.href) + '" target="_blank" rel="noopener">' + h(s.label) + '</a>';
+    }).join('') + '</div>';
   }
   function pageRefer() {
     var R = C.refer || {};
-    var rows = (R.capRows || []).map(function (r) {
-      return '<tr><td>' + h(r.volume) + '</td><td>' + h(r.reduction) + '</td></tr>';
-    }).join('');
+    var check = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="url(#referGold)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     return pageHero('REFER AN AGENT', 'assets/banners/refer.jpg') +
-      '<section class="section"><div class="wrap"><div class="prose">' +
-      '<p><strong>' + h(R.lead) + '</strong></p><p>' + h(R.intro) + '</p>' +
+      '<section class="section"><div class="wrap refer">' +
+      '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="referGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EAD59E"/><stop offset="1" stop-color="#D5BE87"/></linearGradient></defs></svg>' +
+      '<p class="refer-lead">' + h(R.lead) + '</p><p>' + h(R.intro) + '</p>' +
       '<h3>1. Cap reduction for referring a Producing Agent</h3>' +
-      '<p>If the agent you refer is a Producing Agent, meaning they closed transactions totaling one of the sales volume thresholds below during the preceding 12 months, your cap is reduced:</p>' +
-      '<table style="width:100%;border-collapse:collapse;margin:0 0 16px"><thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Referred agent’s sales volume (preceding 12 months)</th><th style="text-align:left;padding:8px;border-bottom:1px solid #ddd">Your cap reduction</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<p>If the agent you refer is a <b>Producing Agent</b>, meaning they closed transactions totaling one of the sales volume thresholds below during the preceding 12 months, your cap is reduced:</p>' +
+      '<div class="refer-stats">' +
+      '<div class="refer-stat"><div class="n">$750</div><div class="l">Cap reduction</div><p>Referred agent’s 12-month sales volume: <b>$2.5M+</b></p></div>' +
+      '<div class="refer-stat"><div class="n">$1,500</div><div class="l">Cap reduction</div><p>Referred agent’s 12-month sales volume: <b>$5M+</b></p></div>' +
+      '</div>' +
       '<p>' + h(R.capNote) + '</p>' +
       '<h3>2. Referral Production Incentive: 1% of their GCI</h3>' +
-      '<p>' + h(R.gci) + '</p>' +
+      '<p>You receive a bonus equal to <b>1% of the total gross commission income (GCI)</b> the referred agent generates. The bonus:</p>' +
+      '<div class="refer-checks"><div class="r">' + check + '<div>Lasts one (1) year from the referred agent’s hire date, then expires automatically, regardless of your production level</div></div>' +
+      '<div class="r">' + check + '<div>Is not paid on any transaction that closes after the referred agent has reached their annual cap</div></div></div>' +
       '<h3>How to refer</h3>' +
-      '<p>There is no form on this page yet. Contact Enrique and he will reach out to the agent personally.</p>' +
-      '<p><a class="btn" href="#/agents/enrique-esparza">Contact the Broker</a></p>' +
-      '<p class="note">' + h(R.legal) + '</p></div></div></section>';
+      '<p>Fill out the form below with your information and the agent’s. Enrique will reach out to them personally.</p>' +
+      '<p class="refer-cta"><a class="refer-btn" href="https://app.enesmarealty.com/leadforms/refer.html" target="_blank" rel="noopener">Refer an Agent</a></p>' +
+      '<p class="note">' + h(R.legal) + '</p></div></section>';
   }
   function pageAgents() {
     var cards = (C.agents || []).map(function (a) {
@@ -303,11 +313,18 @@
       '<p><a href="tel:' + h(a.phone.replace(/[^\d+]/g, '')) + '">' + h(a.phone) + '</a><br>' +
       '<a href="mailto:' + h(a.email) + '">' + h(a.email) + '</a><br>' +
       '<a href="' + h(a.web) + '" target="_blank" rel="noopener">' + h(a.webLabel) + '</a></p>' +
+      socialRow(a.social) +
       (a.bioHtml || '') + '</div></div></div></section>';
   }
   function pagePartners() {
-    return pageHero('PREFERRED PARTNERS', 'assets/banners/partners.jpg') +
+    return pageHero('PREFERRED PARTNERS', 'assets/banners/partners-hero.jpg') +
       '<section class="section"><div class="wrap">' + shotGrid(C.site && C.site.partners) + '</div></section>';
+  }
+  function pageOfficeHubs() {
+    return pageHero('OFFICE HUBS', 'assets/banners/officehubs.jpg') +
+      '<section class="section" style="padding-top:28px"><div class="wrap">' +
+      '<iframe class="hub-frame" src="' + h(CFG.OFFICEHUBS || 'https://app.enesmarealty.com/officehubs/') + '" title="Office Hubs"></iframe>' +
+      '</div></section>';
   }
   function page404() {
     return '<section class="section"><div class="wrap" style="text-align:center"><h2>Page not found</h2><div class="gold-rule"></div><p><a href="#/">Back to the Hub</a></p></div></section>';
@@ -324,6 +341,7 @@
     if (p === '/marketing-templates/holidays') return pageHolidays();
     if (p === '/technology') return pageTech();
     if (p === '/listings') return pageListings();
+    if (p === '/office-hubs') return pageOfficeHubs();
     if (p === '/training') return pageTraining();
     if (p === '/calculators') return pageCalcs();
     if (C.calcs && C.calcs[p]) return pageCalcEmbed(C.calcs[p]);
@@ -350,6 +368,7 @@
       '/marketing-templates/holidays': 'HOLIDAYS',
       '/technology': 'TECHNOLOGY',
       '/listings': 'OFFICE LISTINGS',
+      '/office-hubs': 'OFFICE HUBS',
       '/training': 'TRAINING LIBRARY',
       '/calculators': 'CALCULATORS',
       '/calculators/flip-calculator': 'Flip Calculator',
@@ -516,6 +535,12 @@
     document.title = titles() + ' · ENESMA Realty';
     $app.innerHTML = headerHtml() + pageFor(path()) + footerHtml() + searchOverlay();
     bindChrome();
+    var stage = qs('[data-calc]');
+    if (stage && window.HubCalcs) {
+      var mount = HubCalcs[stage.getAttribute('data-calc')];
+      var host = qs('#calc-host');
+      if (mount && host) mount(host);
+    }
     window.scrollTo(0, 0);
   }
   function afterAuth() {
