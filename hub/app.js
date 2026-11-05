@@ -166,8 +166,9 @@
       '<section class="section"><div class="wrap">' + sectionHead('Agent Resources', 'Forms, tools, and support to help you close with confidence.') + grid(C.homeTiles) + '</div></section>' +
       '<section class="section" style="padding-top:0"><div class="wrap">' + sectionHead('Upcoming Events', '') +
       (ev.length ? '<div class="grid-2">' + evHtml + '</div>' : evHtml) + '</div></section>' +
-      '<div class="pills"><a class="pill" href="' + h(CFG.ADD_IOS) + '" target="_blank" rel="noopener">Add to iPhone</a>' +
-      '<a class="pill" href="' + h(CFG.ADD_ANDROID) + '" target="_blank" rel="noopener">Add to Android</a></div>';
+      '<div class="pills" aria-label="Add the Hub to your phone">' +
+      '<a class="pill" href="' + h(CFG.ADD_IOS) + '" target="_blank" rel="noopener"><img src="assets/add-iphone.png" width="1169" height="229" alt="Add to iPhone"></a>' +
+      '<a class="pill" href="' + h(CFG.ADD_ANDROID) + '" target="_blank" rel="noopener"><img src="assets/add-android.png" width="1169" height="229" alt="Add to Android"></a></div>';
   }
   function pageCompliance() {
     return pageHero('COMPLIANCE', 'assets/banners/compliance.jpg') +

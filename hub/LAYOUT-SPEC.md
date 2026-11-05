@@ -52,13 +52,13 @@ Dropdowns:
 
 Preferred Partners is **not** in the nav. It is linked from the home tile grid and the footer Support column.
 
-After sign-in, a slim apps bar sits under the header with gold-outline pills: Transaction Center, E-Sign, My E-Books (absolute URLs on `app.enesmarealty.com`).
+After sign-in, a slim apps bar sits under the header with gold-outline pills in title case: Transaction Center, E-Sign, My E-Books (absolute URLs on `app.enesmarealty.com`). The outline is the Aztec Gold gradient; hover and focus fill the pill with that gradient and switch the type to Rocket Black. On viewports ≤700px the three pills stack full-width so they stay tappable instead of wrapping into an orphan row.
 
 ## Cards and photos
 
 - Home and section tiles: 2 columns, `aspect-ratio: 16 / 9`, `border-radius: 8px`, photo background, dark gradient overlay, 36×2px gold dash, then title + subtitle aligned bottom-left.
 - Event cards: same 16:9 / 8px radius language, grayscale photo, month + large day top-left, gold dash, title, then `time · platform · host · price`.
-- Gold pill buttons (Add to iPhone / Add to Android, and similar CTAs): full gold gradient, black type, pill radius, ~12×22px padding.
+- Add to iPhone / Add to Android: the approved gold lockups (`hub/assets/add-iphone.png`, `hub/assets/add-android.png`) — black Apple / Android mark, black type, gold pill. Side by side on desktop (max 420px each). On viewports ≤700px they stack, full content width on phones. Links stay `config.js` `ADD_IOS` / `ADD_ANDROID`.
 - Footer: black rounded card (~10px) inside the page gutter, four columns (brand + Hub + Support + Broker), then a light “© 2026 ENESMA Realty. For agent use only.” line.
 
 ## Gold vs red
