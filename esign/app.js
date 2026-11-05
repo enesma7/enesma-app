@@ -90,15 +90,34 @@
         if (!j.ok) {
           var err = Object.assign(new Error(j.error || 'Something went wrong.'), { code: j.code });
           if (j.code === 'GMAIL' && action !== 'gmailConnect') { S.gmail = null; }
-          if (j.code === 'AUTH' && action !== 'login' && !/^sign/.test(action)) { setSession(null); S.afterLogin = location.hash; go('#/login'); }
+          if (j.code === 'AUTH' && action !== 'login' && action !== 'loginWithToken' && action !== 'verifyLoginOtp' && action !== 'resendLoginOtp' && !/^sign/.test(action)) { setSession(null); S.afterLogin = location.hash; go('#/login'); }
           throw err;
         }
         return j.data;
       });
   }
+  function cookieDomain() {
+    return /(^|\.)enesmarealty\.com$/.test(location.hostname) ? '; Domain=.enesmarealty.com' : '';
+  }
+  function getCookie(n) {
+    var m = document.cookie.match(new RegExp('(?:^|; )' + n.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function setCookie(n, v, maxAge) {
+    var secure = location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = n + '=' + encodeURIComponent(v) + '; Path=/; Max-Age=' + maxAge + '; SameSite=Lax' + secure + cookieDomain();
+  }
+  function clearCookie(n) {
+    document.cookie = n + '=; Path=/; Max-Age=0; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '') + cookieDomain();
+  }
+  function applyTcTokens(d) {
+    if (d && d.tcToken) setCookie('enesma_sso', d.tcToken, 24 * 60 * 60);
+    if (d && d.deviceToken) setCookie('enesma_dt', d.deviceToken, 30 * 24 * 60 * 60);
+  }
   function setSession(token, user) {
     S.token = token || ''; S.user = token ? user : null;
     try { if (token) { localStorage.setItem('es_token', token); localStorage.setItem('es_user', JSON.stringify(user)); } else { localStorage.removeItem('es_token'); localStorage.removeItem('es_user'); } } catch (e) { }
+    if (!token) clearCookie('enesma_sso');
     chrome();
   }
   var isAdmin = function () { return S.user && S.user.role === 'admin'; };
@@ -195,7 +214,39 @@
   }
 
   /* ---------- login ---------- */
+  function finishEsignAuth(d) {
+    applyTcTokens(d);
+    setSession(d.token, d.user);
+    S.gmail = d.gmail || { connected: true, legacy: true };
+    var to = S.afterLogin && !/login/.test(S.afterLogin) ? S.afterLogin : '#/';
+    S.afterLogin = '';
+    if (S.gmail && !S.gmail.connected) { S.afterConnect = to; to = '#/connect'; }
+    go(to);
+  }
   ROUTES.login = function () {
+    if (S._otpCh) {
+      var ch = S._otpCh, hint = ch.emailHint || 'your account email';
+      var code = h('input', { type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '6', required: true, id: 'oc' });
+      var trust = h('input', { type: 'checkbox', id: 'ot', checked: true });
+      var msg = h('div'), btn = h('button', { class: 'btn red wide', type: 'submit' }, 'Verify and sign in');
+      var form = h('form', { novalidate: true, onsubmit: function (e) {
+        e.preventDefault(); clear(msg);
+        busy(btn, true, 'Verifying…');
+        api('verifyLoginOtp', { challengeId: ch.challengeId, code: code.value.trim(), rememberDevice: trust.checked, deviceLabel: (navigator.userAgent || '').slice(0, 120) })
+          .then(function (d) { S._otpCh = null; finishEsignAuth(d); })
+          .catch(function (err) { busy(btn, false); msg.appendChild(errBox(err.message)); });
+      } }, h('div', { class: 'f' }, h('label', { for: 'oc' }, 'Sign-in code'), code),
+        h('label', { class: 'hint', style: { display: 'flex', gap: '8px', alignItems: 'flex-start', margin: '0 0 14px' } }, trust, ' Trust this device for 30 days.'),
+        msg, btn);
+      $app.appendChild(h('div', { class: 'auth' }, h('div', { class: 'card' }, h('img', { class: 'logo', src: 'assets/esign-logo-light.svg', alt: 'ENESMA E-Sign' }),
+        h('p', { class: 'sub' }, 'We emailed a 6-digit code to ', h('b', null, hint), '. It expires in about 10 minutes.'), form,
+        h('p', { class: 'hint', style: { textAlign: 'center', marginTop: '16px' } },
+          h('a', { href: '#', onclick: function (ev) { ev.preventDefault(); api('resendLoginOtp', { challengeId: ch.challengeId }).then(function (d) { if (d && d.emailHint) ch.emailHint = d.emailHint; toast('A new code is on its way.'); }).catch(function (err) { toast(err.message); }); } }, 'Send a new code'),
+          ' · ',
+          h('a', { href: '#', onclick: function (ev) { ev.preventDefault(); S._otpCh = null; render(); } }, 'Back to sign in')))));
+      setTimeout(function () { code.focus(); }, 30);
+      return;
+    }
     var em = h('input', { type: 'email', autocomplete: 'username', inputmode: 'email', required: true, id: 'em' });
     var pw = h('input', { type: 'password', autocomplete: 'current-password', required: true, id: 'pw' });
     var msg = h('div'), btn = h('button', { class: 'btn red wide', type: 'submit' }, 'Sign in');
@@ -203,8 +254,9 @@
       e.preventDefault(); clear(msg);
       if (!emailOk(em.value) || !pw.value) return msg.appendChild(errBox('Enter your email and password.'));
       busy(btn, true, 'Signing in…');
-      api('login', { email: em.value.trim(), password: pw.value }).then(function (d) {
-        pw.value = ''; setSession(d.token, d.user); S.gmail = d.gmail || { connected: true, legacy: true }; var to = S.afterLogin && !/login/.test(S.afterLogin) ? S.afterLogin : '#/'; S.afterLogin = ''; if (S.gmail && !S.gmail.connected) { S.afterConnect = to; to = '#/connect'; } go(to);
+      api('login', { email: em.value.trim(), password: pw.value, deviceToken: getCookie('enesma_dt') || '' }).then(function (d) {
+        if (d && d.needsOtp) { S._otpCh = d; pw.value = ''; return render(); }
+        pw.value = ''; finishEsignAuth(d);
       }).catch(function (err) { busy(btn, false); msg.appendChild(errBox(err.message)); });
     } }, h('div', { class: 'f' }, h('label', { for: 'em' }, 'Email'), em), h('div', { class: 'f' }, h('label', { for: 'pw' }, 'Password'), pw), msg, btn);
     $app.appendChild(h('div', { class: 'auth' }, h('div', { class: 'card' }, h('img', { class: 'logo', src: 'assets/esign-logo-light.svg', alt: 'ENESMA E-Sign' }),
@@ -895,6 +947,19 @@
     return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
   }
 
+  function tryHubSso(next) {
+    if (S.token || S._ssoTried) return next();
+    var tc = getCookie('enesma_sso');
+    if (!tc) return next();
+    S._ssoTried = true;
+    loading('Signing you in…');
+    api('loginWithToken', { tcToken: tc }).then(function (d) {
+      applyTcTokens(d);
+      setSession(d.token, d.user);
+      S.gmail = d.gmail || { connected: true, legacy: true };
+      render();
+    }).catch(function () { next(); });
+  }
   /* ---------- boot ---------- */
-  if (!handleOAuthReturn()) { if (!location.hash) history.replaceState(null, '', '#/'); render(); }
+  if (!handleOAuthReturn()) { if (!location.hash) history.replaceState(null, '', '#/'); tryHubSso(render); }
 })();

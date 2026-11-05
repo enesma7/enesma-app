@@ -57,12 +57,35 @@ function unwrap(res) {
   if (e.code === 'MUST_CHANGE' && S.user) { S.user.mustChange = true; render(); }
   throw e;
 }
-/* The session token lives only in sessionStorage (cleared when the tab closes), never in localStorage or a URL. */
+/* The session token lives in sessionStorage (cleared when the tab closes) and, for Hub / E-Sign single sign-on, in an
+   enesma_sso cookie (Domain=.enesmarealty.com, 24h). It is never stored in localStorage or a URL. The cookie is JS-readable
+   because the Apps Script API receives the token in the POST body. enesma_dt is a 30-day trusted-device token and is kept
+   across sign-out so the next login on this browser can skip the emailed code. */
+function cookieDomain() {
+  return /(^|\.)enesmarealty\.com$/.test(location.hostname) ? '; Domain=.enesmarealty.com' : '';
+}
+function getCookie(n) {
+  var m = document.cookie.match(new RegExp('(?:^|; )' + n.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&') + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : '';
+}
+function setCookie(n, v, maxAge) {
+  var secure = location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = n + '=' + encodeURIComponent(v) + '; Path=/; Max-Age=' + maxAge + '; SameSite=Lax' + secure + cookieDomain();
+}
+function clearCookie(n) {
+  document.cookie = n + '=; Path=/; Max-Age=0; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '') + cookieDomain();
+}
 function storeToken(tok) {
   S.token = tok;
   sessionStorage.removeItem('tc_t');
   try { localStorage.removeItem('tc_t'); } catch (e) { /* clean up tokens saved by older versions */ }
-  if (tok) sessionStorage.setItem('tc_t', tok);
+  if (tok) { sessionStorage.setItem('tc_t', tok); setCookie('enesma_sso', tok, 24 * 60 * 60); }
+  else clearCookie('enesma_sso');
+}
+function finishLogin(d) {
+  if (!d || !d.token) throw new Error('Sign-in did not complete. Please try again.');
+  if (d.deviceToken) setCookie('enesma_dt', d.deviceToken, 30 * 24 * 60 * 60);
+  storeToken(d.token); S.user = d.user; render();
 }
 function signOutLocal() { storeToken(null); S.user = null; S.crm = null; CRM_UI.agentId = null; S.dash = null; S.txn = null; S.asRole = ''; sessionStorage.removeItem('tc_role'); }
 
@@ -766,10 +789,36 @@ function loginView(msg) {
   qs('#lc').onclick = function (e) { e.preventDefault(); codeView(qs('#lu').value.trim()); };
   qs('#lf').onsubmit = function (e) {
     e.preventDefault(); var b = qs('#lb'); b.disabled = true; b.innerHTML = '<span class="spin"></span>Signing in…';
-    api('login', { email: qs('#lu').value.trim().toLowerCase(), username: qs('#lu').value.trim().toLowerCase(), password: qs('#lp').value }).then(function (d) {
-      storeToken(d.token); S.user = d.user; render();
+    api('login', { email: qs('#lu').value.trim().toLowerCase(), username: qs('#lu').value.trim().toLowerCase(), password: qs('#lp').value, deviceToken: getCookie('enesma_dt') || '' }).then(function (d) {
+      if (d && d.needsOtp) return otpView(d);
+      finishLogin(d);
     }).catch(function (err) { var em = qs('#lu').value; loginView(err.message); qs('#lu').value = em; qs('#lp').focus(); });
   };
+}
+function otpView(ch, msg, okMsg) {
+  var hint = (ch && ch.emailHint) || 'your account email';
+  $app.innerHTML = '<div class="login"><form class="box" id="of" autocomplete="on"><h1 class="app">' + titleMark('tc-lg') + '</h1>' +
+    '<h2 style="font-size:17px;margin:0 0 6px">Enter your sign-in code</h2>' +
+    '<p class="sub" style="margin:0 0 14px">We emailed a 6-digit code to <b>' + h(hint) + '</b>. It expires in about 10 minutes. Check spam if you don’t see it.</p>' +
+    (msg ? '<div class="err">' + h(msg) + '</div>' : '') + (okMsg ? '<div class="ok">' + h(okMsg) + '</div>' : '') +
+    '<div class="f"><label for="oc">Code</label><input id="oc" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>' +
+    '<label class="sub" style="display:flex;gap:8px;align-items:flex-start;margin:0 0 14px;font-size:13px"><input id="ot" type="checkbox" checked style="margin-top:3px"> Trust this device for 30 days. We won’t ask for a code again on this browser until then.</label>' +
+    '<button class="btn" id="ob">Verify and sign in</button>' +
+    '<div class="fine"><a href="#" id="or">Send a new code</a> · <a href="#" id="obk">Back to sign in</a></div></form></div>';
+  qs('#obk').onclick = function (e) { e.preventDefault(); loginView(); };
+  qs('#or').onclick = function (e) {
+    e.preventDefault();
+    api('resendLoginOtp', { challengeId: ch.challengeId }).then(function (d) {
+      otpView({ challengeId: ch.challengeId, emailHint: (d && d.emailHint) || hint }, '', 'A new code is on its way.');
+    }).catch(function (err) { otpView(ch, err.message); });
+  };
+  qs('#of').onsubmit = function (e) {
+    e.preventDefault(); var b = qs('#ob'); b.disabled = true; b.innerHTML = '<span class="spin"></span>Verifying…';
+    api('verifyLoginOtp', { challengeId: ch.challengeId, code: qs('#oc').value.trim(), rememberDevice: qs('#ot').checked, deviceLabel: (navigator.userAgent || '').slice(0, 120) })
+      .then(finishLogin)
+      .catch(function (err) { otpView(ch, err.message); });
+  };
+  setTimeout(function () { var el = qs('#oc'); if (el) el.focus(); }, 30);
 }
 /* First sign-in and forgot password: a 6-digit code is emailed from Enrique's Apps Script account. */
 function codeView(email, step, msg, okMsg, need) {
@@ -2355,6 +2404,8 @@ function render() {
 }
 window.addEventListener('hashchange', function () { if (S.user && !S.user.mustChange) route(); });
 if (DEMO) sessionStorage.setItem('tc_demo', '1');
-S.token = sessionStorage.getItem('tc_t'); try { localStorage.removeItem('tc_t'); } catch (e) { }
+S.token = sessionStorage.getItem('tc_t') || getCookie('enesma_sso') || '';
+if (S.token) try { sessionStorage.setItem('tc_t', S.token); } catch (e) { }
+try { localStorage.removeItem('tc_t'); } catch (e) { }
 render();
 })();
