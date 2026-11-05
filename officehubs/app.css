@@ -1,27 +1,27 @@
 /* ENESMA REALTY · Office Hubs. Palette: #000007, #FBFBFB, Aztec Gold gradient, Illyrian Red gradient only. */
 @font-face{font-family:'Inter';src:url(assets/Inter.ttf) format('truetype');font-weight:100 900;font-display:swap}
-:root{--k:#000007;--w:#FBFBFB;--gold:linear-gradient(135deg,#EAD59E,#D5BE87);--red:linear-gradient(135deg,#EF0207,#9A0007);--line:rgba(0,0,7,.14);--soft:rgba(0,0,7,.64)}
+:root{--k:#000007;--w:#FBFBFB;--black:#000007;--white:#FBFBFB;--gold-a:#EAD59E;--gold-b:#D5BE87;--gold:linear-gradient(135deg,#EAD59E,#D5BE87);--red-a:#EF0207;--red-b:#9A0007;--red:linear-gradient(135deg,#EF0207,#9A0007);--line:rgba(0,0,7,.14);--soft:rgba(0,0,7,.64);--max:1120px;--radius:8px;--nav-h:64px;--gap:22px;--section-pad:64px}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--w);color:var(--k);font-family:Inter,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;padding-bottom:env(safe-area-inset-bottom)}
 a{color:inherit}button,input,select{font:inherit;color:var(--k)}
 .hidden{display:none!important}
-header{display:flex;align-items:center;padding:14px 28px;padding-top:calc(14px + env(safe-area-inset-top));position:sticky;top:0;z-index:20;background:var(--w)}
+header{display:flex;align-items:center;min-height:var(--nav-h,64px);padding:0 28px;padding-top:env(safe-area-inset-top);position:sticky;top:0;z-index:20;background:var(--k);color:var(--w)}
 header:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--gold)}
 .brand{display:flex;align-items:center;gap:14px;text-decoration:none;min-width:0}
 .brand img{height:40px;width:auto;display:block}
-.brand .app{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;white-space:nowrap;padding-left:14px;border-left:2px solid transparent;border-image:var(--gold) 1}
-main{max-width:1080px;margin:0 auto;padding:28px 28px 96px}
+.brand .app{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;white-space:nowrap;padding-left:14px;border-left:2px solid transparent;border-image:var(--gold) 1;color:var(--w)}
+main{max-width:var(--max,1120px);margin:0 auto;padding:28px 28px 96px}
 .loading{padding:60px 0;text-align:center;color:var(--soft)}
 h1{font-size:30px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}
 h2{font-size:20px;margin:0 0 12px}
 h3{font-size:16px;margin:0 0 8px}
 .sub{color:var(--soft);margin:0 0 24px}
 .rule{display:block;width:40px;height:3px;background:var(--gold);border-radius:2px;margin:0 0 14px}
-.soon{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:14px;background:var(--k);color:var(--w);margin:0 0 24px}
+.soon{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:8px;background:var(--k);color:var(--w);margin:0 0 24px}
 .soon .dot{flex:none;width:12px;height:12px;border-radius:50%;background:var(--gold);margin-top:6px}
 .soon b{display:block;font-size:16px}.soon span{opacity:.85;font-size:14px}
-.card{position:relative;border-radius:16px;padding:22px;background:var(--w);box-shadow:0 1px 0 var(--line),0 8px 26px rgba(0,0,7,.08);border:1px solid var(--line)}
-.locs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),440px));gap:18px}
+.card{position:relative;border-radius:8px;padding:22px;background:var(--w);box-shadow:0 1px 0 var(--line),0 8px 26px rgba(0,0,7,.08);border:1px solid var(--line)}
+.locs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),440px));gap:22px}
 .loc{display:flex;flex-direction:column;gap:12px;overflow:hidden;padding-top:26px}
 .loc:before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:var(--gold)}
 .loc .city{font-size:22px;font-weight:700;margin:0}
@@ -30,9 +30,9 @@ h3{font-size:16px;margin:0 0 8px}
 .host img{height:36px;width:auto;display:block;border-radius:4px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0}
 .chip{font-size:13px;padding:4px 10px;border-radius:999px;border:1.5px solid transparent;background:linear-gradient(var(--w),var(--w)) padding-box,var(--gold) border-box}
-.note{display:flex;gap:10px;align-items:center;font-size:14px;padding:10px 12px;border-radius:10px;background:rgba(0,0,7,.04)}
+.note{display:flex;gap:10px;align-items:center;font-size:14px;padding:10px 12px;border-radius:8px;background:rgba(0,0,7,.04)}
 .note svg{flex:none;width:18px;height:18px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 22px;border-radius:12px;border:0;background:var(--gold);color:var(--k);font-weight:700;text-decoration:none;cursor:pointer;font-size:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 22px;border-radius:999px;border:0;background:var(--gold);color:var(--k);font-weight:700;text-decoration:none;cursor:pointer;font-size:16px}
 .btn:hover{filter:brightness(1.04)}.btn:focus-visible{outline:3px solid var(--k);outline-offset:2px}
 .btn[disabled]{opacity:.55;cursor:not-allowed;filter:none}
 .btn.ghost{background:linear-gradient(var(--w),var(--w)) padding-box,var(--gold) border-box;border:2px solid transparent;font-weight:600}
@@ -43,13 +43,13 @@ h3{font-size:16px;margin:0 0 8px}
 .tab{position:relative;flex:none;border:0;background:none;padding:10px 12px;font-size:14px;cursor:pointer;opacity:.7;border-radius:8px;white-space:nowrap}
 .tab.on{opacity:1;font-weight:700}.tab.on:after{content:"";position:absolute;left:12px;right:12px;bottom:2px;height:3px;border-radius:2px;background:var(--gold)}
 .tab small{display:block;font-size:11px;font-weight:500;opacity:.7}
-.cal{position:relative;width:100%;height:560px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--w)}
+.cal{position:relative;width:100%;height:560px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--w)}
 .cal iframe{border:0;width:100%;height:100%;display:block}
 .cal .ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:24px;color:var(--soft);font-size:14px}
 .cal .ph svg{width:40px;height:40px}
 form .f{margin:0 0 14px}
 label{display:block;font-size:13px;font-weight:600;margin:0 0 6px}
-input,select{width:100%;min-height:48px;padding:11px 13px;border-radius:10px;border:1.5px solid var(--line);background:var(--w);outline:none;font-size:16px;-webkit-appearance:none;appearance:none}
+input,select{width:100%;min-height:48px;padding:11px 13px;border-radius:8px;border:1.5px solid var(--line);background:var(--w);outline:none;font-size:16px;-webkit-appearance:none;appearance:none}
 select{background-image:linear-gradient(45deg,transparent 50%,var(--k) 50%),linear-gradient(135deg,var(--k) 50%,transparent 50%);background-position:calc(100% - 20px) 21px,calc(100% - 15px) 21px;background-size:5px 5px;background-repeat:no-repeat;padding-right:36px}
 input:focus,select:focus{border-color:transparent;background:linear-gradient(var(--w),var(--w)) padding-box,var(--gold) border-box}
 select:focus{background:linear-gradient(45deg,transparent 50%,var(--k) 50%) calc(100% - 20px) 21px/5px 5px no-repeat,linear-gradient(135deg,var(--k) 50%,transparent 50%) calc(100% - 15px) 21px/5px 5px no-repeat,linear-gradient(var(--w),var(--w)) padding-box,var(--gold) border-box}
@@ -57,7 +57,7 @@ input[disabled],select[disabled]{opacity:.55}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 .busy{font-size:13px;margin:-4px 0 14px;color:var(--soft)}.busy b{color:var(--k)}
-.err{position:relative;padding:12px 14px 12px 18px;border-radius:10px;background:rgba(0,0,7,.04);margin:0 0 14px;font-size:14px;overflow:hidden}
+.err{position:relative;padding:12px 14px 12px 18px;border-radius:8px;background:rgba(0,0,7,.04);margin:0 0 14px;font-size:14px;overflow:hidden}
 .err:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--red)}
 .err .rt{background:var(--red);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
 .done{text-align:left}
@@ -65,7 +65,7 @@ input[disabled],select[disabled]{opacity:.55}
 .done dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:14px 0 18px;font-size:15px}.done dt{color:var(--soft)}.done dd{margin:0;font-weight:600}
 .small{font-size:13px;color:var(--soft)}
 @media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}.cal{height:480px}}
-@media (max-width:560px){header{padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top))}.brand img{height:30px}.brand .app{font-size:11px;padding-left:10px;letter-spacing:.14em}
+@media (max-width:560px){header{padding:0 16px;padding-top:env(safe-area-inset-top)}.brand img{height:30px}.brand .app{font-size:11px;padding-left:10px;letter-spacing:.14em}
  main{padding:20px 16px 80px}h1{font-size:25px}.card{padding:18px}.locs{grid-template-columns:minmax(0,1fr)}.cal{height:420px}.lochead .btn{width:100%}}
 /* Agent Hub way back: logo links to the Hub; pill sits at the header's right edge */
 .brand a{text-decoration:none;color:inherit}.ah-logo{display:block;flex:none}
@@ -73,7 +73,7 @@ header .ah-back{margin:-7px 0 -7px auto;padding-left:10px}
 /* Back to Agent Hub (shown only when this page is the top window) */
 .ah-back{display:none;align-items:center;min-height:44px;min-width:44px;text-decoration:none;-webkit-tap-highlight-color:transparent;flex:none;cursor:pointer}
 .ah-top .ah-back{display:inline-flex}
-.ah-pill{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 15px 0 10px;border-radius:999px;background:linear-gradient(135deg,#EAD59E 0%,#D5BE87 100%);color:#000007;font:600 13px/1 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:.01em;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,7,.28),inset 0 1px 0 rgba(255,255,255,.4);transition:filter .15s,transform .1s}
+.ah-pill{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 15px 0 10px;border-radius:999px;background:linear-gradient(135deg,#EAD59E 0%,#D5BE87 100%);color:#000007;font:600 13px/1 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:.01em;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,7,.28),inset 0 1px 0 rgba(251,251,251,.4);transition:filter .15s,transform .1s}
 .ah-pill svg{width:14px;height:14px;flex:none}
 .ah-back:hover .ah-pill{filter:brightness(1.06)}
 .ah-back:active .ah-pill{transform:scale(.97)}

@@ -292,7 +292,7 @@ function shell(active, inner) {
   var tog = isDual() ? '<div class="rtog seg" role="group" aria-label="View as">' + [['agent', 'My Files'], ['tc', 'TC View']].map(function (x) { return '<button type="button" data-role="' + x[0] + '" class="' + (activeRole() === x[0] ? 'on' : '') + '" aria-pressed="' + (activeRole() === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' : '';
   return (DEMO ? '<div class="demo"><b>DEMO PREVIEW</b> · sample data only, nothing is saved · <a href="#" id="exitDemo" style="color:#FBFBFB">exit demo</a></div>' : '') +
     '<header id="hdr"><button class="nbtn" id="nbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><span></span><span></span><span></span></button>' +
-    '<a class="brand" href="#/" aria-label="Transaction Center home">' + titleMark('tc-sm') + '</a>' +
+    '<a class="brand" href="#/" aria-label="Transaction Center home">' + titleMark('tc-sm tc-dark') + '</a>' +
     '<nav class="main" id="mnav" aria-label="Main">' + nav + '</nav><div class="hspace"></div>' + tog +
     '<div class="search"><span>' + SEARCH_ICON + '</span><input id="q" type="search" placeholder="Search address, client, escrow #" autocomplete="off" aria-label="Search transactions"><div class="sres hidden" id="sres"></div></div>' +
     '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + h(roleLabel(S.user)) + (isDual() ? '<br><small>Now: ' + (isTC() ? 'TC View' : 'My Files') + '</small>' : '') + '</div>' + (canGoals() ? '<a href="#/" id="goalsLnk">Goals</a>' : '') + '<a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
@@ -1212,7 +1212,7 @@ function drawScaled(im, w, h, bg) {   // high-quality downscale (halving steps),
     src = c0; sw = c0.width; sh = c0.height;
   }
   var c = document.createElement('canvas'); c.width = w; c.height = h;
-  var x = c.getContext('2d'); if (bg) { x.fillStyle = '#FFFFFF'; x.fillRect(0, 0, w, h); }
+  var x = c.getContext('2d'); if (bg) { x.fillStyle = '#FBFBFB'; x.fillRect(0, 0, w, h); }
   x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, w, h);
   return c;
 }
@@ -1339,7 +1339,7 @@ function openDoc(docId, btn) {
     var url = URL.createObjectURL(new Blob([f.bytes], { type: f.mime }));
     var viewable = /^application\/pdf|^image\/(png|jpe?g|gif|webp)|^text\/plain/.test(f.mime);
     qs('.box', m).innerHTML = '<button class="close" aria-label="Close">×</button><h2 style="padding-right:30px;word-break:break-word">' + h(f.name) + '</h2>' +
-      (viewable ? (/^image/.test(f.mime) ? '<img src="' + url + '" alt="" style="max-width:100%;border-radius:10px;margin-top:10px">' : (/^application\/pdf/.test(f.mime) ? '<div class="pdfv" style="margin-top:10px"></div>' : '<iframe src="' + url + '" title="Document" style="width:100%;height:70vh;border:1px solid rgba(0,0,7,.12);border-radius:10px;margin-top:10px;background:#fff"></iframe>')) : '<p class="sub">This file type cannot be previewed in the browser.</p>') +
+      (viewable ? (/^image/.test(f.mime) ? '<img src="' + url + '" alt="" style="max-width:100%;border-radius:10px;margin-top:10px">' : (/^application\/pdf/.test(f.mime) ? '<div class="pdfv" style="margin-top:10px"></div>' : '<iframe src="' + url + '" title="Document" style="width:100%;height:70vh;border:1px solid rgba(0,0,7,.12);border-radius:10px;margin-top:10px;background:#FBFBFB"></iframe>')) : '<p class="sub">This file type cannot be previewed in the browser.</p>') +
       '<div class="actions"><a class="btn" href="' + url + '" download="' + h(f.name) + '">Download</a></div>';
     var pv = qs('.pdfv', m), stop = pv ? renderPdfPages(pv, f.bytes, f.name) : null;
     qs('.close', m).onclick = function () { if (stop) stop(); m.close(); URL.revokeObjectURL(url); };
@@ -1365,7 +1365,7 @@ function renderPdfPages(host, bytes, name) {
     var w = Math.max(200, host.clientWidth || 320), dpr = Math.min(window.devicePixelRatio || 1, 2), chain = Promise.resolve();
     for (var i = 1; i <= d.numPages; i++) (function (n) {
       var wrap = document.createElement('div'); wrap.className = 'pdfpage'; wrap.setAttribute('data-page', n);
-      wrap.style.cssText = 'background:#fff;border:1px solid rgba(0,0,7,.12);border-radius:8px;margin:0 0 12px;overflow:hidden;min-height:120px';
+      wrap.style.cssText = 'background:#FBFBFB;border:1px solid rgba(0,0,7,.12);border-radius:8px;margin:0 0 12px;overflow:hidden;min-height:120px';
       host.appendChild(wrap);
       chain = chain.then(function () { if (cancelled) return; return d.getPage(n); }).then(function (pg) {
         if (!pg || cancelled) return;
