@@ -8,17 +8,18 @@
   var OFFICE_MAIL = '8311 Haven Ave #150, Rancho Cucamonga, CA 91730';
   var KINDS = ['brokerage', 'primary', 'co_list', 'co_buyer', 'referral_inhouse', 'referral_outside', 'tc_fee', 'admin_fee', 'other', 'credit'];
   var EBOOKS = ['brokerage', 'primary', 'co_list', 'co_buyer', 'referral_inhouse'];
+  /* CDA UI titles and subtitles use title case. Kind ids stay snake_case. */
   var LABELS = {
     brokerage: 'ENESMA Realty (Brokerage)',
     primary: 'Primary Agent',
-    co_list: 'Co-listing agent',
-    co_buyer: 'Co-buyer agent',
-    referral_inhouse: 'Referral · in-house agent',
-    referral_outside: 'Referral · outside',
-    tc_fee: 'TC fee',
+    co_list: 'Co-Listing Agent',
+    co_buyer: 'Co-Buyer Agent',
+    referral_inhouse: 'Referral · In-House Agent',
+    referral_outside: 'Referral · Outside',
+    tc_fee: 'TC Fee',
     admin_fee: 'Admin Fee',
     other: 'Other',
-    credit: 'Credit / paying from closing'
+    credit: 'Credit / Paying From Closing'
   };
   var AGENT_KINDS = { primary: 1, co_list: 1, co_buyer: 1, referral_inhouse: 1 };
   /* These amounts come out of the primary agent. They are not taken off gross before the split. */
