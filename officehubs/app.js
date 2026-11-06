@@ -5,7 +5,7 @@ var CFG = window.OH_CONFIG || {};
 var API = String(CFG.API_URL || '').trim();
 var TZ = 'America/Los_Angeles';
 var $app = document.getElementById('app');
-var ACCESS_LINE = 'Your exterior office access code is emailed with your reservation confirmation.';
+var ACCESS_LINE = 'Your exterior office access code and Wi-Fi details are emailed with your reservation confirmation.';
 
 var LOCATIONS = [{
   id: 'rc', slug: 'rancho-cucamonga', name: 'Rancho Cucamonga',
