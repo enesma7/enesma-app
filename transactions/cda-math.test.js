@@ -16,9 +16,72 @@ assert.ok(uiSrc.indexOf('No split is saved') < 0);
 assert.ok(uiSrc.indexOf('Standard per-transaction admin fee') < 0);
 assert.ok(uiSrc.indexOf('M.adminFeeNote(l.note)') >= 0, 'admin fee mail-to uses the office-address note');
 var html = fs.readFileSync(__dirname + '/index.html', 'utf8');
-assert.ok(html.indexOf('cda-math.js?v=5') >= 0);
-assert.ok(html.indexOf('cda-ui.js?v=5') >= 0);
-assert.ok(html.indexOf('cda-math.js?v=4') < 0 && html.indexOf('cda-ui.js?v=4') < 0);
+assert.ok(html.indexOf('cda-math.js?v=6') >= 0);
+assert.ok(html.indexOf('cda-ui.js?v=6') >= 0);
+assert.ok(html.indexOf('app.css?v=44') >= 0);
+assert.ok(html.indexOf('cda-math.js?v=5') < 0 && html.indexOf('cda-ui.js?v=5') < 0);
+assert.ok(uiSrc.indexOf('M.settlement') >= 0);
+assert.ok(uiSrc.indexOf('Primary Agent is below $0.00') >= 0);
+assert.ok(uiSrc.indexOf('These amounts do not match') >= 0);
+assert.ok(uiSrc.indexOf('cda-foot') >= 0);
+var shotLines = [
+  { kind: 'primary', amount: 11140, name: 'Agent' },
+  { kind: 'brokerage', amount: 1260, name: 'ENESMA Realty' },
+  { kind: 'admin_fee', amount: 200, name: 'ENESMA Realty' },
+  { kind: 'referral_outside', amount: 6300, name: 'Zina Gjoni' }
+];
+var unreduced = M.settlement(shotLines, 12600);
+assert.strictEqual(unreduced.sum, 18900);
+assert.strictEqual(unreduced.remainder, 4840);
+assert.strictEqual(unreduced.mismatch, true);
+assert.strictEqual(unreduced.under, false);
+var reduced = shotLines.map(function (l) { return Object.assign({}, l); });
+reduced[0].amount = unreduced.remainder;
+var matched = M.settlement(reduced, 12600);
+assert.strictEqual(matched.primary, 4840);
+assert.strictEqual(matched.sum, 12600);
+assert.strictEqual(matched.diff, 0);
+assert.strictEqual(matched.mismatch, false);
+var negative = M.settlement([
+  { kind: 'primary', amount: -1460 },
+  { kind: 'brokerage', amount: 1260 },
+  { kind: 'admin_fee', amount: 200 },
+  { kind: 'referral_outside', amount: 12600 }
+], 12600);
+assert.strictEqual(negative.diff, 0);
+assert.strictEqual(negative.under, true);
+assert.strictEqual(negative.mismatch, true);
+var shot = M.applySplitLines(shotLines, { totalGross: 12600, agentId: 'U1', agentName: 'Agent' }, { id: 'U1', splitPct: 90, address: '10 Agent St' }, 200);
+var shotBy = {}; shot.forEach(function (l) { shotBy[l.kind] = l; });
+assert.strictEqual(shotBy.brokerage.amount, 1260);
+assert.strictEqual(shotBy.admin_fee.amount, 200);
+assert.strictEqual(shotBy.primary.amount, 4840);
+assert.strictEqual(shotBy.referral_outside.amount, 6300);
+assert.strictEqual(M.sumLines(shot), 12600);
+assert.strictEqual(shotBy.primary.note, '10 Agent St');
+assert.strictEqual(shotBy.brokerage.note, M.OFFICE_MAIL);
+assert.strictEqual(shotBy.admin_fee.note, M.OFFICE_MAIL);
+assert.strictEqual(shotBy.admin_fee.name, M.BROKER_NAME);
+var beforeSplit = M.rebalanceAmounts([{ kind: 'referral_outside', amount: 6300 }], 12600, 90, 200);
+assert.strictEqual(beforeSplit.brokerage, 1260);
+assert.notStrictEqual(beforeSplit.brokerage, M.round2((12600 - 6300) * 0.1));
+assert.strictEqual(beforeSplit.admin, 200);
+assert.strictEqual(beforeSplit.primary, 4840);
+assert.notStrictEqual(beforeSplit.primary, M.round2((12600 - 6300) * 0.9 - 200));
+var kinds = ['co_list', 'co_buyer', 'referral_inhouse', 'referral_outside', 'tc_fee', 'other', 'credit'];
+kinds.forEach(function (kind) {
+  var one = M.rebalanceAmounts([{ kind: kind, amount: 500 }], 12600, 90, 200);
+  assert.strictEqual(one.brokerage, 1260, kind);
+  assert.strictEqual(one.admin, 200, kind);
+  assert.strictEqual(one.extras, 500, kind);
+  assert.strictEqual(one.primary, 10640, kind);
+});
+var allAdded = kinds.map(function (kind) { return { kind: kind, amount: 500 }; });
+var allPlan = M.rebalanceAmounts(allAdded, 12600, 90, 200);
+assert.strictEqual(allPlan.brokerage, 1260);
+assert.strictEqual(allPlan.extras, 3500);
+assert.strictEqual(allPlan.primary, 7640);
+assert.strictEqual(M.round2(allPlan.brokerage + allPlan.admin + allPlan.extras + allPlan.primary), 12600);
 assert.strictEqual(M.LABELS.primary, 'Primary Agent');
 assert.strictEqual(M.LABELS.brokerage, 'ENESMA Realty (Brokerage)');
 assert.strictEqual(M.LABELS.admin_fee, 'Admin Fee');

@@ -45,7 +45,7 @@
       }).join('') + '</select>';
     } else nameCell = '<input data-f="name" value="' + h(l.name || '') + '" maxlength="120" placeholder="Payee name" aria-label="' + h(label) + ' payee"' + (locked ? ' readonly' : '') + '>';
     var books = M.EBOOKS_KINDS.indexOf(kind) >= 0;
-    var amtLock = locked || kind === 'admin_fee';
+    var amtLock = locked || kind === 'admin_fee' || kind === 'brokerage';
     var shown = l.amount === '' || l.amount == null ? '' : M.usd(l.amount);
     /* Admin Fee mail-to is the office address. A stored street address is kept; the fee description is not. */
     var noteVal = kind === 'admin_fee' ? M.adminFeeNote(l.note) : (l.note || '');
@@ -72,14 +72,34 @@
   function paintTotals(root, header) {
     var A = app(), host = A.qs('.cda-tot', root);
     if (!host) return;
-    var lines = readLines(root);
-    var sum = M.sumLines(lines), gross = M.grossOf(header), diff = M.round2(sum - gross);
-    var cls = diff === 0 ? 'ok' : 'err';
-    var msg = diff === 0 ? 'Lines equal the locked total gross.' : 'These lines total ' + money2(sum) + '. They must equal the locked total gross of ' + money2(gross) + ' before this CDA can be saved.';
+    var s = M.settlement(readLines(root), M.grossOf(header));
+    var priTxt = s.primary == null ? '—' : money2(s.primary);
+    var title = '', detail, cls;
+    if (s.under) {
+      cls = 'err';
+      title = 'Primary Agent is below $0.00';
+      detail = 'Primary Agent is ' + priTxt + '. Lower the other amounts so the Primary Agent stays at $0.00 or more. The locked total gross stays ' + money2(s.gross) + '.';
+    } else if (s.diff !== 0) {
+      cls = 'err';
+      title = 'These amounts do not match';
+      detail = 'Lines total ' + money2(s.sum) + '. They must equal the locked total gross of ' + money2(s.gross) + ' before this CDA can be saved.';
+    } else {
+      cls = 'ok';
+      detail = 'Added payees come out of the Primary Agent. Brokerage stays its percent of the full locked gross.';
+    }
     host.className = 'cda-tot ' + cls;
-    host.innerHTML = '<span>Lines ' + money2(sum) + '</span><span>Total gross ' + money2(gross) + '</span><span>' + msg + '</span>';
-    root._mismatch = diff !== 0;
-    root._mismatchMsg = diff === 0 ? '' : msg;
+    host.setAttribute('role', cls === 'err' ? 'alert' : 'status');
+    host.setAttribute('aria-live', cls === 'err' ? 'assertive' : 'polite');
+    host.innerHTML = (title ? '<strong class="cda-tot-title">' + A.h(title) + '</strong>' : '') +
+      '<span class="cda-pri">Primary Agent ' + A.h(priTxt) + '</span>' +
+      '<span class="cda-tot-row"><span>Lines ' + A.h(money2(s.sum)) + '</span><span>Locked gross ' + A.h(money2(s.gross)) + '</span></span>' +
+      '<span class="cda-tot-msg">' + A.h(detail) + '</span>';
+    root._mismatch = !!s.mismatch;
+    root._mismatchMsg = s.mismatch ? (title ? title + '. ' + detail : detail) : '';
+    ['#cdaSave', '#cdaSend'].forEach(function (id) {
+      var b = A.qs(id, root);
+      if (b) b.disabled = !!s.mismatch;
+    });
   }
 
   function fillPdf(header, lines) {
@@ -218,22 +238,24 @@
       '<div id="cdaErr"></div>' +
       '<div class="cda-lines" id="cdaLines">' + lines.map(function (l, i) { return lineRow(l, i, pack, locked); }).join('') + '</div>' +
       (locked ? '' : '<div class="cda-add"><button type="button" class="ub" data-add="co_list">+ Co-listing agent</button><button type="button" class="ub" data-add="co_buyer">+ Co-buyer agent</button><button type="button" class="ub" data-add="referral_inhouse">+ In-house referral</button><button type="button" class="ub" data-add="referral_outside">+ Outside referral</button><button type="button" class="ub" data-add="tc_fee">+ TC fee</button><button type="button" class="ub" data-add="other">+ Other</button><button type="button" class="ub" data-add="credit">+ Credit</button></div>') +
-      '<div class="cda-tot"></div>' +
+      '<div class="cda-foot"><div class="cda-tot" role="status" aria-live="polite"></div>' +
       '<div class="cda-sign" id="cdaSign"></div>' +
-      '<div class="actions" id="cdaActs"></div>';
+      '<div class="actions" id="cdaActs"></div></div>';
     A.qs('.box', m).innerHTML = '<button class="close" aria-label="Close">×</button>' + html;
     A.qs('.close', m).onclick = m.close;
     var box = A.qs('.box', m);
     box._agentId = header.agentId || '';
     box._linesBox = A.qs('#cdaLines', m);
 
-    function primaryInput() { var row = A.qs('.cda-line[data-kind="primary"]', box); return row ? row.querySelector('[data-f="amount"]') : null; }
+    var splitPct = M.splitOf(agentById(pack, header.agentId)).split;
+    var adminFee = pack.adminFee != null && pack.adminFee !== '' ? pack.adminFee : M.ADMIN_FEE;
+    function amountInput(kind) { var row = A.qs('.cda-line[data-kind="' + kind + '"]', box); return row ? row.querySelector('[data-f="amount"]') : null; }
     function balancePrimary() {
-      var input = primaryInput(); if (!input || input.readOnly) return;
-      if (document.activeElement === input) { paintTotals(box, header); return; }
-      var others = 0;
-      readLines(box).forEach(function (l) { if (l.kind !== 'primary') others = M.round2(others + M.num(l.amount)); });
-      input.value = M.usd(M.round2(M.grossOf(header) - others));
+      var plan = M.rebalanceAmounts(readLines(box), M.grossOf(header), splitPct, adminFee);
+      var bro = amountInput('brokerage');
+      var input = amountInput('primary');
+      if (bro && document.activeElement !== bro) bro.value = M.usd(plan.brokerage);
+      if (input && !input.readOnly && document.activeElement !== input) input.value = M.usd(plan.primary);
       paintTotals(box, header);
     }
     function formatAmount(input) {
@@ -241,7 +263,7 @@
       var raw = input.value.trim();
       input.value = raw === '' ? '' : M.usd(raw);
     }
-    box.addEventListener('input', function (e) {
+    function onLineEdit(e) {
       var row = e.target && e.target.closest && e.target.closest('.cda-line');
       if (!row) return;
       if (e.target.getAttribute('data-f') === 'agentId') {
@@ -252,6 +274,10 @@
       }
       if (e.target.getAttribute('data-f') === 'amount' && row.getAttribute('data-kind') !== 'primary') balancePrimary();
       else paintTotals(box, header);
+    }
+    box.addEventListener('input', onLineEdit);
+    box.addEventListener('change', function (e) {
+      if (e.target && e.target.getAttribute && e.target.getAttribute('data-f') === 'amount') onLineEdit(e);
     });
     box.addEventListener('focusout', function (e) {
       if (e.target && e.target.getAttribute && e.target.getAttribute('data-f') === 'amount') formatAmount(e.target);
@@ -267,6 +293,7 @@
         var node = row.firstChild;
         A.qs('#cdaLines', box).appendChild(node);
         var rm = node.querySelector('.cda-rm'); if (rm) rm.onclick = function () { node.remove(); balancePrimary(); };
+        var amt = node.querySelector('[data-f="amount"]'); if (amt) amt.focus();
         balancePrimary();
       };
     });
@@ -280,10 +307,9 @@
       var bad = linesOut.filter(function (l) { return l.kind === 'referral_inhouse' && M.num(l.amount) > 0 && !l.agentId; })[0]
         || linesOut.filter(function (l) { return (l.kind === 'co_list' || l.kind === 'co_buyer') && M.num(l.amount) > 0 && !l.agentId; })[0];
       if (bad) { err('Choose the ENESMA agent for ' + (M.LABELS[bad.kind] || bad.kind) + '.'); return null; }
-      var sum = M.sumLines(linesOut), gross = M.grossOf(header), diff = M.round2(sum - gross);
-      if (diff !== 0) { err('These lines total ' + money2(sum) + '. They must equal the locked total gross of ' + money2(gross) + ' before this CDA can be saved.'); return null; }
-      var neg = linesOut.filter(function (l) { return M.num(l.amount) < 0; })[0];
-      if (neg) { err((M.LABELS[neg.kind] || 'A line') + ' is below $0.00. Lower the other amounts so every line stays at zero or more and the total still equals ' + money2(gross) + '.'); return null; }
+      var s = M.settlement(linesOut, M.grossOf(header));
+      if (s.under) { err('Primary Agent is ' + money2(s.primary) + '. Lower the other amounts so the Primary Agent stays at $0.00 or more. The locked total gross stays ' + money2(s.gross) + '.'); return null; }
+      if (s.diff !== 0) { err('Lines total ' + money2(s.sum) + '. They must equal the locked total gross of ' + money2(s.gross) + ' before this CDA can be saved.'); return null; }
       err('');
       return linesOut;
     }
@@ -307,6 +333,7 @@
       acts.appendChild(rev);
       rev.onclick = function () { revise(pack); };
     }
+    paintTotals(box, header);
     if (status === 'sent') renderSent(pack);
     if (status === 'executed') renderExecuted(pack);
 

@@ -21,6 +21,8 @@
     credit: 'Credit / paying from closing'
   };
   var AGENT_KINDS = { primary: 1, co_list: 1, co_buyer: 1, referral_inhouse: 1 };
+  /* These amounts come out of the primary agent. They are not taken off gross before the split. */
+  var DEDUCT_FROM_PRIMARY = { co_list: 1, co_buyer: 1, referral_inhouse: 1, referral_outside: 1, tc_fee: 1, other: 1, credit: 1 };
 
   function round2(n) { n = Number(n); if (!isFinite(n)) return 0; return Math.round(n * 100) / 100; }
   function num(v) { var n = parseFloat(String(v == null ? '' : v).replace(/[$,%\s]/g, '')); return isNaN(n) ? 0 : n; }
@@ -51,6 +53,24 @@
     (lines || []).forEach(function (l) { if (l.amount === '' || l.amount == null) return; s += round2(num(l.amount)); });
     return round2(s);
   }
+  /* Primary is whatever is left of locked gross after every other line. A negative remainder
+     or a sum that is not the locked gross is a mismatch, even if the two cancel out. */
+  function settlement(lines, gross) {
+    var g = round2(num(gross)), others = 0, pri = null;
+    (lines || []).forEach(function (l) {
+      if (!l) return;
+      if (l.kind === 'primary') { if (!pri) pri = l; return; }
+      if (l.amount === '' || l.amount == null) return;
+      others = round2(others + round2(num(l.amount)));
+    });
+    var hasPri = !!(pri && pri.amount !== '' && pri.amount != null);
+    var primary = hasPri ? round2(num(pri.amount)) : null;
+    var sum = sumLines(lines);
+    var diff = round2(sum - g);
+    var remainder = round2(g - others);
+    var under = primary != null && primary < 0;
+    return { sum: sum, gross: g, diff: diff, primary: primary, remainder: remainder, others: others, under: under, mismatch: diff !== 0 || under };
+  }
   function grossOf(header) { return round2(header && header.totalGross); }
   function splitOf(agent) {
     if (!agent || agent.splitPct === '' || agent.splitPct == null) return { split: EXAMPLE_SPLIT, source: 'example' };
@@ -74,28 +94,47 @@
     if (!n || /admin fee|per-transaction|per transaction|deducted from/i.test(n)) return OFFICE_MAIL;
     return n;
   }
-  /* Brokerage = broker % of full gross. Admin fee is deducted from the primary agent only.
-     Added lines (co-agent, referral, TC, other, credit) also reduce the primary agent so the sum stays equal to gross.
-     $12,800 at 90/10 → brokerage $1,280.00, agent $11,320.00, admin $200.00. */
+  /* Brokerage = broker % of the full locked gross. It is not reduced by added payees.
+     Outside referral is not taken off gross before that split. Admin fee and every added
+     payee (co-list, co-buyer, in-house referral, outside referral, TC, other, credit)
+     come out of the primary agent only.
+     $12,600 at 90/10 with a $6,300 outside referral → brokerage $1,260.00, admin $200.00, agent $4,840.00.
+     $12,800 at 90/10 with no extras → brokerage $1,280.00, agent $11,320.00, admin $200.00. */
+  function rebalanceAmounts(lines, gross, splitPct, adminFee) {
+    var g = round2(num(gross));
+    var sp = Number(splitPct);
+    if (!isFinite(sp)) sp = EXAMPLE_SPLIT;
+    var fee = adminFee == null || adminFee === '' ? ADMIN_FEE : round2(num(adminFee));
+    var extras = 0;
+    (lines || []).forEach(function (l) {
+      if (!l || !DEDUCT_FROM_PRIMARY[l.kind] || l.amount === '' || l.amount == null) return;
+      extras = round2(extras + round2(num(l.amount)));
+    });
+    return {
+      gross: g, split: sp, extras: extras, admin: fee,
+      brokerage: round2(g * (100 - sp) / 100), brokerPct: round2(100 - sp),
+      primary: round2(g * sp / 100 - fee - extras)
+    };
+  }
   function applySplitLines(lines, header, agent, adminFee, agents) {
     var gross = grossOf(header), sp = splitOf(agent);
     var fee = adminFee == null || adminFee === '' ? ADMIN_FEE : round2(num(adminFee));
     var out = ensureSkeleton(lines || [], header, fee);
-    var bro = null, pri = null, adm = null, extras = 0;
+    var bro = null, pri = null, adm = null;
     out.forEach(function (l) {
       if (l.kind === 'brokerage' && !bro) bro = l;
       else if (l.kind === 'primary' && !pri) pri = l;
       else if (l.kind === 'admin_fee' && !adm) adm = l;
-      else extras = round2(extras + round2(num(l.amount)));
     });
-    bro.amount = round2(gross * (100 - sp.split) / 100);
-    bro.pct = round2(100 - sp.split);
+    var plan = rebalanceAmounts(out, gross, sp.split, fee);
+    bro.amount = plan.brokerage;
+    bro.pct = plan.brokerPct;
     if (!bro.name) bro.name = BROKER_NAME;
     if (!String(bro.note || '').trim()) bro.note = OFFICE_MAIL;
-    adm.amount = fee;
+    adm.amount = plan.admin;
     if (!adm.name) adm.name = BROKER_NAME;
     adm.note = adminFeeNote(adm.note);
-    pri.amount = round2(gross * sp.split / 100 - fee - extras);
+    pri.amount = plan.primary;
     pri.pct = sp.split;
     if (!pri.agentId) pri.agentId = (header && header.agentId) || (agent && agent.id) || '';
     if (!pri.name) pri.name = (header && header.agentName) || (agent && agent.name) || '';
@@ -245,9 +284,9 @@
 
   root.TCCda = {
     ADMIN_FEE: ADMIN_FEE, EXAMPLE_SPLIT: EXAMPLE_SPLIT, BROKER_NAME: BROKER_NAME, OFFICE_MAIL: OFFICE_MAIL,
-    KINDS: KINDS, EBOOKS_KINDS: EBOOKS, LABELS: LABELS, AGENT_KINDS: AGENT_KINDS,
+    KINDS: KINDS, EBOOKS_KINDS: EBOOKS, LABELS: LABELS, AGENT_KINDS: AGENT_KINDS, DEDUCT_FROM_PRIMARY: DEDUCT_FROM_PRIMARY,
     round2: round2, num: num, usd: usd, blank: blank, isCdaItem: isCdaItem, cloneLine: cloneLine,
-    ensureAdmin: ensureAdmin, sumLines: sumLines, grossOf: grossOf, splitOf: splitOf, agentAddress: agentAddress, adminFeeNote: adminFeeNote,
+    ensureAdmin: ensureAdmin, sumLines: sumLines, settlement: settlement, rebalanceAmounts: rebalanceAmounts, grossOf: grossOf, splitOf: splitOf, agentAddress: agentAddress, adminFeeNote: adminFeeNote,
     applySplitLines: applySplitLines, fallbackSuggest: fallbackSuggest, ensureSkeleton: ensureSkeleton, linesForEdit: linesForEdit, booksLines: booksLines,
     sideLabel: sideLabel, headerFromTxn: headerFromTxn, pdfFields: pdfFields, signRects: signRects
   };

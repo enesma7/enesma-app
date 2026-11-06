@@ -404,13 +404,20 @@ h1.taddr{margin-bottom:2px}
 .cda-note{margin-top:0}
 .cda-lines{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px}
 .cda-line{display:grid;grid-template-columns:minmax(140px,1.1fr) minmax(140px,1.3fr) 110px minmax(120px,1fr);gap:8px;align-items:center}
-.cda-line input,.cda-line select{font:inherit;font-size:16px;min-height:42px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--w);color:var(--k);width:100%;box-sizing:border-box}
+.cda-line input,.cda-line select{font:inherit;font-size:16px;min-height:42px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--w);color:var(--k);width:100%;box-sizing:border-box;scroll-margin-bottom:220px}
 .cda-line input[readonly]{background:rgba(0,0,7,.04)}
 .cda-k{display:flex;flex-direction:column;gap:2px;font-size:13px}.cda-k small{color:var(--soft);font-weight:600}
 .cda-k .link{align-self:flex-start;padding:0;min-height:0}
 .cda-add{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
-.cda-tot{display:flex;flex-wrap:wrap;gap:8px 16px;padding:10px 12px;border-radius:8px;margin:0 0 10px;font-weight:700}
-.cda-tot.ok{background:rgba(213,190,135,.35)}.cda-tot.err{background:rgba(239,2,7,.08);color:#9A0007}
+.cda-foot{position:sticky;bottom:0;z-index:3;background:var(--w);padding:12px 0 calc(4px + env(safe-area-inset-bottom));box-shadow:0 -8px 18px rgba(0,0,7,.08)}
+.cda-foot .actions button:disabled{opacity:.45;cursor:not-allowed}
+.cda-tot{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border-radius:10px;margin:0 0 10px;font-weight:700;border:2px solid transparent}
+.cda-tot .cda-pri{font-size:18px}
+.cda-tot-row{display:flex;flex-wrap:wrap;gap:6px 16px}
+.cda-tot-msg{font-weight:600;font-size:14px}
+.cda-tot.ok{background:rgba(213,190,135,.35)}
+.cda-tot.err{background:#fff;color:#9A0007;border-color:#EF0207}
+.cda-tot.err .cda-tot-title{font-size:16px}
 .cda-mis{display:flex;gap:8px;align-items:center;margin:0 0 10px;font-weight:600}
 .cda-who{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
 .cda-who label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600}
