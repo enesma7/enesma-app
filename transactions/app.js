@@ -367,7 +367,7 @@ function mebRender() {
   var com = d.commission.filter(function (c) { return c.year === Y; }), ex = d.expenses.filter(function (e) { return String(e.date).slice(0, 4) === Y; });
   var tin = com.reduce(function (s, c) { return s + (c.amount || 0); }, 0), tout = ex.reduce(function (s, e) { return s + e.amount; }, 0), pend = com.filter(function (c) { return c.amount === null; }).length;
   var byCat = d.categories.map(function (c) { return { label: c, a: ex.filter(function (e) { return e.category === c; }).reduce(function (s, e) { return s + e.amount; }, 0), neg: true }; }).filter(function (r) { return r.a; });
-  var basis = { paid: 'Paid by brokerage', split: 'Estimated from your split', pending: 'Not set yet' };
+  var basis = { paid: 'Paid by brokerage', split: 'Estimated from your split', pending: 'Not set yet', cda: 'Signed CDA', cda_pending: 'Signed CDA · waiting for owner approval' };
   var html = '<div class="ebooks"><div class="ebhead"><h1>My E-Books</h1><span class="ebown">Private · only you</span></div>' +
     '<div class="ebbar"><label class="ebyr">Year <select id="mY">' + mebYears(d).map(function (y) { return '<option' + (y === Y ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select></label>' +
     '<button class="btn red" id="mAdd">+ Expense</button><span class="hspace"></span><button class="ub" id="mCsv">Export CSV</button><button class="ub" id="mPrint">Print</button></div>' +
@@ -613,20 +613,21 @@ function ebOpenReceipt(e) {
 function ebImportView() {
   var ag = {}; EB.data.agents.forEach(function (a) { ag[a.id] = a; });
   var list = EB.data.txns;
-  var html = '<p class="sub">Closed transactions. Check the ones to import: the gross commission is booked as <b>Commission Income</b> and the agent\'s payout as an <b>Agent Commission Payouts</b> expense paid to that agent, both linked to the transaction. Each part imports only once. Gross is estimated from the file\'s commission terms and the payout from the agent\'s split (Payees tab); edit either before importing.</p>';
-  if (!list.length) return { html: html + '<div class="empty">No closed transactions yet.</div>', wire: function () { } };
+  var html = '<div id="cdaPend"></div><p class="sub">Closed transactions that do not have a signed CDA yet. Gross is estimated from the file’s commission terms and the payout from the agent’s split. Once a CDA is fully signed, those amounts replace this estimate: approve them in the list above. Do not also import an estimate for that file.</p>';
+  if (!list.length) return { html: html + '<div class="empty">No closed transactions yet.</div>', wire: function () { if (window.TCCdaUi) TCCdaUi.mountPending(qs('#cdaPend')); } };
   html += '<div class="ebbar"><label class="chk"><input type="checkbox" id="imAll"> Select all not yet imported</label><span class="hspace"></span><button class="btn" id="imGo" disabled>Import selected</button></div>' +
     '<div class="ebtable"><table class="ebt ebim"><thead><tr><th></th><th>Transaction</th><th>Closed</th><th>Agent</th><th class="r">Gross commission</th><th class="r">Agent payout</th></tr></thead><tbody>' + list.map(function (t) {
-      var a = ag[t.agentId] || {}, done = t.importedIncome && t.importedPayout, sp = a.splitPct === '' || a.splitPct === undefined ? '' : Number(a.splitPct);
+      var a = ag[t.agentId] || {}, cdaDone = !!(t.cdaExecuted || t.cdaStatus === 'executed'), done = !!(t.importedIncome && t.importedPayout) || cdaDone, sp = a.splitPct === '' || a.splitPct === undefined ? '' : Number(a.splitPct);
       var pay = sp === '' ? '' : (Math.round(t.gross * sp) / 100).toFixed(2);
       return '<tr data-id="' + h(t.id) + '" class="' + (done ? 'done' : '') + '"><td><input type="checkbox" class="imC" aria-label="Import ' + h(t.title) + '"' + (done ? ' disabled' : '') + '></td><td data-l="Transaction"><a href="#/t/' + h(t.id) + '">' + h(t.title) + '</a></td><td data-l="Closed">' + h(fmtDate(t.closedAt)) + '</td><td data-l="Agent">' + h(t.agentName || '—') + (sp !== '' ? ' <small class="muted">' + sp + '%</small>' : '') + '</td>' +
-        '<td data-l="Gross" class="r">' + (t.importedIncome ? '<span class="ebimp">imported</span>' : '<input class="imG" inputmode="decimal" value="' + (t.gross ? t.gross.toFixed(2) : '') + '" placeholder="0.00" aria-label="Gross commission">') + '</td>' +
-        '<td data-l="Payout" class="r">' + (t.importedPayout ? '<span class="ebimp">imported</span>' : (t.agentId ? '<input class="imP" inputmode="decimal" value="' + pay + '" placeholder="' + (sp === '' ? 'set split or type' : '0.00') + '" aria-label="Agent payout">' : '—')) + '</td></tr>';
+        '<td data-l="Gross" class="r">' + (cdaDone ? '<span class="ebimp">signed CDA</span>' : (t.importedIncome ? '<span class="ebimp">imported</span>' : '<input class="imG" inputmode="decimal" value="' + (t.gross ? t.gross.toFixed(2) : '') + '" placeholder="0.00" aria-label="Gross commission">')) + '</td>' +
+        '<td data-l="Payout" class="r">' + (cdaDone ? '<span class="ebimp">signed CDA</span>' : (t.importedPayout ? '<span class="ebimp">imported</span>' : (t.agentId ? '<input class="imP" inputmode="decimal" value="' + pay + '" placeholder="' + (sp === '' ? 'set split or type' : '0.00') + '" aria-label="Agent payout">' : '—'))) + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   return { html: html, wire: function () {
     var go = qs('#imGo'), sync = function () { var n = qsa('.imC:checked').length; go.disabled = !n; go.textContent = n ? 'Import ' + n + ' selected' : 'Import selected'; };
     qsa('.imC').forEach(function (c) { c.onchange = sync; });
     qs('#imAll').onchange = function () { var v = this.checked; qsa('.imC:not([disabled])').forEach(function (c) { c.checked = v; }); sync(); };
+    if (window.TCCdaUi) TCCdaUi.mountPending(qs('#cdaPend'));
     go.onclick = function () {
       var items = [], bad = '';
       qsa('.ebim tr[data-id]').forEach(function (tr) {
@@ -647,7 +648,7 @@ function ebImportView() {
 function ebTinCell(p) { return p.hasTin ? '•••-••-' + h(p.tinLast4) : '<span class="ebwarn">Missing</span>'; }
 function ebPayees() {
   var html = '<h2 class="ebh2">Agents <small class="muted">from Transaction Center users</small></h2><div class="ebtable"><table class="ebt"><thead><tr><th>Agent</th><th class="hm">Email</th><th>Default split</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' +
-    EB.data.agents.map(function (a) { return '<tr data-a="' + h(a.id) + '"><td data-l="Agent">' + h(a.name) + (a.active ? '' : ' <small class="muted">inactive</small>') + '</td><td data-l="Email" class="hm">' + h(a.email) + '</td><td data-l="Split">' + (a.splitPct === '' ? '—' : h(a.splitPct) + '%') + '</td><td data-l="TIN">' + ebTinCell(a) + '</td><td data-l="Address" class="hm">' + h(a.address || '—') + '</td><td class="acts"><button class="ub sm ebAg">Edit</button></td></tr>'; }).join('') + '</tbody></table></div>' +
+    EB.data.agents.map(function (a) { return '<tr data-a="' + h(a.id) + '"><td data-l="Agent">' + h(a.name) + (a.active ? '' : ' <small class="muted">inactive</small>') + '</td><td data-l="Email" class="hm">' + h(a.email) + '</td><td data-l="Split">' + (a.splitPct === '' ? '—' : h(a.splitPct) + '%') + (a.capAmount === '' || a.capAmount == null ? '' : '<br><small class="muted">cap ' + ebM(a.capAmount) + '</small>') + '</td><td data-l="TIN">' + ebTinCell(a) + '</td><td data-l="Address" class="hm">' + h(a.address || '—') + '</td><td class="acts"><button class="ub sm ebAg">Edit</button></td></tr>'; }).join('') + '</tbody></table></div>' +
     '<h2 class="ebh2">Vendors <button class="btn sm" id="vAdd">+ Vendor</button></h2>' +
     (EB.data.vendors.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Vendor</th><th class="hm">Email / phone</th><th>1099</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' + EB.data.vendors.map(function (v) {
       return '<tr data-v="' + h(v.id) + '" class="' + (v.archived ? 'arch' : '') + '"><td data-l="Vendor">' + h(v.name) + (v.archived ? ' <small class="muted">archived</small>' : '') + '</td><td data-l="Contact" class="hm">' + h([v.email, v.phone].filter(Boolean).join(' · ') || '—') + '</td><td data-l="1099">' + (v.is1099 ? '<span class="ebyes">Yes</span>' : 'No') + '</td><td data-l="TIN">' + (v.is1099 ? ebTinCell(v) : (v.hasTin ? '•••-••-' + h(v.tinLast4) : '—')) + '</td><td data-l="Address" class="hm">' + h(v.address || '—') + '</td><td class="acts"><button class="ub sm ebVe">Edit</button></td></tr>';
@@ -662,7 +663,7 @@ function ebPayeeModal(kind, p) {
   var ag = kind === 'agent'; p = p || { name: '', email: '', phone: '', address: '', is1099: true };
   var tinHelp = p.hasTin ? 'On file: •••-••-' + h(p.tinLast4) + '. Type a new one to replace it.' : 'SSN or EIN, 9 digits. Stored encrypted; only the last 4 show here.';
   var m = modal('<h2>' + (ag ? h(p.name) : (p.id ? 'Edit vendor' : 'New vendor')) + '</h2><div id="pe"></div><div class="ebform">' +
-    (ag ? '<p class="sub full">Name, email and phone come from the Users page.</p><label>Default payout split (% of gross)<input id="pSp" inputmode="decimal" value="' + h(p.splitPct === '' || p.splitPct === undefined ? '' : p.splitPct) + '" placeholder="e.g. 70"></label>' :
+    (ag ? '<p class="sub full">Name, email and phone come from the Users page. Example split: Enrique Esparza, 90% agent / 10% brokerage.</p><label>Default payout split (% of gross)<input id="pSp" inputmode="decimal" value="' + h(p.splitPct === '' || p.splitPct === undefined ? '' : p.splitPct) + '" placeholder="e.g. 90"></label><label>Annual cap ($)<input id="pCap" inputmode="decimal" value="' + h(p.capAmount === '' || p.capAmount == null ? '' : p.capAmount) + '" placeholder="Optional"></label><label class="full">Cap note<textarea id="pCapN" rows="2" maxlength="240">' + h(p.capNote || '') + '</textarea></label>' :
       '<label class="full">Name<input id="pN" maxlength="120" value="' + h(p.name) + '"></label><label>Email<input id="pE" type="email" maxlength="120" value="' + h(p.email) + '"></label><label>Phone<input id="pPh" type="tel" maxlength="40" value="' + h(p.phone) + '"></label>') +
     '<label class="full">Address (for 1099)<textarea id="pA" rows="2" maxlength="250">' + h(p.address) + '</textarea></label>' +
     '<label>Taxpayer ID (TIN)<input id="pT" inputmode="numeric" autocomplete="off" maxlength="11" placeholder="' + (p.hasTin ? '•••-••-' + h(p.tinLast4) : '123-45-6789') + '"><span class="sub">' + tinHelp + '</span></label>' +
@@ -673,7 +674,13 @@ function ebPayeeModal(kind, p) {
   qs('#pSv', m).onclick = function () {
     var b = this; b.disabled = true;
     var tin = qs('#pT', m).value.trim(), clr = qs('#pTc', m) && qs('#pTc', m).checked;
-    var call = ag ? api('ebSaveAgentProfile', { profile: { userId: p.id, splitPct: qs('#pSp', m).value.trim(), address: qs('#pA', m).value, tin: tin, clearTin: clr } })
+    var prof = null;
+    if (ag) {
+      prof = { userId: p.id, splitPct: qs('#pSp', m).value.trim(), address: qs('#pA', m).value, tin: tin, clearTin: clr };
+      if (qs('#pCap', m).value.trim() !== '' || p.capAmount) prof.capAmount = qs('#pCap', m).value.trim();
+      if (qs('#pCapN', m).value.trim() !== '' || p.capNote) prof.capNote = qs('#pCapN', m).value;
+    }
+    var call = ag ? api('ebSaveAgentProfile', { profile: prof })
       : api('ebSaveVendor', { vendor: { id: p.id || '', name: qs('#pN', m).value, email: qs('#pE', m).value.trim(), phone: qs('#pPh', m).value, address: qs('#pA', m).value, tin: tin, clearTin: clr, is1099: qs('#p99', m).checked, archived: !!(qs('#pAr', m) && qs('#pAr', m).checked) } });
     call.then(function () { m.close(); return ebAfter('Saved.'); }).catch(function (x) { b.disabled = false; qs('#pe', m).innerHTML = '<div class="err">' + h(x.message) + '</div>'; });
   };
@@ -977,9 +984,23 @@ function phaseLabel(p) { p = String(p || ''); return PHASE_LABEL[p] || p.replace
 function txnView(id, keep) {
   if (!keep) S.tab = 'checklist';
   if (!S.txn || S.txn.txn.id !== id) loading('dash');
-  api('getTransaction', { id: id }).then(function (d) { page.keepScroll = !!keep; S.txn = d; drawTxn(); }).catch(function (e) { failView('dash', e); });
+  api('getTransaction', { id: id }).then(function (d) {
+    page.keepScroll = !!keep; S.txn = d;
+    return api('cdaGet', { txnId: id }).then(function (pack) { if (S.txn && S.txn.txn.id === id) S.txn.cdaPack = pack; }, function (err) {
+      if (S.txn && S.txn.txn.id === id) S.txn.cdaPack = null;
+      if (err && err.code !== 'AUTH' && !/unknown action/i.test(err.message || '')) toast(err.message, 1);
+    });
+  }).then(function () { if (S.txn && S.txn.txn.id === id) drawTxn(); }).catch(function (e) { failView('dash', e); });
 }
 function canEdit() { var t = S.txn.txn; if (t.readOnly) return false; return isAdmin() || (t.status !== 'Closed' && t.status !== 'Cancelled'); }
+function canCda() { var t = S.txn && S.txn.txn; return !!(t && !t.readOnly && t.status !== 'Cancelled' && window.TCCda); }
+function cdaActs(it) {
+  if (!canCda() || !TCCda.isCdaItem(it)) return '';
+  var c = S.txn.cdaPack && S.txn.cdaPack.cda, st = c && c.status;
+  var revise = st === 'draft' || st === 'sent' || st === 'executed';
+  var chip = st === 'sent' ? 'Out for signature' : st === 'executed' ? 'Signed' : st === 'draft' ? 'Draft' : '';
+  return '<button type="button" class="ub cdaBtn" data-item="' + h(it.id) + '">' + (revise ? 'Revise CDA' : 'CDA') + '</button>' + (chip ? '<small class="cda-st">' + chip + '</small>' : '');
+}
 /* Two-line address: [street + unit, "City, ST ZIP"]. Uses intake fields when present, else parses the title string ("street, city[, ST] [zip]"). */
 function addrLines(t) {
   var i = (t && t.intake) || {}, street = i.address || t.address || '', city = i.city || t.city || '', st = i.state || t.state || '', zip = i.zip || t.zip || '', unit = i.unit || t.unit || '';
@@ -1050,6 +1071,7 @@ function drawTab() {
     var html = '', lastPhase = null, lastCat = null, groups = 0, v15 = !!S.v150;
     var act = d.items.filter(function (it) { return it.active; });
     act = act.filter(function (it) { return !it.cancel; }).concat(act.filter(function (it) { return it.cancel; }));   // Cancellation always sits at the very end
+    var escrow = (window.TCCdaUi && TCCdaUi.escrowHtml) ? TCCdaUi.escrowHtml() : '';
     act.forEach(function (it) {
       var ph = it.cancel && lastPhase ? lastPhase : phaseLabel(it.phase);
       if (ph !== lastPhase) { if (groups++) html += '</div><div class="phsep" role="separator" aria-hidden="true"></div>'; html += '<div class="gb" style="padding:4px 0;margin-bottom:16px"><div class="phase">' + h(ph) + ' Checklist</div>'; lastPhase = ph; lastCat = null; }
@@ -1061,7 +1083,7 @@ function drawTab() {
         (it.status === 'Rejected' && it.reviewNote ? '<div class="note rt">Admin note: ' + h(it.reviewNote) + '</div>' : '') +
         (v15 ? '' : notes.map(function (n) { return '<div class="note">' + h(n.by) + ': ' + h(n.text) + '</div>'; }).join('')) +
         '</div>' +
-        itemPill(it.status) + '<div class="acts">' +
+        itemPill(it.status) + '<div class="acts">' + cdaActs(it) +
         (v15 && isAdmin() && !it.cancel ? '<button class="rq' + (it.req ? ' on' : '') + '" data-item="' + h(it.id) + '" data-r="' + (it.req ? '1' : '') + '" aria-pressed="' + (it.req ? 'true' : 'false') + '" title="Switch between Required and Not Required for this file">' + (it.req ? 'Required' : 'Not Required') + '</button>' : '') +
         (canEdit() ? '<label class="ub">' + (it.status === 'Rejected' ? 'Re-upload' : 'Upload') + '<input type="file" class="hidden up" data-item="' + h(it.id) + '" accept="' + UP_ACCEPT + '"></label>' : '') +
         (it.status === 'Rejected' && canEdit() ? '<button class="ub red resub" data-item="' + h(it.id) + '">Add note &amp; resubmit</button>' : '') +
@@ -1069,7 +1091,9 @@ function drawTab() {
           : (t.readOnly ? '' : '<button class="link addn" data-item="' + h(it.id) + '">Note</button>')) + '</div></div>';
     });
     if (groups) html += '</div>';
-    c.innerHTML = html + '<p class="sub"><span class="req-dot"></span> Required for compliance. Agents can upload but cannot delete; only an admin can remove a document, and it stays in the archive.' + (v15 ? ' The note bubble on each item shows how many notes it has; tap it to read or add notes.' : '') + '</p>';
+    c.innerHTML = escrow + html + '<p class="sub"><span class="req-dot"></span> Required for compliance. Agents can upload but cannot delete; only an admin can remove a document, and it stays in the archive.' + (v15 ? ' The note bubble on each item shows how many notes it has; tap it to read or add notes.' : '') + '</p>';
+    if (window.TCCdaUi && TCCdaUi.wireEscrow) TCCdaUi.wireEscrow(c);
+    qsa('.cdaBtn', c).forEach(function (b) { b.onclick = function () { if (window.TCCdaUi) TCCdaUi.open(b.getAttribute('data-item')); }; });
     qsa('.up', c).forEach(function (inp) { inp.onchange = function () { var f = inp.files[0], id = inp.getAttribute('data-item'); inp.value = ''; if (!f) return; var it = d.items.filter(function (x) { return x.id === id; })[0];
       if (S.v150 && needsMiscTitle(it)) return titleModal(it, function (mt) { return uploadFile(f, id, false, mt); });
       uploadFile(f, id); }; });
@@ -1700,7 +1724,10 @@ function usersView() {
     page('users', inner, function () {
       qs('#nu').onclick = function () {
         var m = modal('<h2>' + (S.tcApi ? 'Add user' : 'Add agent') + '</h2><div id="ae"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="af" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="al" maxlength="50" required></div>' +
-          '<div class="f w2"><label>Email (their login) *</label><input type="email" id="am" autocapitalize="none" required></div><div class="f"><label>Phone *</label><input type="tel" id="ap" inputmode="tel" placeholder="000-000-0000" required></div>' + (S.tcApi ? rolePicker(['agent'], !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="ab">Create user</button></div>');
+          '<div class="f w2"><label>Email (their login) *</label><input type="email" id="am" autocapitalize="none" required></div><div class="f"><label>Phone *</label><input type="tel" id="ap" inputmode="tel" placeholder="000-000-0000" required></div>' +
+          '<div class="f"><label>Split % <small>agent share of gross</small></label><input id="aSp" inputmode="decimal" value="90" placeholder="90"></div><div class="f"><label>Annual cap ($)</label><input id="aCap" inputmode="decimal" placeholder="Optional"></div><div class="f w3"><label>Cap note</label><input id="aCapN" maxlength="240" placeholder="Optional"></div>' +
+          '<p class="sub" style="grid-column:1/-1;margin:0">90 means 90% agent / 10% brokerage, the Enrique Esparza example. Leave cap blank when there is no annual cap.</p>' +
+          (S.tcApi ? rolePicker(['agent'], !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="ab">Create user</button></div>');
         if (S.tcApi) wireRolePicker(m);
         qs('#ap', m).oninput = function () { this.value = fmtPhone(this.value); };
         qs('#ab', m).onclick = function () {
@@ -1710,8 +1737,11 @@ function usersView() {
           if (!ne && phoneDigits(qs('#ap', m).value).length !== 10) ne = 'Enter a 10-digit phone number (000-000-0000).';
           var roles = S.tcApi ? pickedRoles(m) : null;
           if (!ne && roles && !roles.length) ne = 'Choose at least one role.';
+          var spRaw = qs('#aSp', m).value.trim(), capRaw = qs('#aCap', m).value.trim();
+          if (!ne && spRaw !== '' && !(Number(spRaw) >= 0 && Number(spRaw) <= 100)) ne = 'Split % is from 0 to 100.';
+          if (!ne && capRaw !== '' && !(Number(String(capRaw).replace(/[$,\s]/g, '')) >= 0)) ne = 'Cap is a dollar amount, or leave it blank.';
           if (ne) { qs('#ae', m).innerHTML = '<div class="err">' + h(ne) + '</div>'; return; }
-          var body = { firstName: fn, lastName: ln, name: fn + ' ' + ln /* older backends */, username: em, email: em, phone: qs('#ap', m).value.trim() };
+          var body = { firstName: fn, lastName: ln, name: fn + ' ' + ln /* older backends */, username: em, email: em, phone: qs('#ap', m).value.trim(), splitPct: spRaw, capAmount: capRaw, capNote: qs('#aCapN', m).value.trim() };
           if (roles) body.roles = roles; else body.role = 'agent';
           api('createUser', body).then(function (r) {
             qs('.box', m).innerHTML = '<h2>' + (S.tcApi ? h(roleLabel(r.user)) + ' added' : 'Agent added') + '</h2><p>Tell <b>' + h(uName(r.user)) + '</b> to open ' + h(location.origin + location.pathname) + ', tap <b>First time or forgot password?</b> and enter <b>' + h(r.user.username) + '</b>. A code is emailed to them to set their own password.' + (S.tcApi ? ' Their roles are already set and they can’t change them.' : '') + '</p>' +
@@ -1726,17 +1756,29 @@ function usersView() {
         var u = users.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (!u) return; var nm = splitNm(u);
         var canRoles = S.tcApi && !u.owner && u.id !== S.user.id && (rolesOf(u)[0] !== 'admin' || S.user.owner);
         var m = modal('<h2>Edit user</h2><p class="sub">' + h(u.email || u.username) + '</p><div id="ee"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="ef" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="el" maxlength="50" required></div>' +
-          '<div class="f"><label>Phone *</label><input type="tel" id="ep" inputmode="tel" placeholder="000-000-0000" required></div>' + (canRoles ? rolePicker(rolesOf(u), !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="eb">Save</button></div>');
+          '<div class="f"><label>Phone *</label><input type="tel" id="ep" inputmode="tel" placeholder="000-000-0000" required></div>' +
+          '<div class="f"><label>Split %</label><input id="eSp" inputmode="decimal" placeholder="e.g. 90"></div><div class="f"><label>Annual cap ($)</label><input id="eCap" inputmode="decimal" placeholder="Optional"></div><div class="f w3"><label>Cap note</label><input id="eCapN" maxlength="240"></div>' +
+          '<p class="sub" style="grid-column:1/-1;margin:0">Leave split blank to keep what is already saved. 90 / 10 is the Enrique Esparza example.</p>' +
+          (canRoles ? rolePicker(rolesOf(u), !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="eb">Save</button></div>');
         qs('#ef', m).value = nm.f; qs('#el', m).value = nm.l; qs('#ep', m).value = u.phone || '';
         if (canRoles) wireRolePicker(m);
         qs('#eb', m).onclick = function () {
           var fn = qs('#ef', m).value.trim(), ln = qs('#el', m).value.trim(), ne = nameErr(fn, ln), roles = canRoles ? pickedRoles(m) : null;
           if (!ne && phoneDigits(qs('#ep', m).value).length !== 10) ne = 'Enter a 10-digit phone number (000-000-0000).';
           if (!ne && roles && !roles.length) ne = 'Choose at least one role.';
+          var spRaw = qs('#eSp', m).value.trim(), capRaw = qs('#eCap', m).value.trim();
+          if (!ne && spRaw !== '' && !(Number(spRaw) >= 0 && Number(spRaw) <= 100)) ne = 'Split % is from 0 to 100.';
+          if (!ne && capRaw !== '' && !(Number(String(capRaw).replace(/[$,\s]/g, '')) >= 0)) ne = 'Cap is a dollar amount, or leave it blank.';
           if (ne) { qs('#ee', m).innerHTML = '<div class="err">' + h(ne) + '</div>'; return; }
           var body = { userId: u.id, firstName: fn, lastName: ln, phone: qs('#ep', m).value.trim() };
           if (roles && roles.join() !== rolesOf(u).join()) body.roles = roles;
           api('updateUser', body).then(function (r) {
+            if (spRaw === '') return r;
+            return api('setAgentSplit', { userId: u.id, splitPct: spRaw, capAmount: capRaw, capNote: qs('#eCapN', m).value.trim() }).then(function () { return r; }, function (e) {
+              if (/unknown action/i.test(e.message || '')) return r;
+              throw e;
+            });
+          }).then(function (r) {
             if (u.id === S.user.id && r && r.user) { S.user.firstName = r.user.firstName; S.user.lastName = r.user.lastName; S.user.name = r.user.name; }
             m.close(); toast('Saved.'); usersView();
           }).catch(function (e) { qs('#ee', m).innerHTML = '<div class="err">' + h(/unknown action/i.test(e.message) ? 'Editing names needs the Transaction Center backend 1.2.1 or later.' : e.message) + '</div>'; });
@@ -2407,5 +2449,6 @@ if (DEMO) sessionStorage.setItem('tc_demo', '1');
 S.token = sessionStorage.getItem('tc_t') || getCookie('enesma_sso') || '';
 if (S.token) try { sessionStorage.setItem('tc_t', S.token); } catch (e) { }
 try { localStorage.removeItem('tc_t'); } catch (e) { }
+window.TCApp = { api: api, modal: modal, h: h, qs: qs, qsa: qsa, toast: toast, uName: uName, bytesToB64: bytesToB64, loadPdfLib: loadPdfLib, isAdmin: isAdmin, refresh: refresh, ebAfter: ebAfter, S: S, get DEMO() { return DEMO; } };
 render();
 })();
