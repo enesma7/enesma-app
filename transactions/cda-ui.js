@@ -30,16 +30,6 @@
   function agentById(pack, id) {
     return ((pack && pack.agents) || []).filter(function (a) { return a.id === id; })[0] || null;
   }
-  function suggestNote(pack, lines) {
-    var header = (pack && pack.header) || {};
-    var ag = agentById(pack, header.agentId);
-    var sp = M.splitOf(ag);
-    var cap = ag && ag.capAmount !== '' && ag.capAmount != null ? ag.capAmount : '';
-    var fee = pack && pack.adminFee != null ? pack.adminFee : M.ADMIN_FEE;
-    var who = sp.source === 'example' ? 'No split is saved for this agent, so this uses the ENESMA example: Enrique Esparza, ' + M.EXAMPLE_SPLIT + '% agent / ' + (100 - M.EXAMPLE_SPLIT) + '% brokerage.' : 'This agent’s split is ' + sp.split + '% agent / ' + (100 - sp.split) + '% brokerage.';
-    var capTxt = cap === '' ? ' No annual cap is on file.' : ' Annual cap on file: ' + money2(cap) + '.';
-    return who + ' Brokerage is that percent of the full total gross. The ' + money2(fee) + ' admin fee is taken from the primary agent only and stays on the CDA. Added agent lines also come out of the primary agent. The lines must equal the locked total gross.' + capTxt;
-  }
 
   function lineRow(l, i, pack, locked) {
     var A = app(), h = A.h;
@@ -48,7 +38,7 @@
     var agents = (pack.agents || []).filter(function (a) { return a.id; });
     var nameCell;
     if (kind === 'brokerage' || kind === 'admin_fee') nameCell = '<input data-f="name" value="' + h(l.name || M.BROKER_NAME) + '" readonly tabindex="-1" aria-label="' + h(label) + ' payee">';
-    else if (kind === 'primary') nameCell = '<input data-f="name" value="' + h(l.name || (pack.header && pack.header.agentName) || '') + '" readonly tabindex="-1" aria-label="Primary agent">';
+    else if (kind === 'primary') nameCell = '<input data-f="name" value="' + h(l.name || (pack.header && pack.header.agentName) || '') + '" readonly tabindex="-1" aria-label="' + h(label) + '">';
     else if (M.AGENT_KINDS[kind]) {
       nameCell = '<select data-f="agentId" aria-label="' + h(label) + '"><option value="">Choose an ENESMA agent</option>' + agents.map(function (a) {
         return '<option value="' + h(a.id) + '"' + (a.id === l.agentId ? ' selected' : '') + '>' + h(a.name) + (a.splitPct === '' || a.splitPct == null ? '' : ' · ' + h(a.splitPct) + '%') + '</option>';
@@ -57,10 +47,11 @@
     var books = M.EBOOKS_KINDS.indexOf(kind) >= 0;
     var amtLock = locked || kind === 'admin_fee';
     var shown = l.amount === '' || l.amount == null ? '' : M.usd(l.amount);
+    var noteVal = kind === 'admin_fee' ? M.adminFeeNote(l.note) : (l.note || '');
     return '<div class="cda-line" data-i="' + i + '" data-kind="' + h(kind) + '"><div class="cda-k"><b>' + h(label) + '</b>' + (books ? '<small>E-Books</small>' : '<small>CDA only</small>') + (kind !== 'brokerage' && kind !== 'primary' && kind !== 'admin_fee' && kind !== 'tc_fee' && !locked ? '<button type="button" class="link cda-rm">Remove</button>' : '') + '</div>' +
       nameCell +
       '<input data-f="amount" inputmode="decimal" value="' + h(shown) + '" placeholder="$0.00" aria-label="' + h(label) + ' amount"' + (amtLock ? ' readonly' : '') + '>' +
-      '<input data-f="note" value="' + h(l.note || '') + '" maxlength="250" placeholder="Mail to" aria-label="' + h(label) + ' mail to"' + (locked ? ' readonly' : '') + '></div>';
+      '<input data-f="note" value="' + h(noteVal) + '" maxlength="250" placeholder="Mail to" aria-label="' + h(label) + ' mail to"' + (locked ? ' readonly' : '') + '></div>';
   }
 
   function readLines(root) {
@@ -201,7 +192,6 @@
     var A = app(), h = A.h, header = pack.header || {};
     var cda = pack.cda, status = (cda && cda.status) || '';
     var locked = status === 'sent' || status === 'executed';
-    var ag = agentById(pack, header.agentId);
     var lines = M.linesForEdit(pack);
     var primary = lines.filter(function (l) { return l.kind === 'primary'; })[0];
     if (primary) { if (!primary.agentId) primary.agentId = header.agentId || ''; if (!primary.name) primary.name = header.agentName || ''; }
@@ -224,7 +214,7 @@
     var executedNote = pack.executed && status !== 'executed' ? '<div class="ok">Latest signed CDA is v' + h(pack.executed.version || '') + '. This draft does not replace it until it is signed again. Books keep the latest fully signed CDA.</div>' : '';
     var html = '<h2>Commission Disbursement Authorization</h2><p class="sub">' + h(stLabel + ver) + (pack.offline ? ' · backend 1.7.1 is not on this server yet. You can review the form; saving needs that update.' : '') + '</p>' + executedNote +
       '<h3 class="cda-h">From the file <small>Locked</small></h3>' + headerBits() +
-      '<p class="sub cda-note">' + h(suggestNote(pack, lines)) + '</p><div id="cdaErr"></div>' +
+      '<div id="cdaErr"></div>' +
       '<div class="cda-lines" id="cdaLines">' + lines.map(function (l, i) { return lineRow(l, i, pack, locked); }).join('') + '</div>' +
       (locked ? '' : '<div class="cda-add"><button type="button" class="ub" data-add="co_list">+ Co-listing agent</button><button type="button" class="ub" data-add="co_buyer">+ Co-buyer agent</button><button type="button" class="ub" data-add="referral_inhouse">+ In-house referral</button><button type="button" class="ub" data-add="referral_outside">+ Outside referral</button><button type="button" class="ub" data-add="tc_fee">+ TC fee</button><button type="button" class="ub" data-add="other">+ Other</button><button type="button" class="ub" data-add="credit">+ Credit</button></div>') +
       '<div class="cda-tot"></div>' +

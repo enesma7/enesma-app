@@ -9,14 +9,14 @@
   var KINDS = ['brokerage', 'primary', 'co_list', 'co_buyer', 'referral_inhouse', 'referral_outside', 'tc_fee', 'admin_fee', 'other', 'credit'];
   var EBOOKS = ['brokerage', 'primary', 'co_list', 'co_buyer', 'referral_inhouse'];
   var LABELS = {
-    brokerage: 'ENESMA Realty (brokerage)',
-    primary: 'Primary agent',
+    brokerage: 'ENESMA Realty (Brokerage)',
+    primary: 'Primary Agent',
     co_list: 'Co-listing agent',
     co_buyer: 'Co-buyer agent',
     referral_inhouse: 'Referral · in-house agent',
     referral_outside: 'Referral · outside',
     tc_fee: 'TC fee',
-    admin_fee: 'Admin fee',
+    admin_fee: 'Admin Fee',
     other: 'Other',
     credit: 'Credit / paying from closing'
   };
@@ -43,7 +43,7 @@
     var a = null;
     out.forEach(function (l) { if (l.kind === 'admin_fee' && !a) a = l; });
     if (!a) out.push(Object.assign(blank('admin_fee'), { amount: fee, name: BROKER_NAME }));
-    else { if (a.amount === '' || a.amount == null) a.amount = fee; if (!a.name) a.name = BROKER_NAME; }
+    else { if (a.amount === '' || a.amount == null) a.amount = fee; if (!a.name) a.name = BROKER_NAME; a.note = adminFeeNote(a.note); }
     return out;
   }
   function sumLines(lines) {
@@ -66,6 +66,14 @@
   function agentAddress(agent) {
     if (!agent) return '';
     return String(agent.address || agent.w9Address || agent.mailingAddress || '').replace(/\s+/g, ' ').trim();
+  }
+  /* Suggest sometimes stores the fee explanation in admin_fee.note. That text is internal-only
+     (not agent-facing). Mail to stays empty unless the note is a real mailing address. */
+  function adminFeeNote(note) {
+    var n = String(note || '').replace(/\s+/g, ' ').trim();
+    if (!n) return '';
+    if (/admin fee|per-transaction|per transaction|deducted from/i.test(n)) return '';
+    return n;
   }
   /* Brokerage = broker % of full gross. Admin fee is deducted from the primary agent only.
      Added lines (co-agent, referral, TC, other, credit) also reduce the primary agent so the sum stays equal to gross.
@@ -239,7 +247,7 @@
     ADMIN_FEE: ADMIN_FEE, EXAMPLE_SPLIT: EXAMPLE_SPLIT, BROKER_NAME: BROKER_NAME, OFFICE_MAIL: OFFICE_MAIL,
     KINDS: KINDS, EBOOKS_KINDS: EBOOKS, LABELS: LABELS, AGENT_KINDS: AGENT_KINDS,
     round2: round2, num: num, usd: usd, blank: blank, isCdaItem: isCdaItem, cloneLine: cloneLine,
-    ensureAdmin: ensureAdmin, sumLines: sumLines, grossOf: grossOf, splitOf: splitOf, agentAddress: agentAddress,
+    ensureAdmin: ensureAdmin, sumLines: sumLines, grossOf: grossOf, splitOf: splitOf, agentAddress: agentAddress, adminFeeNote: adminFeeNote,
     applySplitLines: applySplitLines, fallbackSuggest: fallbackSuggest, ensureSkeleton: ensureSkeleton, linesForEdit: linesForEdit, booksLines: booksLines,
     sideLabel: sideLabel, headerFromTxn: headerFromTxn, pdfFields: pdfFields, signRects: signRects
   };

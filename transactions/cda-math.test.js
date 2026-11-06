@@ -10,6 +10,16 @@ vm.runInContext(fs.readFileSync(__dirname + '/cda-math.js', 'utf8'), context);
 vm.runInContext(fs.readFileSync(__dirname + '/mock.js', 'utf8'), context);
 var M = context.window.TCCda;
 var mock = context.window.TC_MOCK;
+var uiSrc = fs.readFileSync(__dirname + '/cda-ui.js', 'utf8');
+assert.ok(uiSrc.indexOf('cda-note') < 0, 'example-split paragraph is not rendered');
+assert.ok(uiSrc.indexOf('No split is saved') < 0);
+assert.ok(uiSrc.indexOf('Standard per-transaction admin fee') < 0);
+assert.strictEqual(M.LABELS.primary, 'Primary Agent');
+assert.strictEqual(M.LABELS.brokerage, 'ENESMA Realty (Brokerage)');
+assert.strictEqual(M.LABELS.admin_fee, 'Admin Fee');
+assert.strictEqual(M.LABELS.co_list, 'Co-listing agent');
+assert.strictEqual(M.LABELS.tc_fee, 'TC fee');
+assert.ok(uiSrc.indexOf('aria-label="Primary agent"') < 0);
 
 var header = { totalGross: 10000, price: 400000, commission: 2.5, commissionType: 'percent', agentId: 'U1', agentName: 'Enrique Esparza', address: '1 Main', side: 'seller', type: 'purchase' };
 var sug = M.fallbackSuggest(header, { id: 'U1', splitPct: 90, capAmount: '' }, 200);
@@ -32,7 +42,52 @@ assert.strictEqual(lynBy.primary.amount, 11320);
 assert.strictEqual(lynBy.admin_fee.amount, 200);
 assert.strictEqual(M.sumLines(lyn), 12800);
 assert.strictEqual(lynBy.primary.note, '10 Agent St, Lynwood, CA 90262');
+assert.strictEqual(lynBy.admin_fee.note, '');
 assert.strictEqual(M.usd(11320), '$11,320.00');
+var FEE_BLURB = 'Standard per-transaction admin fee (CDA only; deducted from agent share)';
+var blurred = M.linesForEdit({
+  header: { totalGross: 12800, agentId: 'U1', agentName: 'Enrique Esparza' },
+  adminFee: 200,
+  suggested: [
+    { kind: 'brokerage', amount: 1260, name: 'ENESMA Realty' },
+    { kind: 'primary', amount: 11340, name: 'Enrique Esparza', agentId: 'U1' },
+    { kind: 'admin_fee', amount: 200, name: 'ENESMA Realty', note: FEE_BLURB }
+  ],
+  agents: [{ id: 'U1', splitPct: 90, address: '10 Agent St, Lynwood, CA 90262' }]
+});
+var blurBy = {}; blurred.forEach(function (l) { blurBy[l.kind] = l; });
+assert.strictEqual(blurBy.admin_fee.note, '');
+assert.strictEqual(blurBy.admin_fee.amount, 200);
+assert.strictEqual(blurBy.brokerage.amount, 1280);
+assert.strictEqual(blurBy.primary.amount, 11320);
+assert.strictEqual(blurBy.primary.note, '10 Agent St, Lynwood, CA 90262');
+assert.strictEqual(M.sumLines(blurred), 12800);
+var keptMail = M.ensureAdmin([{ kind: 'admin_fee', amount: 200, name: 'ENESMA Realty', note: '10 Agent St, Lynwood, CA 90262' }], 200);
+assert.strictEqual(keptMail[0].note, '10 Agent St, Lynwood, CA 90262');
+var lockedPack = M.linesForEdit({
+  header: { totalGross: 10000, agentId: 'U1', agentName: 'Enrique Esparza' },
+  adminFee: 200,
+  cda: { status: 'executed', lines: [
+    { kind: 'brokerage', amount: 1000, name: 'ENESMA Realty', note: M.OFFICE_MAIL },
+    { kind: 'primary', amount: 8800, name: 'Enrique Esparza', agentId: 'U1', note: '10 Agent St' },
+    { kind: 'admin_fee', amount: 200, name: 'ENESMA Realty', note: FEE_BLURB }
+  ] }
+});
+var lockBy = {}; lockedPack.forEach(function (l) { lockBy[l.kind] = l; });
+assert.strictEqual(lockBy.admin_fee.note, '');
+assert.strictEqual(lockBy.admin_fee.amount, 200);
+assert.strictEqual(lockBy.primary.amount, 8800);
+assert.strictEqual(lockBy.primary.note, '10 Agent St');
+assert.strictEqual(lockBy.brokerage.note, M.OFFICE_MAIL);
+var pdf = M.pdfFields(header, [
+  { kind: 'brokerage', amount: 1000, name: 'ENESMA Realty', note: M.OFFICE_MAIL },
+  { kind: 'primary', amount: 8800, name: 'Enrique Esparza', note: '10 Agent St' },
+  { kind: 'admin_fee', amount: 200, name: 'ENESMA Realty', note: FEE_BLURB }
+]);
+assert.strictEqual(pdf.admin_fee_mail_to, '');
+assert.strictEqual(pdf.admin_fee_amount, '$200.00');
+assert.strictEqual(pdf.agent_mail_to, '10 Agent St');
+assert.strictEqual(pdf.payee1_mail_to, M.OFFICE_MAIL);
 var withCo = M.applySplitLines(lyn.concat([{ kind: 'co_list', amount: 500, name: 'Alex Rivera', agentId: 'U2' }]), { totalGross: 12800, agentId: 'U1', agentName: 'Enrique Esparza' }, { id: 'U1', splitPct: 90 }, 200, [{ id: 'U2', address: '2 Co St' }]);
 var coPri = withCo.filter(function (l) { return l.kind === 'primary'; })[0];
 var coBro = withCo.filter(function (l) { return l.kind === 'brokerage'; })[0];
