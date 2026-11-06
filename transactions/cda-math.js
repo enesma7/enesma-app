@@ -1,10 +1,11 @@
 /* CDA line math shared by the Transaction Center UI and the demo backend.
- * Live cdaGet.suggested is authoritative. This file only fills gaps and checks the total. */
+ * Editable CDA amounts are recalculated here. Brokerage is a percent of full gross; the $200 admin fee comes off the primary agent. */
 (function (root) {
   'use strict';
   var ADMIN_FEE = 200;
   var EXAMPLE_SPLIT = 90; // Enrique Esparza: 90% agent / 10% brokerage
   var BROKER_NAME = 'ENESMA Realty';
+  var OFFICE_MAIL = '8311 Haven Ave #150, Rancho Cucamonga, CA 91730';
   var KINDS = ['brokerage', 'primary', 'co_list', 'co_buyer', 'referral_inhouse', 'referral_outside', 'tc_fee', 'admin_fee', 'other', 'credit'];
   var EBOOKS = ['brokerage', 'primary', 'co_list', 'co_buyer', 'referral_inhouse'];
   var LABELS = {
@@ -57,18 +58,52 @@
     if (!isFinite(n)) return { split: EXAMPLE_SPLIT, source: 'example' };
     return { split: n, source: 'profile' };
   }
-  /* Brokerage is the broker portion of total gross. Admin fee is its own line, taken from the agent side so the three lines equal total gross. */
+  function usd(n) {
+    if (n === '' || n == null) return '';
+    var x = round2(num(n)), sign = x < 0 ? '-' : '';
+    return sign + '$' + Math.abs(x).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function agentAddress(agent) {
+    if (!agent) return '';
+    return String(agent.address || agent.w9Address || agent.mailingAddress || '').replace(/\s+/g, ' ').trim();
+  }
+  /* Brokerage = broker % of full gross. Admin fee is deducted from the primary agent only.
+     Added lines (co-agent, referral, TC, other, credit) also reduce the primary agent so the sum stays equal to gross.
+     $12,800 at 90/10 → brokerage $1,280.00, agent $11,320.00, admin $200.00. */
+  function applySplitLines(lines, header, agent, adminFee, agents) {
+    var gross = grossOf(header), sp = splitOf(agent);
+    var fee = adminFee == null || adminFee === '' ? ADMIN_FEE : round2(num(adminFee));
+    var out = ensureSkeleton(lines || [], header, fee);
+    var bro = null, pri = null, adm = null, extras = 0;
+    out.forEach(function (l) {
+      if (l.kind === 'brokerage' && !bro) bro = l;
+      else if (l.kind === 'primary' && !pri) pri = l;
+      else if (l.kind === 'admin_fee' && !adm) adm = l;
+      else extras = round2(extras + round2(num(l.amount)));
+    });
+    bro.amount = round2(gross * (100 - sp.split) / 100);
+    bro.pct = round2(100 - sp.split);
+    if (!bro.name) bro.name = BROKER_NAME;
+    if (!String(bro.note || '').trim()) bro.note = OFFICE_MAIL;
+    adm.amount = fee;
+    if (!adm.name) adm.name = BROKER_NAME;
+    pri.amount = round2(gross * sp.split / 100 - fee - extras);
+    pri.pct = sp.split;
+    if (!pri.agentId) pri.agentId = (header && header.agentId) || (agent && agent.id) || '';
+    if (!pri.name) pri.name = (header && header.agentName) || (agent && agent.name) || '';
+    if (!String(pri.note || '').trim()) pri.note = agentAddress(agent);
+    out.forEach(function (l) {
+      if (!AGENT_KINDS[l.kind] || l === pri || String(l.note || '').trim() || !l.agentId) return;
+      var who = (agents || []).filter(function (a) { return a.id === l.agentId; })[0];
+      var mail = agentAddress(who);
+      if (mail) l.note = mail;
+    });
+    var rest = out.filter(function (l) { return l !== pri && l !== bro && l !== adm; });
+    return [pri, bro, adm].concat(rest);
+  }
   function fallbackSuggest(header, agent, adminFee) {
-    var gross = grossOf(header), sp = splitOf(agent), fee = adminFee == null ? ADMIN_FEE : round2(num(adminFee));
-    var brokerage = round2(gross * (100 - sp.split) / 100);
-    var primary = round2(gross - brokerage - fee);
-    if (primary < 0) { primary = 0; brokerage = round2(Math.max(0, gross - fee)); }
-    var lines = [
-      Object.assign(blank('brokerage'), { amount: brokerage, name: BROKER_NAME, pct: round2(100 - sp.split) }),
-      Object.assign(blank('primary'), { amount: primary, name: (header && header.agentName) || '', agentId: (header && header.agentId) || (agent && agent.id) || '', pct: sp.split }),
-      Object.assign(blank('admin_fee'), { amount: fee, name: BROKER_NAME })
-    ];
-    return { split: sp.split, source: sp.source, capAmount: agent && agent.capAmount !== '' && agent.capAmount != null ? agent.capAmount : '', lines: lines };
+    var sp = splitOf(agent);
+    return { split: sp.split, source: sp.source, capAmount: agent && agent.capAmount !== '' && agent.capAmount != null ? agent.capAmount : '', lines: applySplitLines([], header, agent, adminFee) };
   }
   function ensureSkeleton(lines, header, adminFee) {
     var out = ensureAdmin(lines, adminFee);
@@ -83,8 +118,10 @@
     var cda = pack && pack.cda;
     var useSaved = cda && cda.lines && cda.lines.length && (cda.status === 'draft' || cda.status === 'sent' || cda.status === 'executed');
     var header = pack && pack.header;
-    var lines = useSaved ? cda.lines : ((pack && pack.suggested && pack.suggested.length) ? pack.suggested : fallbackSuggest(header, null, pack && pack.adminFee).lines);
-    return ensureSkeleton(lines, header, pack && pack.adminFee);
+    if (useSaved && cda.status !== 'draft') return ensureSkeleton(cda.lines, header, pack && pack.adminFee);
+    var seed = (cda && cda.lines && cda.lines.length) ? cda.lines : ((pack && pack.suggested) || []);
+    var ag = ((pack && pack.agents) || []).filter(function (a) { return header && a.id === header.agentId; })[0] || null;
+    return applySplitLines(seed, header, ag, pack && pack.adminFee, pack && pack.agents);
   }
   function booksLines(lines) {
     var byKey = {};
@@ -136,7 +173,7 @@
       type: t.type || ''
     };
   }
-  function pdfAmount(n) { n = round2(num(n)); return n ? n.toFixed(2) : ''; }
+  function pdfAmount(n) { return usd(n); }
   function joinBits(list) { return list.filter(Boolean).join('; '); }
   function pdfFields(header, lines) {
     header = header || {}; lines = ensureAdmin(lines, ADMIN_FEE);
@@ -163,7 +200,7 @@
       date: new Date().toISOString().slice(0, 10),
       agent_name: header.agentName || '',
       property_address: header.address || '',
-      sales_price: header.price ? round2(header.price).toFixed(2) : '',
+      sales_price: header.price ? usd(header.price) : '',
       commission_pct: pct === '' || pct == null ? '' : String(round2(num(pct))),
       escrow_number: header.escrowNumber || '',
       escrow_company: header.escrowCompany || '',
@@ -187,8 +224,8 @@
       other_payee: otherName,
       other_amount: pdfAmount(extraAmt),
       other_mail_to: joinBits(extra.map(function (l) { return l.note; })),
-      total_gross_commission: header.totalGross ? round2(header.totalGross).toFixed(2) : '',
-      total_disbursed: disbursed ? disbursed.toFixed(2) : ''
+      total_gross_commission: header.totalGross ? usd(header.totalGross) : '',
+      total_disbursed: disbursed ? usd(disbursed) : ''
     };
   }
   /* E-Sign fractions, top-left origin, from the CDA AcroForm signature widgets (letter page). */
@@ -199,11 +236,11 @@
   }
 
   root.TCCda = {
-    ADMIN_FEE: ADMIN_FEE, EXAMPLE_SPLIT: EXAMPLE_SPLIT, BROKER_NAME: BROKER_NAME,
+    ADMIN_FEE: ADMIN_FEE, EXAMPLE_SPLIT: EXAMPLE_SPLIT, BROKER_NAME: BROKER_NAME, OFFICE_MAIL: OFFICE_MAIL,
     KINDS: KINDS, EBOOKS_KINDS: EBOOKS, LABELS: LABELS, AGENT_KINDS: AGENT_KINDS,
-    round2: round2, num: num, blank: blank, isCdaItem: isCdaItem, cloneLine: cloneLine,
-    ensureAdmin: ensureAdmin, sumLines: sumLines, grossOf: grossOf, splitOf: splitOf,
-    fallbackSuggest: fallbackSuggest, ensureSkeleton: ensureSkeleton, linesForEdit: linesForEdit, booksLines: booksLines,
+    round2: round2, num: num, usd: usd, blank: blank, isCdaItem: isCdaItem, cloneLine: cloneLine,
+    ensureAdmin: ensureAdmin, sumLines: sumLines, grossOf: grossOf, splitOf: splitOf, agentAddress: agentAddress,
+    applySplitLines: applySplitLines, fallbackSuggest: fallbackSuggest, ensureSkeleton: ensureSkeleton, linesForEdit: linesForEdit, booksLines: booksLines,
     sideLabel: sideLabel, headerFromTxn: headerFromTxn, pdfFields: pdfFields, signRects: signRects
   };
 })(typeof window !== 'undefined' ? window : globalThis);
