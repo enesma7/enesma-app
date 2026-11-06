@@ -239,7 +239,7 @@
       '<h3 class="cda-h">From the file <small>Locked</small></h3>' + headerBits() +
       '<div id="cdaErr"></div>' +
       '<div class="cda-lines" id="cdaLines">' + lines.map(function (l, i) { return lineRow(l, i, pack, locked); }).join('') + '</div>' +
-      (locked ? '' : '<div class="cda-add"><button type="button" class="ub" data-add="co_list">+ Co-listing agent</button><button type="button" class="ub" data-add="co_buyer">+ Co-buyer agent</button><button type="button" class="ub" data-add="referral_inhouse">+ In-house referral</button><button type="button" class="ub" data-add="referral_outside">+ Outside referral</button><button type="button" class="ub" data-add="tc_fee">+ TC fee</button><button type="button" class="ub" data-add="other">+ Other</button><button type="button" class="ub" data-add="credit">+ Credit</button></div>') +
+      (locked ? '' : '<div class="cda-add"><button type="button" class="ub" data-add="co_list">+ Co-Listing Agent</button><button type="button" class="ub" data-add="co_buyer">+ Co-Buyer Agent</button><button type="button" class="ub" data-add="referral_inhouse">+ In-House Referral</button><button type="button" class="ub" data-add="referral_outside">+ Outside Referral</button><button type="button" class="ub" data-add="tc_fee">+ TC Fee</button><button type="button" class="ub" data-add="other">+ Other</button><button type="button" class="ub" data-add="credit">+ Credit</button></div>') +
       '<div class="cda-foot"><div class="cda-tot" role="status" aria-live="polite"></div>' +
       '<div class="cda-sign" id="cdaSign"></div>' +
       '<div class="actions" id="cdaActs"></div></div>';
