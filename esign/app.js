@@ -793,7 +793,7 @@
   function mapOnboardingList(d) {
     var raw = (d && (d.invites || d.agents || d.rows)) || [];
     return raw.map(function (r) {
-      return { id: r.envelopeId || r.id || '', name: inviteName(r), email: r.email || '', status: onboardingLabel(r, r, null), invitedAt: r.invitedAt || r.sentAt || r.createdAt || '', updatedAt: r.updatedAt || r.completedAt || '', firstName: r.firstName || r.first || '', middleName: r.middleName || r.middle || '', lastName: r.lastName || r.last || '', suffix: r.suffix || '' };
+      return { id: r.envelopeId || r.id || '', name: inviteName(r), email: r.email || '', status: onboardingLabel(r, r, null), invitedAt: r.invitedAt || r.sentAt || r.createdAt || '', updatedAt: r.updatedAt || r.completedAt || '', firstName: r.firstName || r.first || '', middleName: r.middleName || r.middle || '', lastName: r.lastName || r.last || '', suffix: r.suffix || '', splitPct: r.splitPct == null ? '' : r.splitPct, capAmount: r.capAmount == null ? '' : r.capAmount };
     });
   }
   function fetchServerRows() {
@@ -806,7 +806,7 @@
   }
   function rememberInvite(person, status) {
     var now = new Date().toISOString();
-    var row = { id: '', local: true, firstName: person.firstName, middleName: person.middleName, lastName: person.lastName, suffix: person.suffix, name: inviteName(person), email: person.email, status: status, inviteStatus: status === 'Pending templates' ? 'pending_templates' : 'awaiting_packet', invitedAt: now, updatedAt: now };
+    var row = { id: '', local: true, firstName: person.firstName, middleName: person.middleName, lastName: person.lastName, suffix: person.suffix, name: inviteName(person), email: person.email, status: status, inviteStatus: status === 'Pending templates' ? 'pending_templates' : 'awaiting_packet', invitedAt: now, updatedAt: now, splitPct: person.splitPct, capAmount: person.capAmount };
     var rows = readPending().filter(function (r) { return normEmail(r.email) !== normEmail(person.email); });
     rows.unshift(row);
     writePending(rows);
@@ -817,7 +817,7 @@
     if (data.envelope) return fromEnvelope(data.envelope);
     var raw = data.invite || data.agent || data.row || data.onboarding || null;
     if (raw && (raw.email || raw.firstName || raw.name || raw.lastName)) {
-      return { id: raw.envelopeId || raw.id || '', name: inviteName(raw) || inviteName(person), email: raw.email || person.email, status: onboardingLabel(raw, raw, null), invitedAt: raw.invitedAt || raw.sentAt || raw.createdAt || new Date().toISOString(), updatedAt: raw.updatedAt || raw.completedAt || raw.createdAt || new Date().toISOString(), firstName: raw.firstName || person.firstName, middleName: raw.middleName || person.middleName, lastName: raw.lastName || person.lastName, suffix: raw.suffix || person.suffix };
+      return { id: raw.envelopeId || raw.id || '', name: inviteName(raw) || inviteName(person), email: raw.email || person.email, status: onboardingLabel(raw, raw, null), invitedAt: raw.invitedAt || raw.sentAt || raw.createdAt || new Date().toISOString(), updatedAt: raw.updatedAt || raw.completedAt || raw.createdAt || new Date().toISOString(), firstName: raw.firstName || person.firstName, middleName: raw.middleName || person.middleName, lastName: raw.lastName || person.lastName, suffix: raw.suffix || person.suffix, splitPct: raw.splitPct == null ? person.splitPct : raw.splitPct, capAmount: raw.capAmount == null ? person.capAmount : raw.capAmount };
     }
     return { id: '', name: inviteName(person), email: person.email, status: 'Invited', invitedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   }
@@ -855,21 +855,27 @@
       var last = h('input', { id: 'ob-last', type: 'text', autocomplete: 'off', maxlength: '80', required: true, 'aria-required': 'true' });
       var suffix = h('input', { id: 'ob-suffix', type: 'text', autocomplete: 'off', maxlength: '20', placeholder: 'Jr., Sr., III' });
       var email = h('input', { id: 'ob-email', type: 'email', inputmode: 'email', autocomplete: 'off', maxlength: '120', required: true, 'aria-required': 'true', spellcheck: 'false' });
+      var split = h('input', { id: 'ob-split', type: 'text', inputmode: 'decimal', autocomplete: 'off', maxlength: '6', value: '90', 'aria-describedby': 'ob-split-hint' });
+      var cap = h('input', { id: 'ob-cap', type: 'text', inputmode: 'decimal', autocomplete: 'off', maxlength: '12', placeholder: 'Optional' });
       var msg = h('div');
       var btn = h('button', { id: 'ob-invite-btn', class: 'btn', type: 'submit' }, 'Invite agent');
-      var form = h('form', { id: 'ob-form', novalidate: true, onsubmit: function (ev) { submitInvite(ev, { first: first, middle: middle, last: last, suffix: suffix, email: email, msg: msg, btn: btn }); } },
+      var form = h('form', { id: 'ob-form', novalidate: true, onsubmit: function (ev) { submitInvite(ev, { first: first, middle: middle, last: last, suffix: suffix, email: email, split: split, cap: cap, msg: msg, btn: btn }); } },
         h('div', { class: 'ob-grid' },
           h('div', { class: 'f' }, h('label', { for: 'ob-first' }, 'First name'), first),
           h('div', { class: 'f' }, h('label', { for: 'ob-middle' }, 'Middle name (optional)'), middle),
           h('div', { class: 'f' }, h('label', { for: 'ob-last' }, 'Last name'), last),
           h('div', { class: 'f' }, h('label', { for: 'ob-suffix' }, 'Suffix (optional)'), suffix),
-          h('div', { class: 'f span2' }, h('label', { for: 'ob-email' }, 'Email'), email)),
+          h('div', { class: 'f span2' }, h('label', { for: 'ob-email' }, 'Email'), email),
+          h('div', { class: 'f' }, h('label', { for: 'ob-split' }, 'Split %'), split, h('small', { id: 'ob-split-hint' }, 'Agent share of gross. 90 means 90% agent / 10% brokerage (Enrique Esparza).')),
+          h('div', { class: 'f' }, h('label', { for: 'ob-cap' }, 'Cap'), cap, h('small', null, 'Optional annual dollar cap. Leave blank when there is none.'))),
         msg, h('div', { class: 'actions' }, btn));
       var list = !rows.length
         ? h('div', { id: 'ob-list', class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No one invited yet'), 'Enter a first name, last name, and email above, then choose Invite agent.'))
-        : h('div', { id: 'ob-list', class: 'ob-wrap' }, h('table', { class: 'ob-table' }, h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', null, 'Email'), h('th', null, 'Status'), h('th', null, 'Invited'), h('th', null, 'Last update'))), h('tbody', null, rows.map(function (r) {
+        : h('div', { id: 'ob-list', class: 'ob-wrap' }, h('table', { class: 'ob-table' }, h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', null, 'Email'), h('th', null, 'Split'), h('th', null, 'Status'), h('th', null, 'Invited'), h('th', null, 'Last update'))), h('tbody', null, rows.map(function (r) {
           var who = r.id ? h('a', { href: '#/envelope/' + encodeURIComponent(r.id) }, r.name || '—') : (r.name || '—');
-          return h('tr', null, h('td', null, who), h('td', null, r.email || '—'), h('td', null, r.status || 'Invited'), h('td', null, fmt(r.invitedAt, false) || '—'), h('td', null, fmt(r.updatedAt, false) || '—'));
+          var splitTxt = r.splitPct === '' || r.splitPct == null ? '—' : String(r.splitPct) + '%';
+          if (r.capAmount !== '' && r.capAmount != null) splitTxt += ' · cap $' + r.capAmount;
+          return h('tr', null, h('td', null, who), h('td', null, r.email || '—'), h('td', null, splitTxt), h('td', null, r.status || 'Invited'), h('td', null, fmt(r.invitedAt, false) || '—'), h('td', null, fmt(r.updatedAt, false) || '—'));
         }))));
       add($app, [h('span', { class: 'rule' }), h('h1', null, 'Onboarding'), h('p', { class: 'sub' }, 'Invite an agent, then track where each packet stands.'), testBar(), state.loadError ? errBox(state.loadError) : null,
         h('div', { class: 'card ob-invite' }, h('h2', null, 'Invite an agent'), h('p', { class: 'hint', style: { marginTop: '0' } }, hintText()), form),
@@ -877,7 +883,7 @@
     }
     async function postInvite(person) {
       if (state.noApi) { var skip = new Error('no-invite-api'); skip.code = 'NO_API'; throw skip; }
-      var payload = { firstName: person.firstName, middleName: person.middleName, lastName: person.lastName, suffix: person.suffix, email: person.email, name: inviteName(person) };
+      var payload = { firstName: person.firstName, middleName: person.middleName, lastName: person.lastName, suffix: person.suffix, email: person.email, name: inviteName(person), splitPct: person.splitPct, capAmount: person.capAmount, capNote: '' };
       var actions = ['inviteOnboarding', 'createOnboarding'];
       var unknown = 0;
       for (var i = 0; i < actions.length; i++) {
@@ -894,10 +900,14 @@
     }
     async function submitInvite(ev, f) {
       ev.preventDefault(); clear(f.msg);
-      var person = { firstName: cleanPart(f.first.value), middleName: cleanPart(f.middle.value), lastName: cleanPart(f.last.value), suffix: cleanPart(f.suffix.value), email: cleanPart(f.email.value) };
+      var splitRaw = cleanPart(f.split.value), capRaw = cleanPart(f.cap.value).replace(/[$,\s]/g, '');
+      var person = { firstName: cleanPart(f.first.value), middleName: cleanPart(f.middle.value), lastName: cleanPart(f.last.value), suffix: cleanPart(f.suffix.value), email: cleanPart(f.email.value), splitPct: splitRaw, capAmount: capRaw };
       if (!person.firstName) { f.msg.appendChild(errBox('Enter a first name.')); f.first.focus(); return; }
       if (!person.lastName) { f.msg.appendChild(errBox('Enter a last name.')); f.last.focus(); return; }
       if (!emailOk(person.email)) { f.msg.appendChild(errBox('Enter a valid email.')); f.email.focus(); return; }
+      var splitN = Number(splitRaw);
+      if (splitRaw === '' || !isFinite(splitN) || splitN < 0 || splitN > 100) { f.msg.appendChild(errBox('Split % is the agent’s share of gross, from 0 to 100. 90 is 90% agent / 10% brokerage.')); f.split.focus(); return; }
+      if (capRaw !== '' && !(Number(capRaw) >= 0)) { f.msg.appendChild(errBox('Cap is an annual dollar amount, or leave it blank.')); f.cap.focus(); return; }
       if (state.rows.some(function (r) { return normEmail(r.email) === normEmail(person.email); })) { f.msg.appendChild(errBox('That email is already on the invited list.')); f.email.focus(); return; }
       busy(f.btn, true, 'Saving…');
       try {

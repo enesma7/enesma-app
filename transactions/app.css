@@ -397,6 +397,27 @@ h1.taddr{margin-bottom:2px}
 /* v35: touch-friendly targets for the Misc pencil and popup delete × */
 .tpen{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;margin:-9px 0 -9px 2px;vertical-align:middle}
 .adocs .dwrap{min-height:32px}.adocs .dx{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px}
+/* ---- CDA popup (1.7.1) ---- */
+.cda-lock{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;margin:0 0 12px}
+.cda-lock div{min-width:0}.cda-lock dt{font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.03em}.cda-lock dd{margin:0;font-weight:650}
+.cda-h{display:flex;align-items:center;gap:8px;font-size:15px;margin:8px 0}.cda-h small{font-weight:700;font-size:11px;padding:2px 7px;border-radius:999px;background:var(--gold)}
+.cda-note{margin-top:0}
+.cda-lines{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px}
+.cda-line{display:grid;grid-template-columns:minmax(140px,1.1fr) minmax(140px,1.3fr) 110px minmax(120px,1fr);gap:8px;align-items:center}
+.cda-line input,.cda-line select{font:inherit;font-size:16px;min-height:42px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--w);color:var(--k);width:100%;box-sizing:border-box}
+.cda-line input[readonly]{background:rgba(0,0,7,.04)}
+.cda-k{display:flex;flex-direction:column;gap:2px;font-size:13px}.cda-k small{color:var(--soft);font-weight:600}
+.cda-k .link{align-self:flex-start;padding:0;min-height:0}
+.cda-add{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.cda-tot{display:flex;flex-wrap:wrap;gap:8px 16px;padding:10px 12px;border-radius:8px;margin:0 0 10px;font-weight:700}
+.cda-tot.ok{background:rgba(213,190,135,.35)}.cda-tot.err{background:rgba(239,2,7,.08);color:#9A0007}
+.cda-mis{display:flex;gap:8px;align-items:center;margin:0 0 10px;font-weight:600}
+.cda-who{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.cda-who label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600}
+.cda-who input{font:inherit;font-size:16px;min-height:42px;padding:8px 10px;border-radius:8px;border:1px solid var(--line)}
+.cda-st{font-size:12px;font-weight:700;color:var(--soft)}
+.cda-esc{margin:0 0 16px}
+@media(max-width:720px){.cda-line,.cda-who,.cda-lock{grid-template-columns:1fr}}
 /* ---- 1.6.0 E-Books (owner only) ---- */
 .ebooks{max-width:1240px;margin:0 auto}
 .ebhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.ebhead h1{margin:0}
