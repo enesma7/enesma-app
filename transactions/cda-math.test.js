@@ -20,6 +20,25 @@ assert.strictEqual(by.brokerage.amount, 1000);
 assert.strictEqual(by.admin_fee.amount, 200);
 assert.strictEqual(by.primary.amount, 8800);
 assert.strictEqual(M.sumLines(sug.lines), 10000);
+assert.strictEqual(sug.lines.filter(function (l) { return l.kind === 'brokerage'; })[0].note, M.OFFICE_MAIL);
+var lyn = M.applySplitLines([
+  { kind: 'brokerage', amount: 1260, name: 'ENESMA Realty' },
+  { kind: 'primary', amount: 11340, name: 'Enrique Esparza', agentId: 'U1' },
+  { kind: 'admin_fee', amount: 200, name: 'ENESMA Admin Fee' }
+], { totalGross: 12800, agentId: 'U1', agentName: 'Enrique Esparza' }, { id: 'U1', splitPct: 90, address: '10 Agent St, Lynwood, CA 90262' }, 200);
+var lynBy = {}; lyn.forEach(function (l) { lynBy[l.kind] = l; });
+assert.strictEqual(lynBy.brokerage.amount, 1280);
+assert.strictEqual(lynBy.primary.amount, 11320);
+assert.strictEqual(lynBy.admin_fee.amount, 200);
+assert.strictEqual(M.sumLines(lyn), 12800);
+assert.strictEqual(lynBy.primary.note, '10 Agent St, Lynwood, CA 90262');
+assert.strictEqual(M.usd(11320), '$11,320.00');
+var withCo = M.applySplitLines(lyn.concat([{ kind: 'co_list', amount: 500, name: 'Alex Rivera', agentId: 'U2' }]), { totalGross: 12800, agentId: 'U1', agentName: 'Enrique Esparza' }, { id: 'U1', splitPct: 90 }, 200, [{ id: 'U2', address: '2 Co St' }]);
+var coPri = withCo.filter(function (l) { return l.kind === 'primary'; })[0];
+var coBro = withCo.filter(function (l) { return l.kind === 'brokerage'; })[0];
+assert.strictEqual(coBro.amount, 1280);
+assert.strictEqual(coPri.amount, 10820);
+assert.strictEqual(M.sumLines(withCo), 12800);
 var ex = M.fallbackSuggest(header, { splitPct: '' }, 200);
 assert.strictEqual(ex.source, 'example');
 assert.strictEqual(ex.split, 90);

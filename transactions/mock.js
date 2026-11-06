@@ -739,7 +739,7 @@ DB.cda = {}; DB.cdaPending = [];
 function cdaAgents() {
   return DB.users.filter(function (x) { return x.active && (x.role === 'agent' || x.role === 'admin'); }).map(function (x) {
     var p = EBD.agents[x.id] || {};
-    return { id: x.id, name: x.name, splitPct: p.splitPct === undefined || p.splitPct === '' ? '' : p.splitPct, capAmount: p.capAmount === undefined || p.capAmount === '' ? '' : p.capAmount };
+    return { id: x.id, name: x.name, splitPct: p.splitPct === undefined || p.splitPct === '' ? '' : p.splitPct, capAmount: p.capAmount === undefined || p.capAmount === '' ? '' : p.capAmount, address: p.address || '', w9Address: p.address || '' };
   });
 }
 function cdaPack(t) {

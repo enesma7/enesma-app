@@ -6,7 +6,7 @@
 
   function app() { return window.TCApp; }
   function unknown(err) { return !!(err && /unknown action/i.test(err.message || '')); }
-  function money2(n) { n = M.round2(M.num(n)); var sign = n < 0 ? '-' : ''; return sign + '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function money2(n) { return M.usd(n); }
 
   function esignUrl() {
     var cfg = window.TC_CONFIG || {};
@@ -36,9 +36,9 @@
     var sp = M.splitOf(ag);
     var cap = ag && ag.capAmount !== '' && ag.capAmount != null ? ag.capAmount : '';
     var fee = pack && pack.adminFee != null ? pack.adminFee : M.ADMIN_FEE;
-    var who = sp.source === 'example' ? 'No split is saved for this agent, so the suggestion uses the ENESMA example: Enrique Esparza, ' + M.EXAMPLE_SPLIT + '% agent / ' + (100 - M.EXAMPLE_SPLIT) + '% brokerage.' : 'Suggestion uses this agent’s saved split, ' + sp.split + '% agent / ' + (100 - sp.split) + '% brokerage.';
-    var capTxt = cap === '' ? ' No annual cap is on file.' : ' Annual cap on file: ' + money2(cap) + ' (shown for reference; the suggestion is still split % of total gross, with the admin fee on its own line).';
-    return who + ' Admin fee is ' + money2(fee) + ' on every file and stays on the CDA. Primary agent is the split of total gross, minus that admin fee, so brokerage + agent + admin fee match the locked total.' + capTxt;
+    var who = sp.source === 'example' ? 'No split is saved for this agent, so this uses the ENESMA example: Enrique Esparza, ' + M.EXAMPLE_SPLIT + '% agent / ' + (100 - M.EXAMPLE_SPLIT) + '% brokerage.' : 'This agent’s split is ' + sp.split + '% agent / ' + (100 - sp.split) + '% brokerage.';
+    var capTxt = cap === '' ? ' No annual cap is on file.' : ' Annual cap on file: ' + money2(cap) + '.';
+    return who + ' Brokerage is that percent of the full total gross. The ' + money2(fee) + ' admin fee is taken from the primary agent only and stays on the CDA. Added agent lines also come out of the primary agent. The lines must equal the locked total gross.' + capTxt;
   }
 
   function lineRow(l, i, pack, locked) {
@@ -55,10 +55,12 @@
       }).join('') + '</select>';
     } else nameCell = '<input data-f="name" value="' + h(l.name || '') + '" maxlength="120" placeholder="Payee name" aria-label="' + h(label) + ' payee"' + (locked ? ' readonly' : '') + '>';
     var books = M.EBOOKS_KINDS.indexOf(kind) >= 0;
+    var amtLock = locked || kind === 'admin_fee';
+    var shown = l.amount === '' || l.amount == null ? '' : M.usd(l.amount);
     return '<div class="cda-line" data-i="' + i + '" data-kind="' + h(kind) + '"><div class="cda-k"><b>' + h(label) + '</b>' + (books ? '<small>E-Books</small>' : '<small>CDA only</small>') + (kind !== 'brokerage' && kind !== 'primary' && kind !== 'admin_fee' && kind !== 'tc_fee' && !locked ? '<button type="button" class="link cda-rm">Remove</button>' : '') + '</div>' +
       nameCell +
-      '<input data-f="amount" inputmode="decimal" value="' + h(l.amount === '' || l.amount == null ? '' : M.round2(l.amount)) + '" placeholder="0.00" aria-label="' + h(label) + ' amount"' + (locked ? ' readonly' : '') + '>' +
-      '<input data-f="note" value="' + h(l.note || '') + '" maxlength="160" placeholder="Mail to / note" aria-label="' + h(label) + ' note"' + (locked ? ' readonly' : '') + '></div>';
+      '<input data-f="amount" inputmode="decimal" value="' + h(shown) + '" placeholder="$0.00" aria-label="' + h(label) + ' amount"' + (amtLock ? ' readonly' : '') + '>' +
+      '<input data-f="note" value="' + h(l.note || '') + '" maxlength="250" placeholder="Mail to" aria-label="' + h(label) + ' mail to"' + (locked ? ' readonly' : '') + '></div>';
   }
 
   function readLines(root) {
@@ -81,12 +83,11 @@
     var lines = readLines(root);
     var sum = M.sumLines(lines), gross = M.grossOf(header), diff = M.round2(sum - gross);
     var cls = diff === 0 ? 'ok' : 'err';
-    var msg = diff === 0 ? 'Lines match the locked total gross.' : (diff > 0 ? 'Over by ' + money2(diff) + '.' : 'Short by ' + money2(Math.abs(diff)) + '.') + ' Fix the amounts before sending, or confirm a mismatch.';
+    var msg = diff === 0 ? 'Lines equal the locked total gross.' : 'These lines total ' + money2(sum) + '. They must equal the locked total gross of ' + money2(gross) + ' before this CDA can be saved.';
     host.className = 'cda-tot ' + cls;
     host.innerHTML = '<span>Lines ' + money2(sum) + '</span><span>Total gross ' + money2(gross) + '</span><span>' + msg + '</span>';
-    var box = A.qs('.cda-mis', root);
-    if (box) box.hidden = diff === 0;
     root._mismatch = diff !== 0;
+    root._mismatchMsg = diff === 0 ? '' : msg;
   }
 
   function fillPdf(header, lines) {
@@ -201,8 +202,7 @@
     var cda = pack.cda, status = (cda && cda.status) || '';
     var locked = status === 'sent' || status === 'executed';
     var ag = agentById(pack, header.agentId);
-    var lines = (cda && cda.lines && cda.lines.length) ? cda.lines : ((pack.suggested && pack.suggested.length) ? pack.suggested : M.fallbackSuggest(header, ag, pack.adminFee).lines);
-    lines = M.ensureSkeleton(lines, header, pack.adminFee);
+    var lines = M.linesForEdit(pack);
     var primary = lines.filter(function (l) { return l.kind === 'primary'; })[0];
     if (primary) { if (!primary.agentId) primary.agentId = header.agentId || ''; if (!primary.name) primary.name = header.agentName || ''; }
     var bro = lines.filter(function (l) { return l.kind === 'brokerage'; })[0];
@@ -228,7 +228,6 @@
       '<div class="cda-lines" id="cdaLines">' + lines.map(function (l, i) { return lineRow(l, i, pack, locked); }).join('') + '</div>' +
       (locked ? '' : '<div class="cda-add"><button type="button" class="ub" data-add="co_list">+ Co-listing agent</button><button type="button" class="ub" data-add="co_buyer">+ Co-buyer agent</button><button type="button" class="ub" data-add="referral_inhouse">+ In-house referral</button><button type="button" class="ub" data-add="referral_outside">+ Outside referral</button><button type="button" class="ub" data-add="tc_fee">+ TC fee</button><button type="button" class="ub" data-add="other">+ Other</button><button type="button" class="ub" data-add="credit">+ Credit</button></div>') +
       '<div class="cda-tot"></div>' +
-      '<label class="chk cda-mis" hidden><input type="checkbox" id="cdaMis"> Send even though the lines do not match total gross</label>' +
       '<div class="cda-sign" id="cdaSign"></div>' +
       '<div class="actions" id="cdaActs"></div>';
     A.qs('.box', m).innerHTML = '<button class="close" aria-label="Close">×</button>' + html;
@@ -237,11 +236,37 @@
     box._agentId = header.agentId || '';
     box._linesBox = A.qs('#cdaLines', m);
 
-    function rerenderLines() {
+    function primaryInput() { var row = A.qs('.cda-line[data-kind="primary"]', box); return row ? row.querySelector('[data-f="amount"]') : null; }
+    function balancePrimary() {
+      var input = primaryInput(); if (!input || input.readOnly) return;
+      if (document.activeElement === input) { paintTotals(box, header); return; }
+      var others = 0;
+      readLines(box).forEach(function (l) { if (l.kind !== 'primary') others = M.round2(others + M.num(l.amount)); });
+      input.value = M.usd(M.round2(M.grossOf(header) - others));
       paintTotals(box, header);
     }
-    box.addEventListener('input', function (e) { if (e.target && e.target.closest && e.target.closest('.cda-line')) rerenderLines(); });
-    A.qsa('.cda-rm', box).forEach(function (b) { b.onclick = function () { b.closest('.cda-line').remove(); rerenderLines(); }; });
+    function formatAmount(input) {
+      if (!input || input.readOnly) return;
+      var raw = input.value.trim();
+      input.value = raw === '' ? '' : M.usd(raw);
+    }
+    box.addEventListener('input', function (e) {
+      var row = e.target && e.target.closest && e.target.closest('.cda-line');
+      if (!row) return;
+      if (e.target.getAttribute('data-f') === 'agentId') {
+        var note = row.querySelector('[data-f="note"]');
+        var who = agentById(pack, e.target.value);
+        var mail = M.agentAddress(who);
+        if (note && !note.value.trim() && mail) note.value = mail;
+      }
+      if (e.target.getAttribute('data-f') === 'amount' && row.getAttribute('data-kind') !== 'primary') balancePrimary();
+      else paintTotals(box, header);
+    });
+    box.addEventListener('focusout', function (e) {
+      if (e.target && e.target.getAttribute && e.target.getAttribute('data-f') === 'amount') formatAmount(e.target);
+      if (e.target && e.target.closest && e.target.closest('.cda-line') && e.target.closest('.cda-line').getAttribute('data-kind') !== 'primary') balancePrimary();
+    });
+    A.qsa('.cda-rm', box).forEach(function (b) { b.onclick = function () { b.closest('.cda-line').remove(); balancePrimary(); }; });
     A.qsa('[data-add]', box).forEach(function (b) {
       b.onclick = function () {
         var kind = b.getAttribute('data-add');
@@ -250,8 +275,8 @@
         row.innerHTML = lineRow(M.blank(kind), A.qsa('.cda-line', box).length, pack, false);
         var node = row.firstChild;
         A.qs('#cdaLines', box).appendChild(node);
-        var rm = node.querySelector('.cda-rm'); if (rm) rm.onclick = function () { node.remove(); rerenderLines(); };
-        rerenderLines();
+        var rm = node.querySelector('.cda-rm'); if (rm) rm.onclick = function () { node.remove(); balancePrimary(); };
+        balancePrimary();
       };
     });
     paintTotals(box, header);
@@ -259,10 +284,16 @@
     var acts = A.qs('#cdaActs', m);
     function err(msg) { A.qs('#cdaErr', m).innerHTML = msg ? '<div class="err">' + h(msg) + '</div>' : ''; }
     function payloadLines() {
+      balancePrimary();
       var linesOut = M.ensureAdmin(readLines(box), pack.adminFee);
       var bad = linesOut.filter(function (l) { return l.kind === 'referral_inhouse' && M.num(l.amount) > 0 && !l.agentId; })[0]
         || linesOut.filter(function (l) { return (l.kind === 'co_list' || l.kind === 'co_buyer') && M.num(l.amount) > 0 && !l.agentId; })[0];
       if (bad) { err('Choose the ENESMA agent for ' + (M.LABELS[bad.kind] || bad.kind) + '.'); return null; }
+      var sum = M.sumLines(linesOut), gross = M.grossOf(header), diff = M.round2(sum - gross);
+      if (diff !== 0) { err('These lines total ' + money2(sum) + '. They must equal the locked total gross of ' + money2(gross) + ' before this CDA can be saved.'); return null; }
+      var neg = linesOut.filter(function (l) { return M.num(l.amount) < 0; })[0];
+      if (neg) { err((M.LABELS[neg.kind] || 'A line') + ' is below $0.00. Lower the other amounts so every line stays at zero or more and the total still equals ' + money2(gross) + '.'); return null; }
+      err('');
       return linesOut;
     }
     if (!locked && !pack.offline) {
@@ -290,7 +321,6 @@
 
     function startSend(linesOut) {
       if (!linesOut) return;
-      if (box._mismatch && !(A.qs('#cdaMis', m) && A.qs('#cdaMis', m).checked)) { err('The lines do not add up to total gross. Adjust them, or check the box to send the mismatch.'); return; }
       err('');
       var host = A.qs('#cdaSign', m);
       host.innerHTML = '<div class="loading"><span class="spin"></span> Checking signers…</div>';
@@ -302,7 +332,6 @@
           var ae = A.qs('#cdaAE', m).value.trim(), be = A.qs('#cdaBE', m).value.trim(), bn = A.qs('#cdaBN', m).value.trim();
           if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ae) || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(be) || !bn) { err('Enter the agent email and the broker name and email.'); return; }
           var b = this; b.disabled = true; err('');
-          var allow = !!(box._mismatch && A.qs('#cdaMis', m) && A.qs('#cdaMis', m).checked);
           var afterSave = A.api('cdaSaveDraft', { txnId: txn.id, lines: linesOut });
           afterSave.then(function () {
             if (A.DEMO) return { envelope: { id: 'demo-' + txn.id } };
@@ -310,7 +339,7 @@
           }).then(function (env) {
             var id = (env.envelope && env.envelope.id) || env.id;
             if (!id) throw new Error('E-Sign did not return an envelope.');
-            return A.api('cdaMarkSent', { txnId: txn.id, envelopeId: id, allowMismatch: allow || undefined });
+            return A.api('cdaMarkSent', { txnId: txn.id, envelopeId: id });
           }).then(function () {
             m.close();
             A.toast(A.DEMO ? 'Demo: CDA marked sent. The owner records the signed PDF from this file.' : 'CDA sent. The agent signs first, then the broker.');
