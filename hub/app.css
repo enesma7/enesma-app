@@ -248,19 +248,26 @@ button, input { font: inherit; }
 .pill:focus-visible { outline: 2px solid var(--black); outline-offset: 4px; }
 
 /* Footer */
-.foot-wrap { padding: 0 24px 36px; }
+.foot-wrap { padding: 48px 24px 32px; }
 .foot {
   background: var(--black); color: var(--white);
-  border-radius: 10px; padding: 40px 40px 28px;
-  display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap: 32px;
+  border-radius: 10px; padding: 48px 44px 36px;
+  display: grid; grid-template-columns: 1.35fr 1fr 1fr 1fr; gap: 36px 44px;
+  align-items: start;
 }
-.foot .tag { color: rgba(251,251,251,.72); font-size: 13px; margin: 10px 0 16px; }
+.foot > div { min-width: 0; }
+.foot .tag { color: rgba(251,251,251,.72); font-size: 13px; line-height: 1.45; margin: 14px 0 18px; }
 .foot .eho { display: flex; align-items: center; gap: 10px; font-size: 12px; color: rgba(251,251,251,.7); }
 .foot .eho img { width: 28px; height: auto; }
-.foot h4 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+.foot h4 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .foot ul { list-style: none; margin: 0; padding: 0; }
-.foot li { margin: 0 0 8px; }
-.foot a { color: rgba(251,251,251,.84); text-decoration: none; font-size: 14px; }
+.foot li {
+  margin: 0 0 12px;
+  font-size: 14px; line-height: 1.4; font-weight: 400;
+  color: rgba(251,251,251,.84);
+}
+.foot li:last-child { margin-bottom: 0; }
+.foot a { color: inherit; text-decoration: none; font-size: inherit; font-weight: inherit; }
 .foot a:hover { color: var(--gold-a); }
 .legal { text-align: center; color: #6b6b70; font-size: 13px; padding: 18px 16px 36px; }
 
@@ -380,11 +387,17 @@ button, input { font: inherit; }
   .top.nav-open .nav { display: flex; }
   .drop-menu { position: static; box-shadow: none; padding-left: 8px; }
   .grid-2, .holidays, .tech-grid, .partners, .swatches, .shot-grid, .refer-stats { grid-template-columns: 1fr; }
-  .foot { grid-template-columns: 1fr; padding: 28px 22px; }
+  .foot-wrap { padding: 48px 16px 24px; }
+  .foot { grid-template-columns: 1fr 1fr 1fr; gap: 32px 28px; padding: 36px 24px 32px; }
+  .foot > div:first-child { grid-column: 1 / -1; padding-bottom: 8px; }
   .agent, .listing-card { grid-template-columns: 1fr; }
   .listing-card div { padding: 8px 16px 20px; }
   .wrap { width: min(var(--max), calc(100% - 32px)); }
   .hero { min-height: 340px; }
   .pills { gap: 12px; margin-bottom: 36px; max-width: calc(100% - 32px); }
   .pill { width: min(168px, 42vw); }
+}
+@media (max-width: 640px) {
+  .foot { grid-template-columns: 1fr 1fr; gap: 36px 24px; }
+  .foot > div:first-child { grid-column: auto; padding-bottom: 0; }
 }
