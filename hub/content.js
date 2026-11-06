@@ -244,7 +244,7 @@ window.HUB_CONTENT = {
     {
       "title": "W-9 (ENESMA Realty)",
       "sub": "Signed Form W-9 (PDF)",
-      "href": "https://app.enesmarealty.com/forms/w9.pdf"
+      "href": "https://app.enesmarealty.com/forms/w9.html"
     }
   ],
   "policiesDocId": "1xMf-fWcDDWO_8Immu_g65xBlFHfGKBpwJFJ3nCD-3K4",
@@ -651,7 +651,7 @@ window.HUB_CONTENT = {
     "officeDocs": [
       { "img": "assets/sites/officedocs-01.jpg", "href": "https://app.enesmarealty.com/forms/cda.html", "ext": true, "alt": "CDA. Commission Disbursement Authorization", "title": "CDA", "sub": "Commission Disbursement Authorization" },
       { "img": "assets/sites/officedocs-02.jpg", "href": "https://app.enesmarealty.com/forms/invoice.html", "ext": true, "alt": "General Invoice. Fillable invoice PDF", "title": "General Invoice", "sub": "Fillable invoice PDF" },
-      { "img": "assets/sites/officedocs-03.jpg", "href": "https://app.enesmarealty.com/forms/w9.pdf", "ext": true, "alt": "W-9 (ENESMA Realty). Signed Form W-9 (PDF)", "title": "W-9 (ENESMA Realty)", "sub": "Signed Form W-9 (PDF)" }
+      { "img": "assets/sites/officedocs-03.jpg", "href": "https://app.enesmarealty.com/forms/w9.html", "ext": true, "alt": "W-9 (ENESMA Realty). Signed Form W-9 (PDF)", "title": "W-9 (ENESMA Realty)", "sub": "Signed Form W-9 (PDF)" }
     ],
     "calcs": [
       { "img": "assets/sites/calcs-01.jpg", "href": "#/calculators/net-sheet", "alt": "Net Sheet. Seller net proceeds estimate", "title": "Net Sheet", "sub": "Seller net proceeds estimate" },
