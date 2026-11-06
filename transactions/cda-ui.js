@@ -85,14 +85,13 @@
       detail = 'Lines total ' + money2(s.sum) + '. They must equal the locked total gross of ' + money2(s.gross) + ' before this CDA can be saved.';
     } else {
       cls = 'ok';
-      detail = 'Added payees come out of the Primary Agent. Brokerage stays its percent of the full locked gross.';
+      detail = 'Lines equal the locked total gross.';
     }
     host.className = 'cda-tot ' + cls;
     host.setAttribute('role', cls === 'err' ? 'alert' : 'status');
     host.setAttribute('aria-live', cls === 'err' ? 'assertive' : 'polite');
-    host.innerHTML = (title ? '<strong class="cda-tot-title">' + A.h(title) + '</strong>' : '') +
-      '<span class="cda-pri">Primary Agent ' + A.h(priTxt) + '</span>' +
-      '<span class="cda-tot-row"><span>Lines ' + A.h(money2(s.sum)) + '</span><span>Locked gross ' + A.h(money2(s.gross)) + '</span></span>' +
+    host.innerHTML = (cls === 'err' ? '<strong class="cda-tot-title">' + A.h(title) + '</strong><span class="cda-pri">Primary Agent ' + A.h(priTxt) + '</span>' : '') +
+      '<span class="cda-tot-row"><span>Lines ' + A.h(money2(s.sum)) + '</span><span>Total gross ' + A.h(money2(s.gross)) + '</span></span>' +
       '<span class="cda-tot-msg">' + A.h(detail) + '</span>';
     root._mismatch = !!s.mismatch;
     root._mismatchMsg = s.mismatch ? (title ? title + '. ' + detail : detail) : '';
