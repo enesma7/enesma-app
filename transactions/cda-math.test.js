@@ -14,6 +14,11 @@ var uiSrc = fs.readFileSync(__dirname + '/cda-ui.js', 'utf8');
 assert.ok(uiSrc.indexOf('cda-note') < 0, 'example-split paragraph is not rendered');
 assert.ok(uiSrc.indexOf('No split is saved') < 0);
 assert.ok(uiSrc.indexOf('Standard per-transaction admin fee') < 0);
+assert.ok(uiSrc.indexOf('M.adminFeeNote(l.note)') >= 0, 'admin fee mail-to uses the office-address note');
+var html = fs.readFileSync(__dirname + '/index.html', 'utf8');
+assert.ok(html.indexOf('cda-math.js?v=5') >= 0);
+assert.ok(html.indexOf('cda-ui.js?v=5') >= 0);
+assert.ok(html.indexOf('cda-math.js?v=4') < 0 && html.indexOf('cda-ui.js?v=4') < 0);
 assert.strictEqual(M.LABELS.primary, 'Primary Agent');
 assert.strictEqual(M.LABELS.brokerage, 'ENESMA Realty (Brokerage)');
 assert.strictEqual(M.LABELS.admin_fee, 'Admin Fee');
@@ -28,7 +33,10 @@ assert.strictEqual(sug.source, 'profile');
 var by = {}; sug.lines.forEach(function (l) { by[l.kind] = l; });
 assert.strictEqual(by.brokerage.amount, 1000);
 assert.strictEqual(by.admin_fee.amount, 200);
+assert.strictEqual(by.admin_fee.name, M.BROKER_NAME);
+assert.strictEqual(by.admin_fee.note, M.OFFICE_MAIL);
 assert.strictEqual(by.primary.amount, 8800);
+assert.strictEqual(by.primary.note, '');
 assert.strictEqual(M.sumLines(sug.lines), 10000);
 assert.strictEqual(sug.lines.filter(function (l) { return l.kind === 'brokerage'; })[0].note, M.OFFICE_MAIL);
 var lyn = M.applySplitLines([
@@ -42,7 +50,10 @@ assert.strictEqual(lynBy.primary.amount, 11320);
 assert.strictEqual(lynBy.admin_fee.amount, 200);
 assert.strictEqual(M.sumLines(lyn), 12800);
 assert.strictEqual(lynBy.primary.note, '10 Agent St, Lynwood, CA 90262');
-assert.strictEqual(lynBy.admin_fee.note, '');
+assert.strictEqual(lynBy.brokerage.note, M.OFFICE_MAIL);
+assert.strictEqual(lynBy.admin_fee.name, 'ENESMA Admin Fee');
+assert.strictEqual(lynBy.admin_fee.note, M.OFFICE_MAIL);
+assert.ok(lynBy.admin_fee.note.indexOf('Standard per-transaction') < 0);
 assert.strictEqual(M.usd(11320), '$11,320.00');
 var FEE_BLURB = 'Standard per-transaction admin fee (CDA only; deducted from agent share)';
 var blurred = M.linesForEdit({
@@ -56,7 +67,9 @@ var blurred = M.linesForEdit({
   agents: [{ id: 'U1', splitPct: 90, address: '10 Agent St, Lynwood, CA 90262' }]
 });
 var blurBy = {}; blurred.forEach(function (l) { blurBy[l.kind] = l; });
-assert.strictEqual(blurBy.admin_fee.note, '');
+assert.strictEqual(blurBy.admin_fee.note, M.OFFICE_MAIL);
+assert.strictEqual(blurBy.admin_fee.name, M.BROKER_NAME);
+assert.ok(blurBy.admin_fee.note.indexOf('Standard per-transaction') < 0);
 assert.strictEqual(blurBy.admin_fee.amount, 200);
 assert.strictEqual(blurBy.brokerage.amount, 1280);
 assert.strictEqual(blurBy.primary.amount, 11320);
@@ -64,6 +77,16 @@ assert.strictEqual(blurBy.primary.note, '10 Agent St, Lynwood, CA 90262');
 assert.strictEqual(M.sumLines(blurred), 12800);
 var keptMail = M.ensureAdmin([{ kind: 'admin_fee', amount: 200, name: 'ENESMA Realty', note: '10 Agent St, Lynwood, CA 90262' }], 200);
 assert.strictEqual(keptMail[0].note, '10 Agent St, Lynwood, CA 90262');
+assert.strictEqual(keptMail[0].name, M.BROKER_NAME);
+var freshAdmin = M.ensureAdmin([], 200);
+assert.strictEqual(freshAdmin[0].kind, 'admin_fee');
+assert.strictEqual(freshAdmin[0].name, M.BROKER_NAME);
+assert.strictEqual(freshAdmin[0].note, M.OFFICE_MAIL);
+assert.strictEqual(freshAdmin[0].amount, 200);
+assert.strictEqual(M.adminFeeNote(''), M.OFFICE_MAIL);
+assert.strictEqual(M.adminFeeNote(FEE_BLURB), M.OFFICE_MAIL);
+assert.strictEqual(M.adminFeeNote(M.OFFICE_MAIL), M.OFFICE_MAIL);
+assert.strictEqual(M.adminFeeNote('10 Agent St, Lynwood, CA 90262'), '10 Agent St, Lynwood, CA 90262');
 var lockedPack = M.linesForEdit({
   header: { totalGross: 10000, agentId: 'U1', agentName: 'Enrique Esparza' },
   adminFee: 200,
@@ -74,7 +97,8 @@ var lockedPack = M.linesForEdit({
   ] }
 });
 var lockBy = {}; lockedPack.forEach(function (l) { lockBy[l.kind] = l; });
-assert.strictEqual(lockBy.admin_fee.note, '');
+assert.strictEqual(lockBy.admin_fee.note, M.OFFICE_MAIL);
+assert.ok(lockBy.admin_fee.note.indexOf('Standard per-transaction') < 0);
 assert.strictEqual(lockBy.admin_fee.amount, 200);
 assert.strictEqual(lockBy.primary.amount, 8800);
 assert.strictEqual(lockBy.primary.note, '10 Agent St');
@@ -84,7 +108,8 @@ var pdf = M.pdfFields(header, [
   { kind: 'primary', amount: 8800, name: 'Enrique Esparza', note: '10 Agent St' },
   { kind: 'admin_fee', amount: 200, name: 'ENESMA Realty', note: FEE_BLURB }
 ]);
-assert.strictEqual(pdf.admin_fee_mail_to, '');
+assert.strictEqual(pdf.admin_fee_mail_to, M.OFFICE_MAIL);
+assert.strictEqual(pdf.admin_fee_payee, M.BROKER_NAME);
 assert.strictEqual(pdf.admin_fee_amount, '$200.00');
 assert.strictEqual(pdf.agent_mail_to, '10 Agent St');
 assert.strictEqual(pdf.payee1_mail_to, M.OFFICE_MAIL);
@@ -119,8 +144,14 @@ call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(funct
       assert.strictEqual(M.sumLines(lines), pack.header.totalGross);
       var admin = lines.filter(function (l) { return l.kind === 'admin_fee'; })[0];
       assert.strictEqual(admin.amount, 200);
+      assert.strictEqual(admin.name, M.BROKER_NAME);
+      assert.strictEqual(admin.note, M.OFFICE_MAIL);
+      assert.ok(admin.note.indexOf('Standard per-transaction') < 0);
+      var bro = lines.filter(function (l) { return l.kind === 'brokerage'; })[0];
+      assert.strictEqual(bro.note, M.OFFICE_MAIL);
       var primary = lines.filter(function (l) { return l.kind === 'primary'; })[0];
       assert.strictEqual(primary.pct, 90);
+      assert.strictEqual(primary.note, '');
       return call({ action: 'cdaSaveDraft', token: token, txnId: closed.id, lines: lines }).then(function () {
         return call({ action: 'cdaMarkSent', token: token, txnId: closed.id, envelopeId: 'env-demo' });
       }).then(function (sent) {

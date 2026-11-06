@@ -47,6 +47,7 @@
     var books = M.EBOOKS_KINDS.indexOf(kind) >= 0;
     var amtLock = locked || kind === 'admin_fee';
     var shown = l.amount === '' || l.amount == null ? '' : M.usd(l.amount);
+    /* Admin Fee mail-to is the office address. A stored street address is kept; the fee description is not. */
     var noteVal = kind === 'admin_fee' ? M.adminFeeNote(l.note) : (l.note || '');
     return '<div class="cda-line" data-i="' + i + '" data-kind="' + h(kind) + '"><div class="cda-k"><b>' + h(label) + '</b>' + (books ? '<small>E-Books</small>' : '<small>CDA only</small>') + (kind !== 'brokerage' && kind !== 'primary' && kind !== 'admin_fee' && kind !== 'tc_fee' && !locked ? '<button type="button" class="link cda-rm">Remove</button>' : '') + '</div>' +
       nameCell +

@@ -42,7 +42,7 @@
     var out = (lines || []).map(cloneLine).filter(function (l) { return KINDS.indexOf(l.kind) >= 0; });
     var a = null;
     out.forEach(function (l) { if (l.kind === 'admin_fee' && !a) a = l; });
-    if (!a) out.push(Object.assign(blank('admin_fee'), { amount: fee, name: BROKER_NAME }));
+    if (!a) out.push(Object.assign(blank('admin_fee'), { amount: fee, name: BROKER_NAME, note: OFFICE_MAIL }));
     else { if (a.amount === '' || a.amount == null) a.amount = fee; if (!a.name) a.name = BROKER_NAME; a.note = adminFeeNote(a.note); }
     return out;
   }
@@ -67,12 +67,11 @@
     if (!agent) return '';
     return String(agent.address || agent.w9Address || agent.mailingAddress || '').replace(/\s+/g, ' ').trim();
   }
-  /* Suggest sometimes stores the fee explanation in admin_fee.note. That text is internal-only
-     (not agent-facing). Mail to stays empty unless the note is a real mailing address. */
+  /* Suggest sometimes stores the fee explanation in admin_fee.note. That text is not a mailing
+     address. Mail to is the ENESMA Realty office unless a real address is already stored. */
   function adminFeeNote(note) {
     var n = String(note || '').replace(/\s+/g, ' ').trim();
-    if (!n) return '';
-    if (/admin fee|per-transaction|per transaction|deducted from/i.test(n)) return '';
+    if (!n || /admin fee|per-transaction|per transaction|deducted from/i.test(n)) return OFFICE_MAIL;
     return n;
   }
   /* Brokerage = broker % of full gross. Admin fee is deducted from the primary agent only.
@@ -95,6 +94,7 @@
     if (!String(bro.note || '').trim()) bro.note = OFFICE_MAIL;
     adm.amount = fee;
     if (!adm.name) adm.name = BROKER_NAME;
+    adm.note = adminFeeNote(adm.note);
     pri.amount = round2(gross * sp.split / 100 - fee - extras);
     pri.pct = sp.split;
     if (!pri.agentId) pri.agentId = (header && header.agentId) || (agent && agent.id) || '';
@@ -225,7 +225,7 @@
       tc_fee_mail_to: tc.note || '',
       admin_fee_payee: ad.name || BROKER_NAME,
       admin_fee_amount: pdfAmount(ad.amount || ADMIN_FEE),
-      admin_fee_mail_to: ad.note || '',
+      admin_fee_mail_to: adminFeeNote(ad.note),
       referral_payee: joinBits(ref.map(function (l) { return l.name || LABELS[l.kind]; })),
       referral_amount: pdfAmount(refAmt),
       referral_mail_to: joinBits(ref.map(function (l) { return l.note; })),
