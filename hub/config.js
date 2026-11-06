@@ -1,5 +1,5 @@
 window.HUB = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbw1sMFZhJcB0_9StcSppTufCkAVyoxeI_ZDImOKpsJHl7R4_M4VMdsUXMDSO0gxuGdT/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbzYtmzYv74D0yi0sVy-_JaLDYlNLSU795sqhREsqbGYYU1BEDR5KDAB7Du9Mm0Gp4ba/exec',
   TC: 'https://app.enesmarealty.com/transactions/',
   ESIGN: 'https://app.enesmarealty.com/esign/',
   MYBOOKS: 'https://app.enesmarealty.com/transactions/#/mybooks',
