@@ -26,7 +26,7 @@ Only brokerage + primary/co_list/co_buyer/referral_inhouse reach E-Books.
 
 **importKey:** `cda:<txnId>:brokerage`, `cda:<txnId>:agent:<userId>`; pending ops add|update|remove; approve updates existing entry in place.
 
-**Frontend flow:** checklist item P_CDA_COMMISSION_DISBURSEMENT_ → "CDA" button → popup (cdaGet, prefill suggested) → Save (cdaSaveDraft) → Send for E-Sign: render PDF, create envelope via E-Sign app (agent signer 1, owner signer 2) → cdaMarkSent → on completion E-Sign (owner session) calls cdaOnSigned with final PDF. "Revise CDA" → cdaRevise(reason) → edit → resend.
+**Frontend flow:** checklist item P_CDA_COMMISSION_DISBURSEMENT_ → "CDA" button → popup (cdaGet, prefill suggested) → Save (cdaSaveDraft) → Send for E-Sign sends immediately. There is no signer form. The envelope uses the agent email on the file or user profile and the owner email on file, agent first and broker second (`orderMode: "sequential"`). If either email is missing, the popup shows one error and does not send. Then cdaMarkSent. On completion the owner session calls cdaOnSigned with the final PDF. "Revise CDA" → cdaRevise(reason) → edit → resend.
 My E-Books commission `basis`: cda | paid | cda_pending | split | pending.
 
 HMAC sig: base64url(no pad) HMAC-SHA256(CDA_HOOK_SECRET, `${txnId}|${envelopeId}|${ts}`).

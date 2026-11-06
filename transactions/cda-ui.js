@@ -130,7 +130,9 @@
       return { name: A.uName(o), email: o.email || o.username || BROKER.email };
     }, function () { return BROKER; });
   }
-  function agentEmail(header) {
+  function agentEmail(header, pack) {
+    var onFile = agentById(pack, header && header.agentId);
+    if (onFile && onFile.email) return Promise.resolve(String(onFile.email).trim());
     var A = app(), s = A.S.user || {};
     if (s.id && header.agentId && s.id === header.agentId) return Promise.resolve(s.email || '');
     if (!A.isAdmin()) return Promise.resolve(s.email && !header.agentId ? s.email : '');
@@ -139,6 +141,7 @@
       return u ? (u.email || u.username || '') : '';
     }, function () { return ''; });
   }
+  function emailOk(s) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(s || '').trim()); }
 
   function sendEnvelope(header, lines, agent, broker) {
     var A = app();
@@ -339,35 +342,39 @@
     function startSend(linesOut) {
       if (!linesOut) return;
       err('');
+      var sendBtn = A.qs('#cdaSend', m);
+      if (sendBtn) sendBtn.disabled = true;
       var host = A.qs('#cdaSign', m);
-      host.innerHTML = '<div class="loading"><span class="spin"></span> Checking signers…</div>';
-      Promise.all([agentEmail(header), ownerUser()]).then(function (pair) {
-        host.innerHTML = '<div class="cda-who"><label>Agent signs first<input id="cdaAN" value="' + h(header.agentName || '') + '" readonly></label><label>Agent email<input id="cdaAE" type="email" value="' + h(pair[0] || '') + '" autocomplete="off"></label>' +
-          '<label>Broker signs second<input id="cdaBN" value="' + h(pair[1].name || BROKER.name) + '"></label><label>Broker email<input id="cdaBE" type="email" value="' + h(pair[1].email || BROKER.email) + '" autocomplete="off"></label></div>' +
-          '<button type="button" class="btn" id="cdaGo">Send agent, then broker</button>';
-        A.qs('#cdaGo', m).onclick = function () {
-          var ae = A.qs('#cdaAE', m).value.trim(), be = A.qs('#cdaBE', m).value.trim(), bn = A.qs('#cdaBN', m).value.trim();
-          if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ae) || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(be) || !bn) { err('Enter the agent email and the broker name and email.'); return; }
-          var b = this; b.disabled = true; err('');
-          var afterSave = A.api('cdaSaveDraft', { txnId: txn.id, lines: linesOut });
-          afterSave.then(function () {
-            if (A.DEMO) return { envelope: { id: 'demo-' + txn.id } };
-            return sendEnvelope(header, linesOut, { name: header.agentName || 'Agent', email: ae }, { name: bn, email: be });
-          }).then(function (env) {
-            var id = (env.envelope && env.envelope.id) || env.id;
-            if (!id) throw new Error('E-Sign did not return an envelope.');
-            return A.api('cdaMarkSent', { txnId: txn.id, envelopeId: id });
-          }).then(function () {
-            m.close();
-            A.toast(A.DEMO ? 'Demo: CDA marked sent. The owner records the signed PDF from this file.' : 'CDA sent. The agent signs first, then the broker.');
-            A.refresh();
-          }, function (e) {
-            b.disabled = false;
-            if (e.code === 'CONFLICT') err('This CDA was already sent or signed. Revise it before sending again.');
-            else err(e.message);
-          });
-        };
-      }, function (e) { host.innerHTML = ''; err(e.message); });
+      host.innerHTML = '<div class="loading"><span class="spin"></span> Sending for signature…</div>';
+      function fail(msg) { host.innerHTML = ''; if (sendBtn) sendBtn.disabled = false; err(msg); }
+      Promise.all([agentEmail(header, pack), ownerUser()]).then(function (pair) {
+        var ae = String(pair[0] || '').trim();
+        var broker = pair[1] || {};
+        var be = String(broker.email || '').trim();
+        var bn = String(broker.name || '').trim();
+        var missing = [];
+        if (!emailOk(ae)) missing.push('agent email');
+        if (!emailOk(be)) missing.push('broker email');
+        if (missing.length) {
+          fail('This CDA cannot be sent. The ' + missing.join(' and the ') + (missing.length > 1 ? ' are' : ' is') + ' not on file.');
+          return;
+        }
+        return A.api('cdaSaveDraft', { txnId: txn.id, lines: linesOut }).then(function () {
+          if (A.DEMO) return { envelope: { id: 'demo-' + txn.id } };
+          return sendEnvelope(header, linesOut, { name: header.agentName || 'Agent', email: ae }, { name: bn || BROKER.name, email: be });
+        }).then(function (env) {
+          var id = (env.envelope && env.envelope.id) || env.id;
+          if (!id) throw new Error('E-Sign did not return an envelope.');
+          return A.api('cdaMarkSent', { txnId: txn.id, envelopeId: id });
+        }).then(function () {
+          m.close();
+          A.toast(A.DEMO ? 'Demo: CDA marked sent. The owner records the signed PDF from this file.' : 'CDA sent. The agent signs first, then the broker.');
+          A.refresh();
+        }, function (e) {
+          if (e.code === 'CONFLICT') fail('This CDA was already sent or signed. Revise it before sending again.');
+          else fail(e.message);
+        });
+      }, function (e) { fail(e.message); });
     }
     function revise() {
       var reason = window.prompt('Why is this CDA being revised? The previous signature request is voided. The latest fully signed CDA stays on the books until the new one is signed.');
