@@ -16,11 +16,19 @@ assert.ok(uiSrc.indexOf('No split is saved') < 0);
 assert.ok(uiSrc.indexOf('Standard per-transaction admin fee') < 0);
 assert.ok(uiSrc.indexOf('M.adminFeeNote(l.note)') >= 0, 'admin fee mail-to uses the office-address note');
 var html = fs.readFileSync(__dirname + '/index.html', 'utf8');
-assert.ok(html.indexOf('cda-math.js?v=8') >= 0);
-assert.ok(html.indexOf('cda-ui.js?v=9') >= 0);
+assert.ok(html.indexOf('cda-math.js?v=9') >= 0);
+assert.ok(html.indexOf('cda-ui.js?v=10') >= 0);
 assert.ok(html.indexOf('app.css?v=45') >= 0);
-assert.ok(html.indexOf('cda-math.js?v=7') < 0);
-assert.ok(html.indexOf('cda-ui.js?v=8') < 0);
+assert.ok(html.indexOf('cda-math.js?v=8') < 0);
+assert.ok(html.indexOf('cda-ui.js?v=9') < 0);
+assert.ok(uiSrc.indexOf('M.runCdaEsignHandoff') >= 0);
+assert.ok(uiSrc.indexOf('readSsoCookie') < 0);
+assert.ok(uiSrc.indexOf('exchangeEsignSession') < 0);
+assert.ok(uiSrc.indexOf("esignCall(body.action, { tcToken: body.tcToken })") >= 0);
+assert.ok(uiSrc.indexOf("esignCall('createEnvelope'") >= 0);
+var exchangeAt = uiSrc.indexOf('function esignSession');
+var createAt = uiSrc.indexOf("esignCall('createEnvelope'");
+assert.ok(exchangeAt > 0 && createAt > exchangeAt);
 assert.ok(uiSrc.indexOf('Send agent, then broker') < 0);
 assert.ok(uiSrc.indexOf('id="cdaAE"') < 0);
 assert.ok(uiSrc.indexOf('id="cdaGo"') < 0);
@@ -219,9 +227,83 @@ assert.ok(M.isCdaItem({ code: 'P_CDA_COMMISSION_DISBURSEMENT_' }));
 assert.ok(M.isCdaItem({ code: 'CDA' }));
 assert.ok(!M.isCdaItem({ code: 'P_INVOICES' }));
 
+assert.strictEqual(M.esignSessionToken({ token: ' es-1 ' }), 'es-1');
+assert.strictEqual(M.esignSessionToken({}), '');
+assert.strictEqual(M.esignSessionToken(null), '');
+var loginBody = M.cdaEsignLoginBody('  tc-live  ');
+assert.strictEqual(loginBody.action, 'loginWithToken');
+assert.strictEqual(loginBody.tcToken, 'tc-live');
+assert.strictEqual(Object.keys(loginBody).sort().join(','), 'action,tcToken');
+function rejectNext(promise, check) {
+  return promise.then(function () { throw new Error('expected this handoff to stop'); }, function (e) {
+    if (e && (e.name === 'AssertionError' || e.code === 'ERR_ASSERTION')) throw e;
+    return check(e);
+  });
+}
+function handoffChecks() {
+  return rejectNext(M.runCdaSendHandoff({ tcToken: 'tc-live' }), function (e) {
+    assert.strictEqual(e.sent, false);
+    assert.strictEqual(e.code, 'AUTH');
+    assert.strictEqual(e.createEnvelope, false);
+    assert.strictEqual(e.markSent, false);
+    assert.strictEqual(e.calls.map(function (c) { return c.action; }).join(','), 'cdaSaveDraft,loginWithToken');
+    assert.strictEqual(e.calls[0].token, 'tc-live');
+    assert.strictEqual(e.calls[1].tcToken, 'tc-live');
+    assert.strictEqual(e.calls[1].token, undefined);
+    assert.strictEqual(Object.keys(e.calls[1]).sort().join(','), 'action,tcToken');
+    assert.ok(/Please sign in\./.test(e.message));
+    assert.ok(/was not sent/.test(e.message));
+    assert.ok(/draft is still here/.test(e.message));
+  }).then(function () {
+    var logins = 0;
+    return M.runCdaSendHandoff({
+      tcToken: 'tc-live',
+      login: function (body) {
+        logins++;
+        assert.strictEqual(body.tcToken, 'tc-live');
+        assert.strictEqual(Object.keys(body).sort().join(','), 'action,tcToken');
+        return { token: 'es-session', user: { id: 'U1' } };
+      },
+      create: function (session) {
+        assert.strictEqual(session.esignToken, 'es-session');
+        return { envelope: { id: 'env-1' } };
+      },
+      mark: function (body) {
+        assert.strictEqual(body.action, 'cdaMarkSent');
+        assert.strictEqual(body.token, 'tc-live');
+        assert.strictEqual(body.envelopeId, 'env-1');
+        return { cda: { status: 'sent' } };
+      }
+    }).then(function (ok) {
+      assert.strictEqual(logins, 1);
+      assert.strictEqual(ok.sent, true);
+      assert.strictEqual(ok.envelopeId, 'env-1');
+      assert.strictEqual(ok.calls.map(function (c) { return c.action; }).join(','), 'cdaSaveDraft,loginWithToken,createEnvelope,cdaMarkSent');
+    });
+  }).then(function () {
+    return rejectNext(M.runCdaEsignHandoff('tc-live', function () { return { user: { id: 'U1' } }; }), function (e) {
+      assert.strictEqual(e.code, 'AUTH');
+      assert.strictEqual(e.createEnvelope, false);
+    });
+  }).then(function () {
+    return rejectNext(M.runCdaEsignHandoff('', function () { throw new Error('login should not be called'); }), function (e) {
+      assert.strictEqual(e.code, 'AUTH');
+      assert.strictEqual(e.createEnvelope, false);
+    });
+  }).then(function () {
+    return rejectNext(M.runCdaEsignHandoff('tc-live', function () { throw new Error('Could not reach ENESMA E-Sign.'); }), function (e) {
+      assert.strictEqual(e.code, undefined);
+      assert.strictEqual(e.createEnvelope, false);
+      assert.ok(/Could not reach/.test(e.message));
+      assert.strictEqual(e.trace.length, 1);
+    });
+  });
+}
+
 function call(body) { return mock.call(body).then(function (r) { if (!r.ok) { var e = new Error(r.error); e.code = r.code; throw e; } return r.data; }); }
 
-call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(function (d) {
+handoffChecks().then(function () {
+return call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(function (d) {
   var token = d.token;
   return call({ action: 'listTransactions', token: token }).catch(function () { return null; }).then(function () {
     return call({ action: 'dashboard', token: token });
@@ -280,4 +362,5 @@ call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(funct
       });
     });
   });
+});
 }).catch(function (e) { console.error(e); process.exit(1); });
