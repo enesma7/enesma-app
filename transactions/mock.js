@@ -624,7 +624,7 @@ function ebAgentsOut() { return DB.users.map(function (x) { var p = EBD.agents[x
 function ebVOut(v) { return { id: v.id, name: v.name, email: v.email, phone: v.phone, address: v.address, tinLast4: v.tin ? v.tin.slice(-4) : '', hasTin: !!v.tin, is1099: v.is1099, archived: v.archived }; }
 A.ebLoad = function (b, u) {
   ebGate(u); var keys = {}; ebLive().forEach(function (e) { if (e.importKey) keys[e.importKey] = 1; });
-  var txns = DB.txns.filter(function (t) { return t.status === 'Closed'; }).map(function (t) { var rec = (DB.cda || {})[t.id]; var executed = rec && rec.executed; return { id: t.id, title: ebTitle(t), type: t.type, side: t.side, closedAt: String(t.closedAt || '').slice(0, 10), agentId: t.agentId, agentName: (user(t.agentId) || {}).name || '', gross: executed ? (window.TCCda ? TCCda.grossOf(executed.header || {}) : ebGrossM(t)) : ebGrossM(t), importedIncome: !!keys['txn:' + t.id + ':income'] || !!keys['cda:' + t.id + ':brokerage'], importedPayout: !!keys['txn:' + t.id + ':payout:' + t.agentId] || !!keys['cda:' + t.id + ':agent:' + t.agentId], cdaStatus: executed ? 'executed' : (rec && rec.cda ? rec.cda.status : ''), cdaExecuted: !!executed }; });
+  var txns = DB.txns.filter(function (t) { return t.status === 'Closed'; }).map(function (t) { var rec = (DB.cda || {})[t.id]; var executed = rec && rec.executed; return { id: t.id, title: ebTitle(t), type: t.type, side: t.side, closedAt: String(t.closedAt || '').slice(0, 10), agentId: t.agentId, agentName: (user(t.agentId) || {}).name || '', gross: executed ? (window.TCCda ? window.TCCda.grossOf(executed.header || {}) : ebGrossM(t)) : ebGrossM(t), importedIncome: !!keys['txn:' + t.id + ':income'] || !!keys['cda:' + t.id + ':brokerage'], importedPayout: !!keys['txn:' + t.id + ':payout:' + t.agentId] || !!keys['cda:' + t.id + ':agent:' + t.agentId], cdaStatus: executed ? 'executed' : (rec && rec.cda ? rec.cda.status : ''), cdaExecuted: !!executed }; });
   return { categories: EBD.cats, vendors: EBD.vendors.map(ebVOut), agents: ebAgentsOut(), entries: ebLive().map(ebEOut), txns: txns, methods: ['Check', 'ACH/Transfer', 'Wire', 'Credit Card', 'Debit Card', 'Cash', 'Zelle', 'Escrow Disbursement', 'Other'], threshold: 600 };
 };
 A.ebSaveEntry = function (b, u) {
@@ -653,16 +653,18 @@ function mebMine(u, id) { var e = MEBX.filter(function (x) { return x.id === id 
 function mebOut(e) { return { id: e.id, date: e.date, amount: e.amount, category: e.category, memo: e.memo, receipt: !!e.receipt, receiptName: e.receipt ? e.receipt.name : '' }; }
 A.mebLoad = function (b, u) {
   mebGate(u); var prof = EBD.agents[u.id] || {}, split = prof.splitPct === undefined || prof.splitPct === '' ? null : Number(prof.splitPct);
-  function cdaHit(t) { var rec = (DB.cda || {})[t.id]; return rec && rec.executed && window.TCCda && TCCda.booksLines(rec.executed.lines).some(function (l) { return l.agentId === u.id; }); }
-  var com = DB.txns.filter(function (t) { return t.status === 'Closed' && (t.agentId === u.id || cdaHit(t)); }).map(function (t) {
-    var cdaPay = ebLive().filter(function (e) { return !e.deleted && e.importKey === 'cda:' + t.id + ':agent:' + u.id; }).reduce(function (s, e) { return s + e.amount; }, null);
-    if (cdaHit(t)) {
-      var basis = cdaPay !== null ? 'cda' : 'cda_pending';
-      return { txnId: t.id, title: title(t), type: t.type, closedAt: String(t.closedAt || '').slice(0, 10), year: String(t.closedAt || '').slice(0, 4), amount: cdaPay, basis: basis };
-    }
-    var pay = EBD.entries.filter(function (e) { return e.type === 'expense' && e.importKey === 'txn:' + t.id + ':payout:' + u.id; }).reduce(function (s, e) { return s + e.amount; }, null);
-    var g = ebGrossM(t), amt = pay !== null ? pay : (split !== null && g ? Math.round(g * split) / 100 : null);
-    return { txnId: t.id, title: title(t), type: t.type, closedAt: String(t.closedAt || '').slice(0, 10), year: String(t.closedAt || '').slice(0, 4), amount: amt, basis: pay !== null ? 'paid' : amt !== null ? 'split' : 'pending' };
+  function postedAgent(t) { return ebLive().filter(function (e) { return e.importKey === 'cda:' + t.id + ':agent:' + u.id; })[0] || null; }
+  function pendingAgent(t) { return DB.cdaPending.filter(function (p) { return p.status === 'pending' && p.op !== 'remove' && p.importKey === 'cda:' + t.id + ':agent:' + u.id; })[0] || null; }
+  var com = DB.txns.filter(function (t) { return t.status === 'Closed' && (t.agentId === u.id || postedAgent(t) || pendingAgent(t)); }).map(function (t) {
+    var posted = postedAgent(t);
+    var oldPay = ebLive().filter(function (e) { return e.type === 'expense' && e.importKey === 'txn:' + t.id + ':payout:' + u.id; })[0];
+    var pend = pendingAgent(t);
+    var g = ebGrossM(t), amt = null, basis = 'pending';
+    if (posted) { amt = posted.amount; basis = 'cda'; }
+    else if (oldPay) { amt = oldPay.amount; basis = 'paid'; }
+    else if (pend) { amt = Number(pend.amount) || 0; basis = 'cda_pending'; }
+    else if (split !== null && g) { amt = Math.round(g * split) / 100; basis = 'split'; }
+    return { txnId: t.id, title: title(t), type: t.type, closedAt: String(t.closedAt || '').slice(0, 10), year: String(t.closedAt || '').slice(0, 4), amount: amt, basis: basis };
   });
   return { categories: MEB_CATS, commission: com, expenses: MEBX.filter(function (e) { return e.agentId === u.id && !e.deleted; }).map(mebOut).sort(function (a, c) { return String(c.date).localeCompare(String(a.date)); }) };
 };
@@ -718,6 +720,7 @@ A.ebImport = function (b, u) {
   var cat = function (n) { return EBD.cats.filter(function (c) { return c.name === n; })[0].id; }, added = 0, skipped = 0;
   (b.items || []).forEach(function (it) {
     var t = txn(it.txnId); if (!t || t.status !== 'Closed') { skipped++; return; }
+    if (Object.keys(keys).some(function (k) { return k.indexOf('cda:' + t.id + ':') === 0; })) { skipped++; return; }
     var date = String(t.closedAt || now()).slice(0, 10), title = ebTitle(t);
     var add = function (key, type, c, amount, pt, pid, memo) { if (keys[key]) { skipped++; return; } var a = ebNum(amount); if (isNaN(a) || a <= 0) return; EBD.entries.push({ id: nid('EE'), type: type, date: date, amount: a, categoryId: c, payeeType: pt, payeeId: pid, payeeName: '', method: 'Escrow Disbursement', memo: memo, txnId: t.id, source: 'import', importKey: key, receipt: null, createdAt: now(), updatedAt: now(), deleted: false }); keys[key] = 1; added++; };
     if (it.gross !== undefined) add('txn:' + t.id + ':income', 'income', cat('Commission Income'), it.gross, '', '', 'Gross commission · ' + title);
@@ -795,40 +798,81 @@ A.cdaOnSigned = function (b, u) {
   if (!u || u.role !== 'admin') Fail('Only the owner or an admin can file a signed CDA.', 'FORBIDDEN');
   var t = cdaTxn(b, u), rec = DB.cda[t.id]; if (!rec || !rec.cda) Fail('No CDA to file.');
   if (!b.base64) Fail('The signed PDF is missing.');
+  var envId = String(b.envelopeId || '');
+  if (rec.cda.status === 'executed' && rec.cda.signedDocId && (!envId || rec.cda.envelopeId === envId)) {
+    var have = DB.docs.filter(function (d) { return d.id === rec.cda.signedDocId && !d.removed; })[0];
+    if (have) return { cda: rec.cda, docId: have.id, itemStatus: 'Pending', queued: 0, already: true };
+  }
+  if (rec.cda.status !== 'sent' && rec.cda.status !== 'draft') Fail('No CDA waiting for signature.', 'CONFLICT');
+  if (envId && rec.cda.envelopeId && rec.cda.envelopeId !== envId) Fail('Envelope does not match this CDA version.', 'CONFLICT');
   var header = cdaPack(t).header;
-  rec.cda.status = 'executed'; rec.cda.updatedAt = now(); rec.cda.header = header; if (b.envelopeId) rec.cda.envelopeId = String(b.envelopeId);
+  rec.cda.status = 'executed'; rec.cda.updatedAt = now(); rec.cda.header = header; if (envId) rec.cda.envelopeId = envId;
   rec.executed = JSON.parse(JSON.stringify(rec.cda));
   rec.versions = rec.versions || []; rec.versions.push({ version: rec.cda.version, status: 'executed', at: now() });
   var item = itemsOf(t.id).filter(function (i) { return i.active && (i.code === 'P_CDA_COMMISSION_DISBURSEMENT_' || i.code === 'CDA'); })[0];
-  var doc = addDoc(t, item, String(b.name || 'CDA-signed.pdf').slice(0, 150), u.id, 'Approved', { b64: b.base64 });
-  if (item) item.status = 'Approved';
+  var doc = addDoc(t, item, String(b.name || 'CDA-signed.pdf').slice(0, 150), u.id, 'Pending', { b64: b.base64 });
+  rec.cda.signedDocId = doc.id;
   ebLive().forEach(function (e) { if (e.importKey && e.importKey.indexOf('txn:' + t.id + ':') === 0) e.deleted = true; });
-  return { cda: rec.cda, docId: doc.id, itemStatus: item ? item.status : '', queued: cdaQueue(t, rec.cda.lines) };
+  return { cda: rec.cda, docId: doc.id, itemStatus: item ? item.status : '', queued: cdaQueue(t, rec.cda.lines), already: false };
 };
-A.ebCdaPending = function (b, u) { ebGate(u); return { pending: DB.cdaPending.slice() }; };
+function cdaIncomeRow(i) { return i.type === 'income' || String(i.importKey || '').slice(-10) === ':brokerage'; }
+function actualCloseDate(t) {
+  if (!t || t.status !== 'Closed') return '';
+  var d = String(t.closedAt || '').slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '';
+}
+function matchedDeposit(rec) {
+  var chk = rec && rec.escrowCheck;
+  if (!chk || !chk.match) return '';
+  var d = String(chk.depositDate || '');
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '';
+}
+function upsertCda(i, date, setDate) {
+  var cat = function (n) { return EBD.cats.filter(function (c) { return c.name === n; })[0].id; };
+  var live = ebLive().filter(function (e) { return e.importKey === i.importKey; })[0];
+  if (i.op === 'remove') { if (live) live.deleted = true; }
+  else if (live) { live.amount = i.amount; live.updatedAt = now(); if (setDate) live.date = date; }
+  else EBD.entries.push({ id: nid('EE'), type: i.type, date: date, amount: i.amount, categoryId: i.type === 'income' ? cat('Commission Income') : cat('Agent Commission Payouts'), payeeType: i.payeeType || '', payeeId: i.payeeId || '', payeeName: i.payeeName || '', method: 'Escrow Disbursement', memo: i.memo || '', txnId: i.txnId, source: 'cda', importKey: i.importKey, receipt: null, createdAt: now(), updatedAt: now(), deleted: false });
+  i.status = 'approved';
+}
+A.ebCdaPending = function (b, u) { ebGate(u); return { pending: DB.cdaPending.filter(function (p) { return !p.status || p.status === 'pending'; }) }; };
 A.ebCdaDecide = function (b, u) {
   ebGate(u); var ids = b.ids || [], decision = b.decision === 'approve' || b.decision === 'reject' ? b.decision : Fail('Choose approve or reject.');
-  var date = /^\d{4}-\d{2}-\d{2}$/.test(b.date || '') ? b.date : new Date().toISOString().slice(0, 10), approved = 0, rejected = 0;
-  var cat = function (n) { return EBD.cats.filter(function (c) { return c.name === n; })[0].id; };
+  var approved = 0, rejected = 0, awaiting = 0, missing = 0;
   ids.forEach(function (id) {
-    var i = DB.cdaPending.filter(function (p) { return p.id === id; })[0]; if (!i) return;
-    if (decision === 'reject') { rejected++; DB.cdaPending = DB.cdaPending.filter(function (p) { return p.id !== id; }); return; }
-    var live = ebLive().filter(function (e) { return e.importKey === i.importKey; })[0];
-    if (i.op === 'remove') { if (live) live.deleted = true; }
-    else if (live) { live.amount = i.amount; live.updatedAt = now(); live.date = date; }
-    else EBD.entries.push({ id: nid('EE'), type: i.type, date: date, amount: i.amount, categoryId: i.type === 'income' ? cat('Commission Income') : cat('Agent Commission Payouts'), payeeType: i.payeeType || '', payeeId: i.payeeId || '', payeeName: '', method: 'Escrow Disbursement', memo: i.memo || '', txnId: i.txnId, source: 'cda', importKey: i.importKey, receipt: null, createdAt: now(), updatedAt: now(), deleted: false });
-    approved++; DB.cdaPending = DB.cdaPending.filter(function (p) { return p.id !== id; });
+    var i = DB.cdaPending.filter(function (p) { return p.id === id && (!p.status || p.status === 'pending'); })[0]; if (!i) return;
+    if (decision === 'reject') { rejected++; i.status = 'rejected'; return; }
+    if (i.op === 'remove') { upsertCda(i, '', false); approved++; return; }
+    if (cdaIncomeRow(i)) {
+      var dep = matchedDeposit(DB.cda[i.txnId]);
+      if (!dep) { i.status = 'awaiting_deposit'; awaiting++; return; }
+      upsertCda(i, dep, true); approved++; return;
+    }
+    var closeD = actualCloseDate(txn(i.txnId));
+    if (!closeD) { missing++; return; }
+    upsertCda(i, closeD, true); approved++;
   });
-  return { approved: approved, rejected: rejected };
+  return { approved: approved, rejected: rejected, awaitingDeposit: awaiting, missingCloseDate: missing };
 };
 A.ebConfirmEscrowCheck = function (b, u) {
   ebGate(u); var t = txn(b.txnId); if (!t) Fail('Transaction not found.'); if (t.status !== 'Closed') Fail('Confirm the escrow check on a closed file.');
   var rec = DB.cda[t.id]; if (!rec || !rec.executed) Fail('A fully signed CDA is required first.');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(b.date || '')) Fail('Enter the check date.'); if (!String(b.checkNumber || '').trim()) Fail('Enter the check number.');
+  var depositDate = String(b.depositDate || b.date || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(depositDate)) Fail('Enter the date the check was deposited.');
+  if (!String(b.checkNumber || '').trim()) Fail('Enter the check number.');
   var amount = ebNum(b.amount); if (!(amount > 0)) Fail('Enter the check amount.');
   var expected = window.TCCda.grossOf(rec.executed.header || cdaPack(t).header), difference = window.TCCda.round2(amount - expected), match = difference === 0;
-  rec.escrowCheck = { date: b.date, checkNumber: String(b.checkNumber).trim(), amount: amount, expected: expected, difference: difference, match: match, confirmedAt: now(), confirmedBy: u.id, locked: match };
-  return { escrowCheck: rec.escrowCheck };
+  rec.escrowCheck = { date: depositDate, depositDate: depositDate, checkNumber: String(b.checkNumber).trim(), amount: amount, expected: expected, difference: difference, match: match, confirmedAt: now(), confirmedBy: u.id, locked: false };
+  var incomePosted = false;
+  if (match) {
+    var row = DB.cdaPending.filter(function (p) { return p.txnId === t.id && cdaIncomeRow(p) && p.status === 'awaiting_deposit' && p.op !== 'remove'; })[0];
+    if (row) { upsertCda(row, depositDate, true); incomePosted = true; }
+    else {
+      var live = ebLive().filter(function (e) { return e.importKey === 'cda:' + t.id + ':brokerage'; })[0];
+      if (live) { live.date = depositDate; live.updatedAt = now(); incomePosted = true; }
+    }
+  }
+  return { escrowCheck: rec.escrowCheck, incomePosted: incomePosted };
 };
 var OPEN = { ping: 1, login: 1, requestPasswordCode: 1, resetPasswordWithCode: 1 };
 window.TC_MOCK = {

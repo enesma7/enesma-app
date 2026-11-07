@@ -207,6 +207,10 @@
     var line2 = city ? (city + ', ' + st + (zip ? ' ' + zip : '')) : (zip ? st + ' ' + zip : '');
     return {
       address: [street, line2].filter(Boolean).join(', '),
+      street: String(street || '').replace(/\s+/g, ' ').trim(),
+      city: String(city || '').replace(/\s+/g, ' ').trim(),
+      state: String(i.state || '').replace(/\s+/g, ' ').trim(),
+      zip: String(zip || '').replace(/\s+/g, ' ').trim(),
       price: round2(price),
       commission: raw,
       commissionType: commissionType,
@@ -276,11 +280,22 @@
       total_disbursed: disbursed ? usd(disbursed) : ''
     };
   }
-  /* E-Sign fractions, top-left origin, from the CDA AcroForm signature widgets (letter page). */
+  /* Three-line signing heading. Uses only street/city/state/ZIP that are actually present. */
+  function cdaSignHeading(header) {
+    header = header || {};
+    function bit(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
+    var street = bit(header.street);
+    var place = [bit(header.city), bit(header.state), bit(header.zip)].filter(Boolean).join(' ');
+    var lines = ['CDA'];
+    if (street) lines.push(street);
+    if (place) lines.push(place);
+    return lines.join('\n');
+  }
+  /* Top-left fractions of the CDA signature and date widgets. Each date sits on the date line under its signature. */
   function signRects(pageW, pageH) {
     pageW = pageW || 612; pageH = pageH || 792;
     function box(x, y, w, h) { return { page: 1, x: +(x / pageW).toFixed(4), y: +(y / pageH).toFixed(4), w: +(w / pageW).toFixed(4), h: +(h / pageH).toFixed(4) }; }
-    return { agentSig: box(145, 600, 170, 28), agentDate: box(330, 608, 100, 18), brokerSig: box(145, 656, 170, 28), brokerDate: box(330, 664, 100, 18) };
+    return { agentSig: box(145, 608, 160, 19), agentDate: box(145, 630, 80, 13), brokerSig: box(145, 664, 165, 19), brokerDate: box(145, 686, 80, 13) };
   }
 
   root.TCCda = {
@@ -289,6 +304,6 @@
     round2: round2, num: num, usd: usd, blank: blank, isCdaItem: isCdaItem, cloneLine: cloneLine,
     ensureAdmin: ensureAdmin, sumLines: sumLines, settlement: settlement, rebalanceAmounts: rebalanceAmounts, grossOf: grossOf, splitOf: splitOf, agentAddress: agentAddress, adminFeeNote: adminFeeNote,
     applySplitLines: applySplitLines, fallbackSuggest: fallbackSuggest, ensureSkeleton: ensureSkeleton, linesForEdit: linesForEdit, booksLines: booksLines,
-    sideLabel: sideLabel, headerFromTxn: headerFromTxn, pdfFields: pdfFields, signRects: signRects
+    sideLabel: sideLabel, headerFromTxn: headerFromTxn, pdfFields: pdfFields, cdaSignHeading: cdaSignHeading, signRects: signRects
   };
 })(typeof window !== 'undefined' ? window : globalThis);
