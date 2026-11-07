@@ -36,12 +36,13 @@ var mixed = [
 ];
 var books = M.booksLines(mixed);
 var kinds = books.map(function (l) { return l.kind; }).sort();
-assert.strictEqual(Array.prototype.join.call(kinds, '|'), 'brokerage|co_buyer|primary');
+assert.strictEqual(Array.prototype.join.call(kinds, '|'), 'admin_fee|brokerage|co_buyer|primary');
 var alex = books.filter(function (l) { return l.agentId === 'U2'; })[0];
 var sample = books.filter(function (l) { return l.agentId === 'U3'; })[0];
 assert.strictEqual(alex.amount, 7400);
 assert.strictEqual(sample.amount, 400);
-assert.ok(!books.some(function (l) { return l.kind === 'referral_outside' || l.kind === 'tc_fee' || l.kind === 'admin_fee' || l.kind === 'other' || l.kind === 'credit'; }));
+assert.strictEqual(books.filter(function (l) { return l.kind === 'admin_fee'; })[0].amount, 200);
+assert.ok(!books.some(function (l) { return l.kind === 'referral_outside' || l.kind === 'tc_fee' || l.kind === 'other' || l.kind === 'credit'; }));
 
 call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(function (admin) {
   var token = admin.token;
@@ -73,7 +74,8 @@ call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(funct
         }).then(function (queued) {
           var earlyIds = queued.pending.filter(function (p) { return p.txnId === open.id; }).map(function (p) { return p.id; });
           assert.ok(earlyIds.length >= 2);
-          assert.ok(!queued.pending.some(function (p) { return p.txnId === open.id && /admin_fee|tc_fee|referral_outside|other|credit/.test(p.kind || ''); }));
+          assert.ok(queued.pending.some(function (p) { return p.txnId === open.id && p.kind === 'admin_fee'; }));
+          assert.ok(!queued.pending.some(function (p) { return p.txnId === open.id && /tc_fee|referral_outside|other|credit/.test(p.kind || ''); }));
           return call({ action: 'ebCdaDecide', token: token, ids: earlyIds, decision: 'approve', date: '1999-01-01' });
         }).then(function (early) {
           assert.ok(early.missingCloseDate >= 1);
@@ -128,8 +130,12 @@ call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(funct
             return call({ action: 'ebLoad', token: token });
           }).then(function (both) {
             var rows = cdaKeys(both.entries || [], open.id);
-            assert.strictEqual(rows.length, 2);
+            assert.strictEqual(rows.length, 3);
             var income = rows.filter(function (e) { return e.importKey === 'cda:' + open.id + ':brokerage'; })[0];
+            var fee = rows.filter(function (e) { return e.importKey === 'cda:' + open.id + ':admin_fee'; })[0];
+            assert.ok(fee);
+            assert.strictEqual(fee.payeeId, '');
+            assert.notStrictEqual(fee.amount, income.amount);
             var expense = rows.filter(function (e) { return e.importKey === 'cda:' + open.id + ':agent:U1'; })[0];
             assert.strictEqual(income.payeeId, '');
             assert.strictEqual(income.date, '2027-01-03');
@@ -175,8 +181,10 @@ call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(funct
             });
           }).then(function (finalRows) {
             var rows = cdaKeys(finalRows.entries || [], open.id);
-            assert.strictEqual(rows.length, 2);
-            var income = rows.filter(function (e) { return e.type === 'income'; })[0];
+            assert.strictEqual(rows.length, 3);
+            var income = rows.filter(function (e) { return e.importKey === 'cda:' + open.id + ':brokerage'; })[0];
+            var fees = rows.filter(function (e) { return e.importKey === 'cda:' + open.id + ':admin_fee'; });
+            assert.strictEqual(fees.length, 1);
             var expense = rows.filter(function (e) { return e.type === 'expense'; })[0];
             assert.strictEqual(expense.date, '2026-12-31');
             assert.strictEqual(expense.amount, M.round2(agentAmt - 100));

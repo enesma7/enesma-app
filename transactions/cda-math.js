@@ -7,7 +7,7 @@
   var BROKER_NAME = 'ENESMA Realty';
   var OFFICE_MAIL = '8311 Haven Ave #150, Rancho Cucamonga, CA 91730';
   var KINDS = ['brokerage', 'primary', 'co_list', 'co_buyer', 'referral_inhouse', 'referral_outside', 'tc_fee', 'admin_fee', 'other', 'credit'];
-  var EBOOKS = ['brokerage', 'primary', 'co_list', 'co_buyer', 'referral_inhouse'];
+  var EBOOKS = ['brokerage', 'admin_fee', 'primary', 'co_list', 'co_buyer', 'referral_inhouse'];
   /* CDA UI titles and subtitles use title case. Kind ids stay snake_case. */
   var LABELS = {
     brokerage: 'ENESMA Realty (Brokerage)',
@@ -177,9 +177,9 @@
       if (EBOOKS.indexOf(l.kind) < 0) return;
       var amt = round2(num(l.amount));
       if (!(amt > 0)) return;
-      if (l.kind === 'brokerage') {
-        var b = byKey.brokerage || { kind: 'brokerage', amount: 0, name: l.name || BROKER_NAME, agentId: '' };
-        b.amount = round2(b.amount + amt); byKey.brokerage = b; return;
+      if (l.kind === 'brokerage' || l.kind === 'admin_fee') {
+        var b = byKey[l.kind] || { kind: l.kind, amount: 0, name: l.name || BROKER_NAME, agentId: '' };
+        b.amount = round2(b.amount + amt); if (l.name) b.name = l.name; byKey[l.kind] = b; return;
       }
       if (!l.agentId) return;
       var k = 'agent:' + l.agentId;

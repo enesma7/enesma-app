@@ -428,7 +428,7 @@
     var chk = p.escrowCheck || {};
     var h = A.h;
     var prior = chk.date ? '<p class="' + (chk.match ? 'ok' : 'err') + '">Last confirmation ' + h(chk.date) + ' · check ' + h(chk.checkNumber || '') + ' · ' + money2(chk.amount) + (chk.match ? ' · match' : ' · mismatch ' + money2(chk.difference || 0)) + '.</p>' : '';
-    return '<div class="card gb cda-esc" id="cdaEsc"><h3>Broker commission check</h3><p class="sub">Confirm the commission check against the signed CDA total gross of <b>' + money2(expected) + '</b>. Brokerage income is recorded only after you enter the date that check was deposited, and only for the approved brokerage amount. Agent commission amounts are not dated from this deposit.</p>' + prior +
+    return '<div class="card gb cda-esc" id="cdaEsc"><h3>Broker commission check</h3><p class="sub">Confirm the commission check against the signed CDA total gross of <b>' + money2(expected) + '</b>. Brokerage commission and the admin fee are recorded only after you enter the date that check was deposited, and only for those approved amounts. Agent commission amounts are not dated from this deposit.</p>' + prior +
       '<div id="cdaEscErr"></div><div class="cda-who"><label>Date deposited<input type="date" id="escDate" value="' + h(chk.depositDate || '') + '"></label><label>Check #<input id="escNum" value="' + h(chk.checkNumber || '') + '" maxlength="40"></label><label>Amount<input id="escAmt" inputmode="decimal" value="' + h(chk.amount != null && chk.amount !== '' ? chk.amount : '') + '" placeholder="0.00"></label></div>' +
       '<p id="escLive" class="sub"></p><button type="button" class="btn" id="escGo">Confirm deposit</button></div>';
   }
