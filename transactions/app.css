@@ -451,6 +451,12 @@ h1.taddr{margin-bottom:2px}
 .ebt tr.sec th{font-size:14px;color:var(--k);padding-top:16px}.ebt tr.tot td{font-weight:700;border-bottom:2px solid var(--k)}.ebt tr.net td{font-weight:800;font-size:16px}
 .ebtype{display:inline-block;font-size:10px;font-weight:800;padding:2px 6px;border-radius:5px;margin-right:6px;vertical-align:1px}
 .ebtype.income{background:var(--gold);color:var(--k)}.ebtype.expense{background:var(--red);color:var(--w)}
+.modal .ebkv{margin:0 0 12px}.modal .ebkv div{display:grid;grid-template-columns:9.5em 1fr;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}.modal .ebkv dt,.modal .ebkv dd{margin:0}.modal .ebkv dt{font-weight:700}
+@media(max-width:760px){.modal .ebkv div{grid-template-columns:1fr}.ebpendrow td.src{grid-column:1/-1}}
+.ebred{display:inline-flex;align-items:center;gap:6px;background:var(--red);color:#fff;border:0;border-radius:8px;min-height:44px;min-width:44px;padding:8px 12px;font-weight:700;cursor:pointer}
+.ebred:focus-visible{outline:2px solid #D5BE87;outline-offset:2px}
+.ebred span{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fff;color:#9A0007;font-weight:800}
+.ebpendrow{background:rgba(154,0,7,.06)}
 .ebimp,.ebyes,.ebflag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--gold);color:var(--k);white-space:nowrap}
 .ebflag{background:var(--red);color:var(--w)}
 .muted{color:var(--soft)}
