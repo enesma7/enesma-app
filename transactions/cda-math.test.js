@@ -16,11 +16,17 @@ assert.ok(uiSrc.indexOf('No split is saved') < 0);
 assert.ok(uiSrc.indexOf('Standard per-transaction admin fee') < 0);
 assert.ok(uiSrc.indexOf('M.adminFeeNote(l.note)') >= 0, 'admin fee mail-to uses the office-address note');
 var html = fs.readFileSync(__dirname + '/index.html', 'utf8');
-assert.ok(html.indexOf('cda-math.js?v=8') >= 0);
-assert.ok(html.indexOf('cda-ui.js?v=9') >= 0);
+assert.ok(html.indexOf('cda-math.js?v=9') >= 0);
+assert.ok(html.indexOf('cda-ui.js?v=10') >= 0);
 assert.ok(html.indexOf('app.css?v=45') >= 0);
-assert.ok(html.indexOf('cda-math.js?v=7') < 0);
-assert.ok(html.indexOf('cda-ui.js?v=8') < 0);
+assert.ok(html.indexOf('cda-math.js?v=8') < 0);
+assert.ok(html.indexOf('cda-ui.js?v=9') < 0);
+assert.ok(uiSrc.indexOf('M.exchangeEsignSession') >= 0);
+assert.ok(uiSrc.indexOf("esignCall('loginWithToken'") >= 0);
+assert.ok(uiSrc.indexOf("esignCall('createEnvelope'") >= 0);
+var exchangeAt = uiSrc.indexOf('function esignSession');
+var createAt = uiSrc.indexOf("esignCall('createEnvelope'");
+assert.ok(exchangeAt > 0 && createAt > exchangeAt);
 assert.ok(uiSrc.indexOf('Send agent, then broker') < 0);
 assert.ok(uiSrc.indexOf('id="cdaAE"') < 0);
 assert.ok(uiSrc.indexOf('id="cdaGo"') < 0);
@@ -219,9 +225,68 @@ assert.ok(M.isCdaItem({ code: 'P_CDA_COMMISSION_DISBURSEMENT_' }));
 assert.ok(M.isCdaItem({ code: 'CDA' }));
 assert.ok(!M.isCdaItem({ code: 'P_INVOICES' }));
 
+var ssoA = M.ssoToken('tc-session', 'sso-cookie');
+assert.strictEqual(ssoA.primary, 'tc-session');
+assert.strictEqual(ssoA.alternate, 'sso-cookie');
+var ssoSame = M.ssoToken('same', 'same');
+assert.strictEqual(ssoSame.primary, 'same');
+assert.strictEqual(ssoSame.alternate, '');
+var ssoCookie = M.ssoToken('', 'sso-cookie');
+assert.strictEqual(ssoCookie.primary, 'sso-cookie');
+assert.strictEqual(ssoCookie.alternate, '');
+var ssoTrim = M.ssoToken('  tc-session  ', '');
+assert.strictEqual(ssoTrim.primary, 'tc-session');
+assert.strictEqual(ssoTrim.alternate, '');
+assert.strictEqual(M.esignSessionToken({ token: ' es-1 ' }), 'es-1');
+assert.strictEqual(M.esignSessionToken({}), '');
+assert.strictEqual(M.esignSessionToken(null), '');
+function pleaseSignIn() { var e = new Error('Please sign in.'); e.code = 'AUTH'; return e; }
+function handoffChecks() {
+  return M.exchangeEsignSession('tc-session', 'sso-cookie', function (tc) {
+    assert.strictEqual(tc, 'tc-session');
+    return { token: 'es-ok', user: { id: 'U1' } };
+  }).then(function (s) {
+    assert.strictEqual(s.token, 'es-ok');
+    var calls = [];
+    return M.exchangeEsignSession('stale', 'fresh', function (tc) {
+      calls.push(tc);
+      if (tc === 'stale') throw pleaseSignIn();
+      return { token: 'es-2', user: { id: 'U1' } };
+    }).then(function (s2) {
+      assert.deepStrictEqual(calls, ['stale', 'fresh']);
+      assert.strictEqual(s2.token, 'es-2');
+      return M.exchangeEsignSession('nope', '', function () { throw pleaseSignIn(); });
+    });
+  }).then(function () { throw new Error('rejected sign-in should not continue'); }, function (e) {
+    assert.strictEqual(e.code, 'AUTH');
+    assert.ok(/was not sent/.test(e.message));
+    assert.ok(/Please sign in\./.test(e.message));
+    assert.ok(/draft is still here/.test(e.message));
+    return M.exchangeEsignSession('', 'cookie-only', function (tc) {
+      assert.strictEqual(tc, 'cookie-only');
+      return { token: 'es-3' };
+    });
+  }).then(function (s3) {
+    assert.strictEqual(s3.token, 'es-3');
+    return M.exchangeEsignSession('tc', 'same-as-unused', function () { return { user: { id: 'U1' } }; });
+  }).then(function () { throw new Error('login without a token should not send'); }, function (e) {
+    assert.strictEqual(e.code, 'AUTH');
+    var calls = [];
+    return M.exchangeEsignSession('tc', 'other', function () {
+      calls.push('x');
+      throw new Error('Could not reach ENESMA E-Sign.');
+    }).then(function () { throw new Error('network errors should not be retried'); }, function (e2) {
+      assert.strictEqual(calls.length, 1);
+      assert.strictEqual(e2.code, undefined);
+      assert.ok(/Could not reach/.test(e2.message));
+    });
+  });
+}
+
 function call(body) { return mock.call(body).then(function (r) { if (!r.ok) { var e = new Error(r.error); e.code = r.code; throw e; } return r.data; }); }
 
-call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(function (d) {
+handoffChecks().then(function () {
+return call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(function (d) {
   var token = d.token;
   return call({ action: 'listTransactions', token: token }).catch(function () { return null; }).then(function () {
     return call({ action: 'dashboard', token: token });
@@ -280,4 +345,5 @@ call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(funct
       });
     });
   });
+});
 }).catch(function (e) { console.error(e); process.exit(1); });

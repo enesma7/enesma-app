@@ -21,10 +21,22 @@
       .then(function (r) { return r.json(); }, function () { throw new Error('Could not reach ENESMA E-Sign.'); })
       .then(function (j) { if (!j || !j.ok) { var e = new Error((j && j.error) || 'E-Sign could not do that.'); e.code = j && j.code; throw e; } return j.data; });
   }
+  function readSsoCookie() {
+    try {
+      var m = String(document.cookie || '').match(/(?:^|; )enesma_sso=([^;]*)/);
+      return m ? decodeURIComponent(m[1]) : '';
+    } catch (e) { return ''; }
+  }
   function esignSession() {
     var A = app();
     if (esignSession.tok) return Promise.resolve(esignSession.tok);
-    return esignCall('loginWithToken', { tcToken: A.S.token }).then(function (d) { esignSession.tok = d.token; esignSession.user = d.user; return d.token; });
+    return M.exchangeEsignSession(A.S && A.S.token, readSsoCookie(), function (tc) {
+      return esignCall('loginWithToken', { tcToken: tc });
+    }).then(function (s) {
+      esignSession.tok = s.token;
+      esignSession.user = s.user;
+      return s.token;
+    });
   }
 
   function agentById(pack, id) {
@@ -346,7 +358,15 @@
       if (sendBtn) sendBtn.disabled = true;
       var host = A.qs('#cdaSign', m);
       host.innerHTML = '<div class="loading"><span class="spin"></span> Sending for signature…</div>';
-      function fail(msg) { host.innerHTML = ''; if (sendBtn) sendBtn.disabled = false; err(msg); }
+      function fail(e) {
+        var msg = typeof e === 'string' ? e : (e && e.message) || '';
+        var code = e && e.code;
+        host.innerHTML = '';
+        /* A Transaction Center AUTH sign-out renders the login form under this modal. Close it so the sign-in fields are visible. An E-Sign rejection leaves the TC session in place. */
+        if (code === 'AUTH' && A.S && !A.S.token) { m.close(); return; }
+        if (sendBtn) sendBtn.disabled = false;
+        err(msg || 'This CDA was not sent.');
+      }
       Promise.all([agentEmail(header, pack), ownerUser()]).then(function (pair) {
         var ae = String(pair[0] || '').trim();
         var broker = pair[1] || {};
@@ -371,10 +391,10 @@
           A.toast(A.DEMO ? 'Demo: CDA marked sent. The owner records the signed PDF from this file.' : 'CDA sent. The agent signs first, then the broker.');
           A.refresh();
         }, function (e) {
-          if (e.code === 'CONFLICT') fail('This CDA was already sent or signed. Revise it before sending again.');
-          else fail(e.message);
+          if (e && e.code === 'CONFLICT') fail({ code: 'CONFLICT', message: 'This CDA was already sent or signed. Revise it before sending again.' });
+          else fail(e);
         });
-      }, function (e) { fail(e.message); });
+      }, function (e) { fail(e); });
     }
     function revise() {
       var reason = window.prompt('Why is this CDA being revised? The previous signature request is voided. The latest fully signed CDA stays on the books until the new one is signed.');

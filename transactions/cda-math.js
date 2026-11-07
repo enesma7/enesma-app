@@ -276,6 +276,45 @@
       total_disbursed: disbursed ? usd(disbursed) : ''
     };
   }
+  /* The TC session and the enesma_sso cookie can diverge after E-Sign rotates the cookie.
+     Try the session that just talked to Transaction Center, then the cookie if it is different. */
+  function ssoToken(sessionToken, ssoCookie) {
+    var session = String(sessionToken || '').trim();
+    var cookie = String(ssoCookie || '').trim();
+    return { primary: session || cookie, alternate: (session && cookie && session !== cookie) ? cookie : '' };
+  }
+  function esignSessionToken(data) {
+    return String(data && data.token || '').trim();
+  }
+  function esignAuthError(serverMessage) {
+    var base = 'E-Sign did not accept this Transaction Center sign-in, so this CDA was not sent. The draft is still here.';
+    var detail = String(serverMessage || '').trim();
+    if (!detail || detail.indexOf(base) === 0) detail = '';
+    var e = new Error(detail ? base + ' (' + detail + ')' : base);
+    e.code = 'AUTH';
+    return e;
+  }
+  function exchangeEsignSession(sessionToken, ssoCookie, login) {
+    var pair = ssoToken(sessionToken, ssoCookie);
+    function once(tc) {
+      if (!tc) return Promise.reject(esignAuthError());
+      return Promise.resolve().then(function () { return login(tc); }).then(function (d) {
+        var tok = esignSessionToken(d);
+        if (!tok) throw esignAuthError();
+        return { token: tok, user: d && d.user };
+      });
+    }
+    return once(pair.primary).then(function (ok) { return ok; }, function (e) {
+      if (e && e.code === 'AUTH' && pair.alternate) {
+        return once(pair.alternate).then(function (ok) { return ok; }, function (e2) {
+          if (e2 && e2.code === 'AUTH') throw esignAuthError(e2.message);
+          throw e2;
+        });
+      }
+      if (e && e.code === 'AUTH') throw esignAuthError(e.message);
+      throw e;
+    });
+  }
   /* E-Sign fractions, top-left origin, from the CDA AcroForm signature widgets (letter page). */
   function signRects(pageW, pageH) {
     pageW = pageW || 612; pageH = pageH || 792;
@@ -289,6 +328,7 @@
     round2: round2, num: num, usd: usd, blank: blank, isCdaItem: isCdaItem, cloneLine: cloneLine,
     ensureAdmin: ensureAdmin, sumLines: sumLines, settlement: settlement, rebalanceAmounts: rebalanceAmounts, grossOf: grossOf, splitOf: splitOf, agentAddress: agentAddress, adminFeeNote: adminFeeNote,
     applySplitLines: applySplitLines, fallbackSuggest: fallbackSuggest, ensureSkeleton: ensureSkeleton, linesForEdit: linesForEdit, booksLines: booksLines,
-    sideLabel: sideLabel, headerFromTxn: headerFromTxn, pdfFields: pdfFields, signRects: signRects
+    sideLabel: sideLabel, headerFromTxn: headerFromTxn, pdfFields: pdfFields, signRects: signRects,
+    ssoToken: ssoToken, esignSessionToken: esignSessionToken, exchangeEsignSession: exchangeEsignSession
   };
 })(typeof window !== 'undefined' ? window : globalThis);
