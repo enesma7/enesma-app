@@ -1,5 +1,6 @@
 /* Node check for CDA math and the demo 1.7.1 actions. Run: node transactions/cda-math.test.js */
 'use strict';
+require('./esign-recipients.test.js');
 var assert = require('assert');
 var fs = require('fs');
 var vm = require('vm');
