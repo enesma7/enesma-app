@@ -739,6 +739,13 @@ A.eb1099 = function (b, u) {
 };
 /* ---- 1.7.1 CDA (demo): same action names as CDA-EBOOKS-API.md ---- */
 DB.cda = {}; DB.cdaPending = [];
+(function () {
+  var t = DB.txns.filter(function (x) { return x.status === 'Closed' && x.address === '3021 Mission Inn Ave'; })[0];
+  if (!t) return;
+  var title = ebTitle(t);
+  DB.cdaPending.push({ id: 'CPsampleB', txnId: t.id, title: title, version: 1, op: 'add', importKey: 'cda:' + t.id + ':brokerage', type: 'income', amount: 640, payeeName: 'ENESMA Realty', payeeType: '', payeeId: '', kind: 'brokerage', status: 'pending', memo: 'Brokerage commission · CDA v1' });
+  DB.cdaPending.push({ id: 'CPsampleA', txnId: t.id, title: title, version: 1, op: 'add', importKey: 'cda:' + t.id + ':agent:U2', type: 'expense', amount: 2560, payeeName: 'Alex Rivera', payeeType: 'agent', payeeId: 'U2', kind: 'primary', status: 'pending', memo: 'Agent commission · CDA v1' });
+})();
 function cdaAgents() {
   return DB.users.filter(function (x) { return x.active && (x.role === 'agent' || x.role === 'admin'); }).map(function (x) {
     var p = EBD.agents[x.id] || {};

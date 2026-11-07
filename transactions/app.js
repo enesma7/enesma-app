@@ -495,10 +495,16 @@ function ebView(tab) {
   if (!EB.data) { loading('ebooks'); return ebReload().then(function () { ebRender(); }).catch(function (e) { failView('ebooks', e); }); }
   ebRender();
 }
-function ebReload() { return api('ebLoad').then(function (d) { EB.data = d; }); }
+function ebReload() {
+  return api('ebLoad').then(function (d) {
+    EB.data = d;
+    return api('ebCdaPending').then(function (p) { EB.cdaPending = (p && p.pending) || []; }, function () { EB.cdaPending = []; });
+  });
+}
 function ebAfter(msg) { return ebReload().then(function () { if (msg) toast(msg); page.keepScroll = true; ebRender(); }); }
 function ebRender() {
-  var tabs = '<div class="ebtabs" role="tablist">' + EB_TABS.map(function (t) { return '<a role="tab" href="#/ebooks/' + t[0] + '" class="' + (EB.tab === t[0] ? 'on' : '') + '" aria-selected="' + (EB.tab === t[0]) + '">' + t[1] + '</a>'; }).join('') + '</div>';
+  var pendN = (EB.cdaPending || []).length;
+  var tabs = '<div class="ebtabs" role="tablist">' + EB_TABS.map(function (t) { return '<a role="tab" href="#/ebooks/' + t[0] + '" class="' + (EB.tab === t[0] ? 'on' : '') + '" aria-selected="' + (EB.tab === t[0]) + '">' + t[1] + (t[0] === 'ledger' && pendN ? ' <span class="ebflag" aria-label="' + pendN + ' waiting for approval">' + pendN + '</span>' : '') + '</a>'; }).join('') + '</div>';
   var body = ({ ledger: ebLedger, import: ebImportView, payees: ebPayees, categories: ebCats, '1099': eb1099View, reports: ebReports })[EB.tab]();
   page('ebooks', '<div class="ebooks"><div class="ebhead"><h1>E-Books</h1><span class="ebown">Owner only</span></div>' + tabs + '<div id="ebbody">' + body.html + '</div></div>', body.wire);
 }
@@ -516,8 +522,18 @@ function ebCatOptions(type, sel, withArchived) {
   return EB.data.categories.filter(function (c) { return (!type || c.type === type) && (withArchived || !c.archived || c.id === sel); })
     .map(function (c) { return '<option value="' + h(c.id) + '"' + (c.id === sel ? ' selected' : '') + '>' + h(c.name + (type ? '' : ' (' + c.type + ')') + (c.archived ? ' · archived' : '')) + '</option>'; }).join('');
 }
+function ebPendingVisible() {
+  var f = EB.f, q = (f.q || '').toLowerCase();
+  return (EB.cdaPending || []).filter(function (r) {
+    if (r.type !== 'income' && r.type !== 'expense') return false;
+    if (f.cat) return false;
+    if (f.type && r.type !== f.type) return false;
+    if (q && (String(r.payeeName || '') + ' ' + String(r.title || '') + ' ' + String(r.kind || '') + ' ' + r.amount).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+}
 function ebLedger() {
-  var f = EB.f, rows = ebFiltered(), tin = 0, tout = 0;
+  var f = EB.f, rows = ebFiltered(), tin = 0, tout = 0, waiting = ebPendingVisible();
   rows.forEach(function (e) { if (e.type === 'income') tin += e.amount; else tout += e.amount; });
   var html = '<div class="ebbar"><button class="btn" id="ebAddIn">+ Income</button><button class="btn red" id="ebAddEx">+ Expense</button><span class="hspace"></span><button class="ub" id="ebCsvL">Export CSV</button><button class="ub" id="ebPrintL">Print</button></div>' +
     '<div class="ebfilt"><label>From<input type="date" id="fFrom" value="' + h(f.from) + '"></label><label>To<input type="date" id="fTo" value="' + h(f.to) + '"></label>' +
@@ -525,6 +541,10 @@ function ebLedger() {
     '<label>Category<select id="fCat"><option value="">All</option>' + ebCatOptions(f.type, f.cat, true) + '</select></label>' +
     '<label class="grow">Search<input type="search" id="fQ" value="' + h(f.q) + '" placeholder="Payee, memo, address…"></label></div>' +
     '<div class="ebsum"><div><small>Income</small><b>' + ebM(tin) + '</b></div><div><small>Expenses</small><b>' + ebM(tout) + '</b></div><div class="' + (tin - tout < 0 ? 'neg' : '') + '"><small>Net</small><b>' + ebM(tin - tout) + '</b></div><div><small>Entries</small><b>' + rows.length + '</b></div></div>';
+  if (waiting.length) html += '<p class="sub">Signed CDA amounts below are waiting for owner amount approval. They are not included in the totals, reports, or 1099. Checklist compliance review is separate.</p><div class="ebtable"><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Payee</th><th class="hm">Source</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + waiting.map(function (r) {
+    var label = r.type === 'income' ? 'Commission Income' : 'Agent Commission Payouts';
+    return '<tr class="ebpendrow" data-cda="' + h(r.id) + '"><td data-l="Date">Not posted</td><td data-l="Category"><span class="ebtype ' + r.type + '">' + (r.type === 'income' ? 'In' : 'Out') + '</span>' + label + '</td><td data-l="Payee">' + h(r.payeeName || '—') + (r.payeeType === 'agent' ? ' <small class="muted">agent</small>' : '') + '</td><td data-l="Source" class="hm">Signed CDA' + (r.title ? ' · ' + h(r.title) : '') + (r.version ? ' · v' + h(r.version) : '') + '</td><td data-l="Amount" class="r amt ' + r.type + '">' + (r.type === 'expense' ? '−' : '') + ebM(r.amount) + '</td><td class="acts"><button type="button" class="ebred" aria-label="Review pending CDA amount ' + h(r.payeeName || label) + ' ' + ebM(r.amount) + (r.title ? ' for ' + h(r.title) : '') + '"><span aria-hidden="true">!</span> Review</button></td></tr>';
+  }).join('') + '</tbody></table></div>';
   html += rows.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Payee</th><th class="hm">Method</th><th class="hm">Memo / Transaction</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + rows.map(function (e) {
     var t = ebTxn(e.txnId), c = ebCat(e.categoryId);
     return '<tr data-id="' + h(e.id) + '"><td data-l="Date">' + h(fmtDate(e.date)) + '</td><td data-l="Category"><span class="ebtype ' + e.type + '">' + (e.type === 'income' ? 'In' : 'Out') + '</span>' + h(c.name) + '</td><td data-l="Payee">' + h(e.payeeName || '—') + (e.payeeType === 'agent' ? ' <small class="muted">agent</small>' : '') + '</td>' +
@@ -547,7 +567,45 @@ function ebLedger() {
       dl.onclick = function () { ebDeleteEntry(e); };
       if (rc) rc.onclick = function () { ebOpenReceipt(e); };
     });
+    qsa('tr[data-cda] .ebred').forEach(function (b) {
+      b.onclick = function () {
+        var id = b.closest('tr').getAttribute('data-cda');
+        var row = (EB.cdaPending || []).filter(function (r) { return r.id === id; })[0];
+        if (row) ebCdaReview(row);
+      };
+    });
   } };
+}
+function ebCdaReview(r) {
+  var t = ebTxn(r.txnId), income = r.type === 'income';
+  var close = t && /^\d{4}-\d{2}-\d{2}$/.test(String(t.closedAt || '').slice(0, 10)) ? String(t.closedAt).slice(0, 10) : '';
+  var gate = income
+    ? 'Approving this brokerage amount does not add it to income. It is recorded only after the commission check deposit date is confirmed on the transaction and the check matches the signed CDA total gross. The agent is not asked for a deposit date.'
+    : (close ? 'Confirming records this agent commission on the actual escrow closing date ' + fmtDate(close) + '. It is not in the totals until you confirm.' : 'This file has no actual escrow closing date yet. Confirming will not record the amount, and it will not use today or the estimated close.');
+  var m = modal('<h2>Review CDA amount</h2><p class="sub">This is owner amount approval. It does not approve the checklist item. Compliance review stays separate.</p><div id="cdaRv"></div><dl class="ebkv">' +
+    '<div><dt>Transaction</dt><dd>' + (t ? '<a href="#/t/' + h(t.id) + '">' + h(t.title) + '</a>' : h(r.title || r.txnId || '—')) + '</dd></div>' +
+    '<div><dt>Signed CDA</dt><dd>' + (r.version ? 'Version ' + h(r.version) : 'Latest signed version') + (r.op === 'update' ? ' · replaces the posted amount' : r.op === 'remove' ? ' · removes the posted amount' : '') + '</dd></div>' +
+    '<div><dt>Where it belongs</dt><dd>' + (income ? 'Income · Commission Income' : 'Expenses · Agent Commission Payouts') + '</dd></div>' +
+    '<div><dt>Payee</dt><dd>' + h(r.payeeName || '—') + (r.payeeType === 'agent' ? ' · agent' : income ? ' · brokerage' : '') + '</dd></div>' +
+    '<div><dt>Amount</dt><dd><b>' + ebM(r.amount) + '</b></dd></div></dl><p>' + h(gate) + '</p><div class="actions"><button type="button" class="ub" id="cdaNo">Not now</button><button type="button" class="ub" id="cdaRj">Reject</button><button type="button" class="ebred" id="cdaYes">Approve this amount</button></div>', true);
+  qs('#cdaNo', m).onclick = m.close;
+  function decide(decision) {
+    api('ebCdaDecide', { ids: [r.id], decision: decision }).then(function (res) {
+      res = res || {};
+      m.close();
+      var parts = [];
+      if (decision === 'reject') parts.push('Rejected. Nothing was posted.');
+      else {
+        if (res.approved) parts.push('Recorded ' + res.approved + ' amount' + (res.approved === 1 ? '' : 's') + '.');
+        if (res.awaitingDeposit) parts.push('Brokerage income was not added. It waits for the deposit date.');
+        if (res.missingCloseDate) parts.push('Agent commission was not recorded. The actual escrow closing date is missing.');
+        if (!parts.length) parts.push('Nothing new was posted.');
+      }
+      return ebAfter(parts.join(' '));
+    }, function (e) { qs('#cdaRv', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
+  }
+  qs('#cdaRj', m).onclick = function () { decide('reject'); };
+  qs('#cdaYes', m).onclick = function () { decide('approve'); };
 }
 function ebRangeLabel(from, to) { return from || to ? ' · ' + (from ? fmtDate(from) : 'start') + ' – ' + (to ? fmtDate(to) : 'today') : ''; }
 function ebDeleteEntry(e) {
@@ -613,8 +671,8 @@ function ebOpenReceipt(e) {
 function ebImportView() {
   var ag = {}; EB.data.agents.forEach(function (a) { ag[a.id] = a; });
   var list = EB.data.txns;
-  var html = '<div id="cdaPend"></div><p class="sub">Closed transactions that do not have a signed CDA yet. Gross is estimated from the file’s commission terms and the payout from the agent’s split. Once a CDA is fully signed, those amounts replace this estimate: approve them in the list above. Do not also import an estimate for that file.</p>';
-  if (!list.length) return { html: html + '<div class="empty">No closed transactions yet.</div>', wire: function () { if (window.TCCdaUi) TCCdaUi.mountPending(qs('#cdaPend')); } };
+  var html = '<p class="sub">Signed CDA amounts waiting for approval are on the Ledger, with a red Review button. They are not posted from this page. This list is only for closed files that do not have a signed CDA yet. Gross is estimated from the file’s commission terms and the payout from the agent’s split. Do not also import an estimate for a file that already has a signed CDA.</p>';
+  if (!list.length) return { html: html + '<div class="empty">No closed transactions yet.</div>', wire: function () {} };
   html += '<div class="ebbar"><label class="chk"><input type="checkbox" id="imAll"> Select all not yet imported</label><span class="hspace"></span><button class="btn" id="imGo" disabled>Import selected</button></div>' +
     '<div class="ebtable"><table class="ebt ebim"><thead><tr><th></th><th>Transaction</th><th>Closed</th><th>Agent</th><th class="r">Gross commission</th><th class="r">Agent payout</th></tr></thead><tbody>' + list.map(function (t) {
       var a = ag[t.agentId] || {}, cdaDone = !!(t.cdaExecuted || t.cdaStatus === 'executed'), done = !!(t.importedIncome && t.importedPayout) || cdaDone, sp = a.splitPct === '' || a.splitPct === undefined ? '' : Number(a.splitPct);
@@ -627,7 +685,6 @@ function ebImportView() {
     var go = qs('#imGo'), sync = function () { var n = qsa('.imC:checked').length; go.disabled = !n; go.textContent = n ? 'Import ' + n + ' selected' : 'Import selected'; };
     qsa('.imC').forEach(function (c) { c.onchange = sync; });
     qs('#imAll').onchange = function () { var v = this.checked; qsa('.imC:not([disabled])').forEach(function (c) { c.checked = v; }); sync(); };
-    if (window.TCCdaUi) TCCdaUi.mountPending(qs('#cdaPend'));
     go.onclick = function () {
       var items = [], bad = '';
       qsa('.ebim tr[data-id]').forEach(function (tr) {
@@ -648,13 +705,17 @@ function ebImportView() {
 function ebTinCell(p) { return p.hasTin ? '•••-••-' + h(p.tinLast4) : '<span class="ebwarn">Missing</span>'; }
 function ebPayees() {
   var html = '<h2 class="ebh2">Agents <small class="muted">from Transaction Center users</small></h2><div class="ebtable"><table class="ebt"><thead><tr><th>Agent</th><th class="hm">Email</th><th>Default split</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' +
-    EB.data.agents.map(function (a) { return '<tr data-a="' + h(a.id) + '"><td data-l="Agent">' + h(a.name) + (a.active ? '' : ' <small class="muted">inactive</small>') + '</td><td data-l="Email" class="hm">' + h(a.email) + '</td><td data-l="Split">' + (a.splitPct === '' ? '—' : h(a.splitPct) + '%') + (a.capAmount === '' || a.capAmount == null ? '' : '<br><small class="muted">cap ' + ebM(a.capAmount) + '</small>') + '</td><td data-l="TIN">' + ebTinCell(a) + '</td><td data-l="Address" class="hm">' + h(a.address || '—') + '</td><td class="acts"><button class="ub sm ebAg">Edit</button></td></tr>'; }).join('') + '</tbody></table></div>' +
+    EB.data.agents.map(function (a) {
+    var owed = (EB.cdaPending || []).filter(function (p) { return p.type === 'expense' && p.payeeType === 'agent' && p.payeeId === a.id; });
+    return '<tr data-a="' + h(a.id) + '"><td data-l="Agent">' + h(a.name) + (a.active ? '' : ' <small class="muted">inactive</small>') + (owed.length ? ' <button type="button" class="ebred ebAgPend" data-cda="' + h(owed[0].id) + '" aria-label="Review pending CDA commission for ' + h(a.name) + ' ' + ebM(owed[0].amount) + '"><span aria-hidden="true">!</span> Review</button>' : '') + '</td><td data-l="Email" class="hm">' + h(a.email) + '</td><td data-l="Split">' + (a.splitPct === '' ? '—' : h(a.splitPct) + '%') + (a.capAmount === '' || a.capAmount == null ? '' : '<br><small class="muted">cap ' + ebM(a.capAmount) + '</small>') + '</td><td data-l="TIN">' + ebTinCell(a) + '</td><td data-l="Address" class="hm">' + h(a.address || '—') + '</td><td class="acts"><button class="ub sm ebAg">Edit</button></td></tr>';
+  }).join('') + '</tbody></table></div>' +
     '<h2 class="ebh2">Vendors <button class="btn sm" id="vAdd">+ Vendor</button></h2>' +
     (EB.data.vendors.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Vendor</th><th class="hm">Email / phone</th><th>1099</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' + EB.data.vendors.map(function (v) {
       return '<tr data-v="' + h(v.id) + '" class="' + (v.archived ? 'arch' : '') + '"><td data-l="Vendor">' + h(v.name) + (v.archived ? ' <small class="muted">archived</small>' : '') + '</td><td data-l="Contact" class="hm">' + h([v.email, v.phone].filter(Boolean).join(' · ') || '—') + '</td><td data-l="1099">' + (v.is1099 ? '<span class="ebyes">Yes</span>' : 'No') + '</td><td data-l="TIN">' + (v.is1099 ? ebTinCell(v) : (v.hasTin ? '•••-••-' + h(v.tinLast4) : '—')) + '</td><td data-l="Address" class="hm">' + h(v.address || '—') + '</td><td class="acts"><button class="ub sm ebVe">Edit</button></td></tr>';
     }).join('') + '</tbody></table></div>' : '<div class="empty">No vendors yet.</div>');
   return { html: html, wire: function () {
     qs('#vAdd').onclick = function () { ebPayeeModal('vendor', null); };
+    qsa('.ebAgPend').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); var row = (EB.cdaPending || []).filter(function (p) { return p.id === b.getAttribute('data-cda'); })[0]; if (row) ebCdaReview(row); }; });
     qsa('tr[data-a]').forEach(function (tr) { qs('.ebAg', tr).onclick = function () { ebPayeeModal('agent', EB.data.agents.filter(function (a) { return a.id === tr.getAttribute('data-a'); })[0]); }; });
     qsa('tr[data-v]').forEach(function (tr) { qs('.ebVe', tr).onclick = function () { ebPayeeModal('vendor', EB.data.vendors.filter(function (v) { return v.id === tr.getAttribute('data-v'); })[0]); }; });
   } };
@@ -734,6 +795,7 @@ function eb1099View() {
 function ebReports() {
   var cy = String(ebYear()); if (!EB.rInit) { EB.rInit = 1; EB.rf = cy + '-01-01'; EB.rt = cy + '-12-31'; }
   var from = EB.rf, to = EB.rt, E = EB.data.entries.filter(function (e) { return ebInRange(e, from, to); }), out = '', csv = [], ptitle = '';
+  var pendNote = (EB.cdaPending || []).length ? '<p class="sub">Pending signed-CDA amounts are not included in these totals.</p>' : '';
   var reps = [['pl', 'Profit & Loss'], ['cf', 'Cash Flow'], ['payee', 'Expenses by Payee']];
   if (EB.rep === 'pl') {
     var by = { income: {}, expense: {} }, tot = { income: 0, expense: 0 };
@@ -771,7 +833,7 @@ function ebReports() {
     out = '<div class="ebrepg"><div class="ebtable">' + tb3 + '</div><div><h3>Top payees</h3>' + ebBars(ks.slice(0, 12).map(function (k) { return { label: k, a: pp[k].a, neg: true }; }), { label: 'Expenses by payee' }) + '</div></div>';
     ptitle = 'Expenses by Payee'; EB._print = tb3;
   }
-  var html = '<div class="seg ebrseg" role="group" aria-label="Report">' + reps.map(function (r) { return '<button type="button" data-r="' + r[0] + '" class="' + (EB.rep === r[0] ? 'on' : '') + '" aria-pressed="' + (EB.rep === r[0]) + '">' + r[1] + '</button>'; }).join('') + '</div>' +
+  var html = pendNote + '<div class="seg ebrseg" role="group" aria-label="Report">' + reps.map(function (r) { return '<button type="button" data-r="' + r[0] + '" class="' + (EB.rep === r[0] ? 'on' : '') + '" aria-pressed="' + (EB.rep === r[0]) + '">' + r[1] + '</button>'; }).join('') + '</div>' +
     '<div class="ebfilt"><label>From<input type="date" id="rF" value="' + h(from) + '"></label><label>To<input type="date" id="rT" value="' + h(to) + '"></label><div class="ebpre"><button class="ub sm" data-p="ty">This year</button><button class="ub sm" data-p="ly">Last year</button><button class="ub sm" data-p="tm">This month</button><button class="ub sm" data-p="all">All time</button></div><span class="hspace"></span><button class="ub" id="rCsv">Export CSV</button><button class="ub" id="rPr">Print</button></div>' + out;
   return { html: html, wire: function () {
     var re = function () { page.keepScroll = true; ebRender(); };

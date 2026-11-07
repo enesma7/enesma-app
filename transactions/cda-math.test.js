@@ -18,8 +18,8 @@ assert.ok(uiSrc.indexOf('M.adminFeeNote(l.note)') >= 0, 'admin fee mail-to uses 
 var html = fs.readFileSync(__dirname + '/index.html', 'utf8');
 assert.ok(html.indexOf('cda-math.js?v=9') >= 0);
 assert.ok(html.indexOf('cda-ui.js?v=14') >= 0);
-assert.ok(html.indexOf('app.js?v=44') >= 0);
-assert.ok(html.indexOf('app.css?v=45') >= 0);
+assert.ok(html.indexOf('app.js?v=45') >= 0);
+assert.ok(html.indexOf('app.css?v=46') >= 0);
 assert.ok(html.indexOf('cda-math.js?v=8') < 0);
 assert.ok(html.indexOf('cda-ui.js?v=13') < 0);
 var appSrc = fs.readFileSync(__dirname + '/app.js', 'utf8');
