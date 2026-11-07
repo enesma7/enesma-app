@@ -1533,10 +1533,10 @@ function cancelModal() {
   };
 }
 function statusModal() {
-  var t = S.txn.txn, i = t.intake || {};
+  var t = S.txn.txn;
   var m = modal('<h2>Set status</h2><p class="sub">Cancellations go through “Request cancellation” so the signed document is on file.</p><div id="ze"></div><div class="radios" id="zs">' +
     ['Active', 'In Escrow', 'Closed', 'Expired Contract'].map(function (s) { return '<label class="' + (t.status === s ? 'on' : '') + '"><input type="radio" name="zs" value="' + s + '"' + (t.status === s ? ' checked' : '') + '> ' + s + '</label>'; }).join('') + '</div>' +
-    '<div class="fgrid hidden" id="zc" style="margin-top:16px"><div class="f"><label>Close date</label><input type="date" id="zd" value="' + h(t.closedAt ? String(t.closedAt).slice(0, 10) : (i.estCloseDate || '')) + '"></div>' + (t.type === 'purchase' ? '<div class="f"><label>Final sales price</label><input type="text" inputmode="decimal" id="zp" value="' + h(i.finalPrice || i.purchasePrice || '') + '"></div>' : '') + '</div>' +
+    '<div class="fgrid hidden" id="zc" style="margin-top:16px"><div class="f"><label for="zd">Actual escrow closing date</label><input type="date" id="zd" value="' + h(t.closedAt ? String(t.closedAt).slice(0, 10) : '') + '"><p class="sub">Type the date escrow actually closed. An estimated close is not filled in. An existing closing date stays as it was saved. Nothing is saved until you press Save status.</p></div>' + (t.type === 'purchase' ? '<div class="f"><label>Final sales price</label><input type="text" inputmode="decimal" id="zp" value="' + h(i.finalPrice || i.purchasePrice || '') + '"></div>' : '') + '</div>' +
     '<div class="actions"><button class="btn" id="zb">Save status</button></div>');
   var sync = function () { var c = qs('#zs input:checked', m); qs('#zc', m).classList.toggle('hidden', !(c && c.value === 'Closed')); qsa('#zs label', m).forEach(function (l) { l.classList.toggle('on', !!c && l.contains(c)); }); };
   qsa('#zs input', m).forEach(function (r) { r.onchange = sync; }); sync();

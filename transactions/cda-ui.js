@@ -394,24 +394,24 @@
         pull.disabled = true; err('');
         var done = function (msg) { m.close(); A.toast(msg); A.refresh(); };
         if (A.DEMO) {
-          A.api('cdaOnSigned', { txnId: txn.id, envelopeId: env || ('demo-' + txn.id), base64: 'JVBERi0xLjEK', name: 'CDA-signed.pdf' }).then(function () { done('Signed CDA filed. E-Books entries are waiting for owner approval.'); }, function (e) { pull.disabled = false; err(e.message); });
+          A.api('cdaOnSigned', { txnId: txn.id, envelopeId: env || ('demo-' + txn.id), base64: 'JVBERi0xLjEK', name: 'CDA-signed.pdf' }).then(function () { done('Signed CDA filed. Checklist compliance review is still pending. Owner amount approval in E-Books is separate.'); }, function (e) { pull.disabled = false; err(e.message); });
           return;
         }
         pullSigned(txn.id, env).then(function (r) {
           if (r.waiting) { pull.disabled = false; err('E-Sign is not finished yet' + (r.status ? ' (' + r.status + ').' : '.')); return; }
-          done('Signed CDA filed on the checklist. It is pending compliance review. E-Books entries wait for approval.');
+          done('Signed CDA filed on the checklist. Compliance review is still pending. This did not approve the checklist item. Owner amount approval in E-Books is separate.');
         }, function (e) { pull.disabled = false; err(e.message || 'The signed PDF could not be filed on the checklist.'); });
       };
       if (owner && !A.DEMO && env) {
         pullSigned(txn.id, env).then(function (r) {
-          if (r.signed) { m.close(); A.toast('Signed CDA filed on the checklist. It is pending compliance review.'); A.refresh(); }
+          if (r.signed) { m.close(); A.toast('Signed CDA filed on the checklist. Compliance review is still pending. This did not approve the checklist item.'); A.refresh(); }
         }, function (e) { err(e.message || 'The signed PDF could not be filed on the checklist.'); });
       }
     }
     function renderExecuted(p) {
       var host = A.qs('#cdaSign', m);
       var q = p.cda && (p.cda.queued || p.queued);
-      host.innerHTML = '<div class="ok">Fully signed. The PDF is on this checklist item and waiting for compliance review. Brokerage and ENESMA agent amounts are pending in E-Books until the owner approves them.' + (q ? ' ' + h(q) + ' queued.' : '') + '</div>';
+      host.innerHTML = '<div class="ok">Fully signed. The PDF is on this checklist item for compliance review and is not approved by filing. Owner amount approval, in E-Books, is the separate step that records brokerage and ENESMA agent amounts.' + (q ? ' ' + h(q) + ' queued.' : '') + '</div>';
     }
   }
 
@@ -464,7 +464,7 @@
       var rows = (d && d.pending) || [];
       if (!rows.length) { host.innerHTML = '<p class="sub">No signed-CDA amounts are waiting for approval.</p>'; return; }
       var h = A.h;
-      host.innerHTML = '<h2 class="ebh2">Signed CDA · waiting for approval</h2><p class="sub">These are the brokerage portion and ENESMA agent amounts from the latest signed CDA. Approving records each agent amount on the actual escrow closing date. It does not ask the agent for a deposit date. If that closing date is missing, the agent amount stays unrecorded. Brokerage income stays off the books until the check deposit date is confirmed. TC fee, admin fee, outside referral, other, and credits are not here.</p>' +
+      host.innerHTML = '<h2 class="ebh2">Owner amount approval</h2><p class="sub">This is not checklist compliance review. Compliance review is the separate Approve or Reject step on the CDA checklist item. Approving here records the latest signed CDA amounts: each ENESMA agent amount on the actual escrow closing date, with no agent deposit date. If that closing date is missing, the agent amount stays unrecorded. Brokerage income stays off the books until the check deposit date is confirmed. TC fee, admin fee, outside referral, other, and credits are not here.</p>' +
         '<div class="ebtable"><table class="ebt" id="cdaPendTbl"><thead><tr><th></th><th>File</th><th>Op</th><th>Payee</th><th>Kind</th><th class="r">Amount</th></tr></thead><tbody>' +
         rows.map(function (r) {
           return '<tr data-id="' + h(r.id) + '"><td><input type="checkbox" class="cdaP" checked aria-label="Include"></td><td>' + h(r.title || r.txnId || '') + '</td><td>' + h(r.op || '') + '</td><td>' + h(r.payeeName || r.name || '—') + '</td><td>' + h(r.kind || r.importKey || '') + '</td><td class="r">' + money2(r.amount) + '</td></tr>';
