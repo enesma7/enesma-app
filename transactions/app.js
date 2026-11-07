@@ -522,13 +522,19 @@ function ebCatOptions(type, sel, withArchived) {
   return EB.data.categories.filter(function (c) { return (!type || c.type === type) && (withArchived || !c.archived || c.id === sel); })
     .map(function (c) { return '<option value="' + h(c.id) + '"' + (c.id === sel ? ' selected' : '') + '>' + h(c.name + (type ? '' : ' (' + c.type + ')') + (c.archived ? ' · archived' : '')) + '</option>'; }).join('');
 }
+function ebPendingCat(r) {
+  var mark = String((r && (r.kind || r.kinds)) || '') + ' ' + String((r && r.importKey) || '');
+  if (r && r.type === 'expense') return 'Agent Commission Payouts';
+  if (mark.indexOf('admin_fee') >= 0) return 'Admin Fee';
+  return 'Commission Income';
+}
 function ebPendingVisible() {
   var f = EB.f, q = (f.q || '').toLowerCase();
   return (EB.cdaPending || []).filter(function (r) {
     if (r.type !== 'income' && r.type !== 'expense') return false;
     if (f.cat) return false;
     if (f.type && r.type !== f.type) return false;
-    if (q && (String(r.payeeName || '') + ' ' + String(r.title || '') + ' ' + String(r.kind || '') + ' ' + r.amount).toLowerCase().indexOf(q) < 0) return false;
+    if (q && (String(r.payeeName || '') + ' ' + String(r.title || '') + ' ' + String(r.kind || r.kinds || '') + ' ' + r.amount).toLowerCase().indexOf(q) < 0) return false;
     return true;
   });
 }
@@ -542,7 +548,7 @@ function ebLedger() {
     '<label class="grow">Search<input type="search" id="fQ" value="' + h(f.q) + '" placeholder="Payee, memo, address…"></label></div>' +
     '<div class="ebsum"><div><small>Income</small><b>' + ebM(tin) + '</b></div><div><small>Expenses</small><b>' + ebM(tout) + '</b></div><div class="' + (tin - tout < 0 ? 'neg' : '') + '"><small>Net</small><b>' + ebM(tin - tout) + '</b></div><div><small>Entries</small><b>' + rows.length + '</b></div></div>';
   if (waiting.length) html += '<p class="sub">Signed CDA amounts below are waiting for owner amount approval. They are not included in the totals, reports, or 1099. Checklist compliance review is separate.</p><div class="ebtable"><table class="ebt"><thead><tr><th>Status</th><th>Category</th><th>Payee</th><th>Source</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + waiting.map(function (r) {
-    var label = r.type === 'income' ? 'Commission Income' : 'Agent Commission Payouts';
+    var label = ebPendingCat(r);
     return '<tr class="ebpendrow" data-cda="' + h(r.id) + '"><td data-l="Status"><span class="ebflag">Pending</span></td><td data-l="Category"><span class="ebtype ' + r.type + '">' + (r.type === 'income' ? 'In' : 'Out') + '</span>' + label + '</td><td data-l="Payee">' + h(r.payeeName || '—') + (r.payeeType === 'agent' ? ' <small class="muted">agent</small>' : '') + '</td><td data-l="Source" class="src">Signed CDA' + (r.title ? ' · ' + h(r.title) : '') + (r.version ? ' · v' + h(r.version) : '') + '</td><td data-l="Amount" class="r amt ' + r.type + '">' + (r.type === 'expense' ? '−' : '') + ebM(r.amount) + '</td><td class="acts"><button type="button" class="ebred" aria-label="Review pending CDA amount ' + h(r.payeeName || label) + ' ' + ebM(r.amount) + (r.title ? ' for ' + h(r.title) : '') + '"><span aria-hidden="true">!</span> Review</button></td></tr>';
   }).join('') + '</tbody></table></div>';
   html += rows.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Payee</th><th class="hm">Method</th><th class="hm">Memo / Transaction</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + rows.map(function (e) {
@@ -580,13 +586,13 @@ function ebCdaReview(r, opener) {
   var t = ebTxn(r.txnId), income = r.type === 'income';
   var close = t && /^\d{4}-\d{2}-\d{2}$/.test(String(t.closedAt || '').slice(0, 10)) ? String(t.closedAt).slice(0, 10) : '';
   var gate = income
-    ? 'Approving this brokerage amount does not add it to income. It is recorded only after the commission check deposit date is confirmed on the transaction and the check matches the signed CDA total gross. The agent is not asked for a deposit date.'
+    ? 'Approving this amount does not add it to income. It is recorded only after the commission check deposit date is confirmed on the transaction and the check matches the signed CDA total gross. The agent is not asked for a deposit date.'
     : (close ? 'Confirming records this agent commission on the actual escrow closing date ' + fmtDate(close) + '. It is not in the totals until you confirm.' : 'This file has no actual escrow closing date yet. Confirming will not record the amount, and it will not use today or the estimated close.');
   opener = opener || document.activeElement;
   var m = modal('<h2>Review CDA amount</h2><p class="sub">This is owner amount approval. It does not approve the checklist item. Compliance review stays separate.</p><div id="cdaRv"></div><dl class="ebkv">' +
     '<div><dt>Transaction</dt><dd>' + (t ? '<a href="#/t/' + h(t.id) + '">' + h(t.title) + '</a>' : h(r.title || r.txnId || '—')) + '</dd></div>' +
     '<div><dt>Signed CDA</dt><dd>' + (r.version ? 'Version ' + h(r.version) : 'Latest signed version') + (r.op === 'update' ? ' · replaces the posted amount' : r.op === 'remove' ? ' · removes the posted amount' : '') + '</dd></div>' +
-    '<div><dt>Where it belongs</dt><dd>' + (income ? 'Income · Commission Income' : 'Expenses · Agent Commission Payouts') + '</dd></div>' +
+    '<div><dt>Where it belongs</dt><dd>' + (income ? 'Income · ' + ebPendingCat(r) : 'Expenses · Agent Commission Payouts') + '</dd></div>' +
     '<div><dt>Payee</dt><dd>' + h(r.payeeName || '—') + (r.payeeType === 'agent' ? ' · agent' : income ? ' · brokerage' : '') + '</dd></div>' +
     '<div><dt>Amount</dt><dd><b>' + ebM(r.amount) + '</b></dd></div></dl><p>' + h(gate) + '</p><div class="actions"><button type="button" class="ub" id="cdaNo">Not now</button><button type="button" class="ub" id="cdaRj">Reject</button><button type="button" class="ebred" id="cdaYes">Approve this amount</button></div>', true);
   function restore() { if (opener && opener.focus) setTimeout(function () { opener.focus(); }, 0); }
