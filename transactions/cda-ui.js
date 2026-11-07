@@ -21,21 +21,14 @@
       .then(function (r) { return r.json(); }, function () { throw new Error('Could not reach ENESMA E-Sign.'); })
       .then(function (j) { if (!j || !j.ok) { var e = new Error((j && j.error) || 'E-Sign could not do that.'); e.code = j && j.code; throw e; } return j.data; });
   }
-  function readSsoCookie() {
-    try {
-      var m = String(document.cookie || '').match(/(?:^|; )enesma_sso=([^;]*)/);
-      return m ? decodeURIComponent(m[1]) : '';
-    } catch (e) { return ''; }
-  }
   function esignSession() {
     var A = app();
     if (esignSession.tok) return Promise.resolve(esignSession.tok);
-    return M.exchangeEsignSession(A.S && A.S.token, readSsoCookie(), function (tc) {
-      return esignCall('loginWithToken', { tcToken: tc });
+    return M.runCdaEsignHandoff(A.S && A.S.token, function (body) {
+      return esignCall(body.action, { tcToken: body.tcToken });
     }).then(function (s) {
-      esignSession.tok = s.token;
-      esignSession.user = s.user;
-      return s.token;
+      esignSession.tok = s.esignToken;
+      return s.esignToken;
     });
   }
 

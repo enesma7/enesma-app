@@ -276,15 +276,15 @@
       total_disbursed: disbursed ? usd(disbursed) : ''
     };
   }
-  /* The TC session and the enesma_sso cookie can diverge after E-Sign rotates the cookie.
-     Try the session that just talked to Transaction Center, then the cookie if it is different. */
-  function ssoToken(sessionToken, ssoCookie) {
-    var session = String(sessionToken || '').trim();
-    var cookie = String(ssoCookie || '').trim();
-    return { primary: session || cookie, alternate: (session && cookie && session !== cookie) ? cookie : '' };
-  }
+  /* Handoff contract, pending the Apps Script source: one loginWithToken call whose
+     tcToken is the same Transaction Center session that saved the draft. No second
+     cookie, account, or credential is tried. createEnvelope is allowed only after
+     that call returns data.token. AUTH stops the send. */
   function esignSessionToken(data) {
     return String(data && data.token || '').trim();
+  }
+  function cdaEsignLoginBody(tcToken) {
+    return { action: 'loginWithToken', tcToken: String(tcToken || '').trim() };
   }
   function esignAuthError(serverMessage) {
     var base = 'E-Sign did not accept this Transaction Center sign-in, so this CDA was not sent. The draft is still here.';
@@ -292,26 +292,55 @@
     if (!detail || detail.indexOf(base) === 0) detail = '';
     var e = new Error(detail ? base + ' (' + detail + ')' : base);
     e.code = 'AUTH';
+    e.createEnvelope = false;
+    e.markSent = false;
     return e;
   }
-  function exchangeEsignSession(sessionToken, ssoCookie, login) {
-    var pair = ssoToken(sessionToken, ssoCookie);
-    function once(tc) {
-      if (!tc) return Promise.reject(esignAuthError());
-      return Promise.resolve().then(function () { return login(tc); }).then(function (d) {
-        var tok = esignSessionToken(d);
-        if (!tok) throw esignAuthError();
-        return { token: tok, user: d && d.user };
+  function runCdaEsignHandoff(tcToken, login) {
+    var body = cdaEsignLoginBody(tcToken);
+    var trace = [body];
+    if (!body.tcToken) return Promise.reject(esignAuthError());
+    return Promise.resolve().then(function () { return login(body); }).then(function (data) {
+      var tok = esignSessionToken(data);
+      if (!tok) throw esignAuthError();
+      return { esignToken: tok, trace: trace, createEnvelope: true, markSent: false };
+    }, function (err) {
+      var e = (err && err.code === 'AUTH') ? esignAuthError(err.message) : (err || esignAuthError());
+      e.trace = trace;
+      e.createEnvelope = false;
+      e.markSent = false;
+      throw e;
+    });
+  }
+  function runCdaSendHandoff(opts) {
+    opts = opts || {};
+    var tc = String(opts.tcToken || '').trim();
+    var calls = [{ action: 'cdaSaveDraft', token: tc }];
+    return Promise.resolve().then(function () {
+      return opts.save ? opts.save(calls[0]) : { cda: { status: 'draft' } };
+    }).then(function () {
+      return runCdaEsignHandoff(tc, function (body) {
+        calls.push(body);
+        if (opts.login) return opts.login(body);
+        var e = new Error('Please sign in.');
+        e.code = 'AUTH';
+        throw e;
       });
-    }
-    return once(pair.primary).then(function (ok) { return ok; }, function (e) {
-      if (e && e.code === 'AUTH' && pair.alternate) {
-        return once(pair.alternate).then(function (ok) { return ok; }, function (e2) {
-          if (e2 && e2.code === 'AUTH') throw esignAuthError(e2.message);
-          throw e2;
-        });
-      }
-      if (e && e.code === 'AUTH') throw esignAuthError(e.message);
+    }).then(function (session) {
+      if (!opts.create) return { sent: false, calls: calls, session: session };
+      calls.push({ action: 'createEnvelope', token: session.esignToken });
+      return Promise.resolve().then(function () { return opts.create(session); }).then(function (env) {
+        var id = env && ((env.envelope && env.envelope.id) || env.id);
+        if (!id) throw new Error('E-Sign did not return an envelope.');
+        calls.push({ action: 'cdaMarkSent', token: tc, envelopeId: id });
+        if (opts.mark) return Promise.resolve(opts.mark(calls[calls.length - 1])).then(function () { return { sent: true, calls: calls, envelopeId: id }; });
+        return { sent: true, calls: calls, envelopeId: id };
+      });
+    }, function (e) {
+      e.calls = calls;
+      e.sent = false;
+      e.createEnvelope = false;
+      e.markSent = false;
       throw e;
     });
   }
@@ -329,6 +358,6 @@
     ensureAdmin: ensureAdmin, sumLines: sumLines, settlement: settlement, rebalanceAmounts: rebalanceAmounts, grossOf: grossOf, splitOf: splitOf, agentAddress: agentAddress, adminFeeNote: adminFeeNote,
     applySplitLines: applySplitLines, fallbackSuggest: fallbackSuggest, ensureSkeleton: ensureSkeleton, linesForEdit: linesForEdit, booksLines: booksLines,
     sideLabel: sideLabel, headerFromTxn: headerFromTxn, pdfFields: pdfFields, signRects: signRects,
-    ssoToken: ssoToken, esignSessionToken: esignSessionToken, exchangeEsignSession: exchangeEsignSession
+    esignSessionToken: esignSessionToken, cdaEsignLoginBody: cdaEsignLoginBody, runCdaEsignHandoff: runCdaEsignHandoff, runCdaSendHandoff: runCdaSendHandoff
   };
 })(typeof window !== 'undefined' ? window : globalThis);
