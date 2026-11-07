@@ -390,7 +390,8 @@
         h('dt', null, 'Pages'), h('dd', null, e.pages + ' · ' + e.fields + ' fields'), h('dt', null, 'Original SHA-256'), h('dd', { class: 'hash' }, e.originalHash), e.finalHash ? [h('dt', null, 'Signed SHA-256'), h('dd', { class: 'hash' }, e.finalHash)] : null);
       add($app, [h('a', { class: 'back', href: '#/' }, '‹ Envelopes'), h('div', { class: 'head' }, h('div', { style: { minWidth: 0 } }, h('span', { class: 'rule' }), h('h1', { style: { wordBreak: 'break-word' } }, e.name), h('p', { class: 'sub' }, badge(e.status), ' ', e.subject)), acts),
         e.mailError ? h('div', { class: 'err mailerr' }, 'An email could not be sent from your Gmail: ' + e.mailError + ' — check ', h('a', { href: '#/profile' }, 'your Google connection'), ', then use Resend.') : null,
-        e.status === 'finalizing' ? h('div', { class: 'ok' }, e.finalizeError ? 'Finishing the signed copy hit a problem: ' + e.finalizeError : 'Everyone signed. The signed PDF and certificate are being prepared and emailed to all parties — usually within a minute.') : null,
+        e.status === 'finalizing' && e.finalizeError ? h('div', { class: 'err' }, 'The signed PDF could not be filed on the Transaction Center checklist: ' + e.finalizeError) : null,
+        e.status === 'finalizing' && !e.finalizeError ? h('div', { class: 'ok' }, 'Everyone signed. The signed PDF and certificate are being prepared and emailed to all parties — usually within a minute.') : null,
         h('div', { class: 'detail' }, h('div', { class: 'card' }, h('h2', null, 'Signers'), signers), h('div', { class: 'card' }, h('h2', null, 'Details'), info, e.message ? h('p', { class: 'hint', style: { marginTop: '14px', whiteSpace: 'pre-wrap' } }, e.message) : null))]);
     }
     load();
@@ -1003,14 +1004,14 @@
     function doneView(justSigned, all) {
       var dl = h('button', { class: 'btn red', type: 'button', onclick: function () { busy(dl, true, 'Preparing…'); api('signDownload', { token: token }).then(function (d) { busy(dl, false); downloadPdf(d.name + ' - Signed', d.pdf); }).catch(function (e) { busy(dl, false); toast(e.message); }); } }, 'Download signed PDF');
       var dc = h('button', { class: 'btn ghost', type: 'button', onclick: function () { busy(dc, true, 'Preparing…'); api('signDownload', { token: token, certificate: true }).then(function (d) { busy(dc, false); downloadPdf(d.name + ' - Certificate', d.pdf); }).catch(function (e) { busy(dc, false); toast(e.message); }); } }, 'Certificate PDF');
-      if (X.completed) return hero('All signed', '“' + X.envelope.name + '” is complete. Download the signed copy and its Certificate of Completion.', h('div', { class: 'acts-row' }, dl, dc));
+      if (X.completed) return hero('All signed', '“' + docFirst(X.envelope.name) + '” is complete. Download the signed copy and its Certificate of Completion.', h('div', { class: 'acts-row' }, dl, dc));
       hero(justSigned ? 'Thank you, ' + X.signer.name.split(' ')[0] + '!' : 'You already signed', all ? 'Everyone has signed. You’ll get an email with the signed PDF and Certificate of Completion in a minute or two.' : 'Your signature is saved. When everyone has signed, you’ll get an email with the final signed PDF.');
     }
     function consentView() {
       clear($app); var cb = h('input', { type: 'checkbox', id: 'cons' }), go2 = h('button', { class: 'btn red wide', type: 'button', disabled: true, onclick: docView }, 'Review & sign');
       cb.addEventListener('change', function () { go2.disabled = !cb.checked; });
       $app.appendChild(h('div', { class: 'consent card' }, h('img', { src: 'assets/esign-logo-light.svg', alt: 'ENESMA E-Sign', style: { width: '180px', display: 'block', marginBottom: '16px' } }),
-        h('h1', { style: { fontSize: '22px' } }, X.envelope.name), h('p', { class: 'sub' }, X.envelope.sender + ' (' + X.envelope.senderEmail + ') sent you documents to review and sign.'),
+        h('h1', { class: 'dochead', style: { fontSize: '22px' } }, X.envelope.name), h('p', { class: 'sub' }, X.envelope.sender + ' (' + X.envelope.senderEmail + ') sent you documents to review and sign.'),
         X.envelope.message ? h('div', { class: 'ok', style: { whiteSpace: 'pre-wrap' } }, X.envelope.message) : null,
         h('p', { class: 'hint' }, 'Signing as ', h('b', null, X.signer.name + ' · ' + X.signer.email), '. ' + X.fields.filter(isReq).length + ' required field' + (X.fields.filter(isReq).length === 1 ? '' : 's') + ' to complete.'),
         h('label', { class: 'check', for: 'cons', style: { margin: '16px 0' } }, cb, h('span', null, 'I agree to use electronic records and signatures for these documents, and that my electronic signature is the legal equivalent of my handwritten signature (ESIGN Act / UETA). I can download a copy, and I may ask the sender for a paper copy.')),
@@ -1025,7 +1026,7 @@
     function docView() {
       clear($app); $app.className = 'wide';
       var pagesEl = h('div', { class: 'pages' }), prog = h('span', { class: 'p' }), nextB = h('button', { class: 'btn', type: 'button', onclick: nextField }, 'Next field'), fin = h('button', { class: 'btn red', type: 'button', onclick: finish }, 'Finish');
-      add($app, [h('div', { class: 'sbar' }, h('div', { class: 't' }, h('b', null, X.envelope.name), h('span', null, 'From ' + X.envelope.sender)), h('button', { class: 'link', type: 'button', onclick: decline }, 'Decline')),
+      add($app, [h('div', { class: 'sbar' }, h('div', { class: 't' }, h('b', { class: 'dochead' }, X.envelope.name), h('span', null, 'From ' + X.envelope.sender)), h('button', { class: 'link', type: 'button', onclick: decline }, 'Decline')),
         h('div', { class: 'sdoc' }, pagesEl), h('div', { class: 'sfoot' }, prog, nextB, fin)]);
       var els = [];
       renderPdf(bytesFromB64(X.pdf), pagesEl).then(function (pages) {
@@ -1066,11 +1067,46 @@
       }
     }
   };
-  /** Adopt a signature or initials: draw or type (Great Vibes). Calls cb(pngDataUrl). */
+  function docFirst(name) {
+    var lines = String(name || '').split(/\n/), i;
+    for (i = 0; i < lines.length; i++) { var s = lines[i].replace(/\s+/g, ' ').trim(); if (s) return s; }
+    return 'this document';
+  }
+  var SIG_FONTS = [
+    { id: 'great-vibes', family: 'ENESMA Great Vibes', file: 'assets/GreatVibes-Regular.ttf', label: 'Great Vibes' },
+    { id: 'allura', family: 'ENESMA Allura', file: 'assets/Allura-Regular.ttf', label: 'Allura' },
+    { id: 'sacramento', family: 'ENESMA Sacramento', file: 'assets/Sacramento-Regular.ttf', label: 'Sacramento' }
+  ];
+  var sigFontReady = {};
+  function loadSigFont(font) {
+    if (sigFontReady[font.id]) return sigFontReady[font.id];
+    if (typeof FontFace !== 'function' || !document.fonts || !document.fonts.add) {
+      sigFontReady[font.id] = Promise.reject(new Error('This browser cannot load the signature font.'));
+      return sigFontReady[font.id];
+    }
+    sigFontReady[font.id] = new FontFace(font.family, 'url(' + font.file + ')').load().then(function (face) {
+      document.fonts.add(face);
+      if (!document.fonts.check('48px "' + font.family + '"')) throw new Error('The signature font did not load.');
+      return font;
+    });
+    return sigFontReady[font.id];
+  }
+  function fontIsCursive(family, sample) {
+    var c = document.createElement('canvas').getContext('2d');
+    c.font = '48px "' + family + '"';
+    var script = c.measureText(sample || 'Jordan Hale').width;
+    c.font = '48px Times, "Times New Roman", serif';
+    var serif = c.measureText(sample || 'Jordan Hale').width;
+    return Math.abs(script - serif) > 2;
+  }
+  /** Adopt a signature or initials: draw, or type in one of three cursive fonts. Calls cb(pngDataUrl). */
   function signaturePad(kind, name, cb) {
     var isSig = kind === 'signature', mode = 'type', W = isSig ? 600 : 300, H = isSig ? 180 : 150;
     var txt = h('input', { type: 'text', maxlength: 60, value: isSig ? name : initials(name), 'aria-label': isSig ? 'Your name' : 'Your initials' });
-    var prev = h('div', { class: 'typed' }); function upd() { prev.textContent = txt.value || ' '; } txt.addEventListener('input', upd); upd();
+    var chosen = SIG_FONTS[0];
+    var prev = h('div', { class: 'typed', style: { fontFamily: 'sans-serif' } });
+    function showTyped() { prev.textContent = txt.value || ' '; }
+    txt.addEventListener('input', function () { if (prev.dataset.ready === '1') showTyped(); });
     var cv = h('canvas'), pad = h('div', { class: 'pad' }, cv, h('div', { class: 'base' }), h('button', { class: 'btn sm plain clr', type: 'button', onclick: function () { strokes = []; redraw(); } }, 'Clear'));
     var strokes = [], cur = null, ctx = cv.getContext('2d');
     function fit() { var r = cv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); cv.width = Math.max(1, r.width * d); cv.height = Math.max(1, r.height * d); redraw(); }
@@ -1080,25 +1116,52 @@
     cv.addEventListener('pointerdown', function (e) { e.preventDefault(); cv.setPointerCapture(e.pointerId); cur = [pt(e)]; strokes.push(cur); redraw(); });
     cv.addEventListener('pointermove', function (e) { if (!cur) return; cur.push(pt(e)); redraw(); });
     ['pointerup', 'pointercancel'].forEach(function (ev) { cv.addEventListener(ev, function () { cur = null; }); });
-    var typeBox = h('div', null, h('div', { class: 'f' }, h('label', null, isSig ? 'Type your name' : 'Type your initials'), txt), prev), drawBox = h('div', { class: 'hidden' }, h('p', { class: 'hint', style: { marginTop: 0 } }, 'Draw with your finger, mouse or stylus.'), pad);
+    var fontSeg = h('div', { class: 'seg sigfonts', style: { margin: '8px 0 12px' } });
+    function paintFontButtons() {
+      clear(fontSeg);
+      SIG_FONTS.forEach(function (font) {
+        fontSeg.appendChild(h('button', { type: 'button', class: font.id === chosen.id ? 'on' : '', onclick: function () { chooseFont(font); } }, font.label));
+      });
+    }
+    function chooseFont(font) {
+      chosen = font; prev.dataset.ready = ''; prev.style.fontFamily = 'sans-serif'; prev.textContent = 'Loading signature font…'; if (ok) ok.disabled = true; paintFontButtons();
+      loadSigFont(font).then(function () {
+        if (chosen.id !== font.id) return;
+        prev.style.fontFamily = '"' + font.family + '"'; prev.dataset.ready = '1'; showTyped(); if (ok) ok.disabled = false;
+      }, function () {
+        if (chosen.id !== font.id) return;
+        prev.textContent = 'This signature font did not load.'; prev.dataset.ready = ''; if (ok) ok.disabled = true;
+      });
+    }
+    var typeBox = h('div', null, h('div', { class: 'f' }, h('label', null, isSig ? 'Type your name' : 'Type your initials'), txt), fontSeg, prev), drawBox = h('div', { class: 'hidden' }, h('p', { class: 'hint', style: { marginTop: 0 } }, 'Draw with your finger, mouse or stylus.'), pad);
     var seg = h('div', { class: 'seg', style: { marginBottom: '14px' } }, [['type', 'Type'], ['draw', 'Draw']].map(function (m) { return h('button', { type: 'button', class: m[0] === mode ? 'on' : '', onclick: function (e) { mode = m[0]; Array.prototype.forEach.call(seg.children, function (b) { b.className = ''; }); e.currentTarget.className = 'on'; typeBox.classList.toggle('hidden', mode !== 'type'); drawBox.classList.toggle('hidden', mode !== 'draw'); if (mode === 'draw') setTimeout(fit, 20); } }, m[1]); }));
     var msg = h('div');
-    var ok = h('button', { class: 'btn red', type: 'button', onclick: function () {
-      clear(msg); var out = document.createElement('canvas'), o = out.getContext('2d'); out.width = W; out.height = H;
-      if (mode === 'type') {
-        var t = txt.value.trim(); if (!t) return msg.appendChild(errBox('Type your ' + (isSig ? 'name' : 'initials') + '.'));
-        var fs = H * 0.62; o.font = fs + 'px "Great Vibes"'; while (o.measureText(t).width > W - 30 && fs > 20) { fs -= 2; o.font = fs + 'px "Great Vibes"'; }
-        o.fillStyle = '#000007'; o.textBaseline = 'middle'; o.fillText(t, 15, H * 0.55);
-      } else {
-        if (!strokes.length) return msg.appendChild(errBox('Draw your ' + (isSig ? 'signature' : 'initials') + '.'));
-        var b = cropBox(cv); if (!b) return msg.appendChild(errBox('Draw your ' + (isSig ? 'signature' : 'initials') + '.'));
-        var sc = Math.min((W - 20) / b.w, (H - 20) / b.h); o.drawImage(cv, b.x, b.y, b.w, b.h, (W - b.w * sc) / 2, (H - b.h * sc) / 2, b.w * sc, b.h * sc);
+    var ok = h('button', { class: 'btn red', type: 'button', disabled: true, onclick: function () {
+      clear(msg);
+      function finishPng(out) {
+        var tb = cropBox(out); if (tb) { var c2 = document.createElement('canvas'); c2.width = tb.w + 8; c2.height = tb.h + 8; c2.getContext('2d').drawImage(out, tb.x, tb.y, tb.w, tb.h, 4, 4, tb.w, tb.h); out = c2; }
+        closeModal(); cb(out.toDataURL('image/png'));
       }
-      var tb = cropBox(out); if (tb) { var c2 = document.createElement('canvas'); c2.width = tb.w + 8; c2.height = tb.h + 8; c2.getContext('2d').drawImage(out, tb.x, tb.y, tb.w, tb.h, 4, 4, tb.w, tb.h); out = c2; }
-      closeModal(); cb(out.toDataURL('image/png'));
+      if (mode !== 'type') {
+        if (!strokes.length) return msg.appendChild(errBox('Draw your ' + (isSig ? 'signature' : 'initials') + '.'));
+        var outd = document.createElement('canvas'), od = outd.getContext('2d'); outd.width = W; outd.height = H;
+        var b = cropBox(cv); if (!b) return msg.appendChild(errBox('Draw your ' + (isSig ? 'signature' : 'initials') + '.'));
+        var sc = Math.min((W - 20) / b.w, (H - 20) / b.h); od.drawImage(cv, b.x, b.y, b.w, b.h, (W - b.w * sc) / 2, (H - b.h * sc) / 2, b.w * sc, b.h * sc);
+        return finishPng(outd);
+      }
+      var t = txt.value.trim(); if (!t) return msg.appendChild(errBox('Type your ' + (isSig ? 'name' : 'initials') + '.'));
+      ok.disabled = true;
+      loadSigFont(chosen).then(function (font) {
+        if (!document.fonts.check('48px "' + font.family + '"') || !fontIsCursive(font.family)) throw new Error('The signature font did not load. Choose it again when it is ready.');
+        var out = document.createElement('canvas'), o = out.getContext('2d'); out.width = W; out.height = H;
+        var fs = H * 0.62; o.font = fs + 'px "' + font.family + '"';
+        while (o.measureText(t).width > W - 30 && fs > 20) { fs -= 2; o.font = fs + 'px "' + font.family + '"'; }
+        if (!fontIsCursive(font.family)) throw new Error('The signature font did not load. Choose it again when it is ready.');
+        o.fillStyle = '#000007'; o.textBaseline = 'middle'; o.fillText(t, 15, H * 0.55);
+        finishPng(out);
+      }, function (err) { ok.disabled = false; msg.appendChild(errBox(err.message || 'The signature font did not load.')); });
     } }, isSig ? 'Adopt and sign' : 'Adopt initials');
-    var fontReady = document.fonts && document.fonts.load ? document.fonts.load('40px "Great Vibes"') : Promise.resolve();
-    fontReady.then(function () { }, function () { });
+    paintFontButtons(); chooseFont(chosen);
     openModal(isSig ? 'Adopt your signature' : 'Adopt your initials', h('div', null, seg, typeBox, drawBox, msg, h('p', { class: 'hint' }, 'By selecting Adopt, I agree this mark is my electronic ' + (isSig ? 'signature' : 'initials') + ' for every ' + (isSig ? 'signature' : 'initials') + ' field in these documents.'), h('div', { class: 'actions' }, ok)), { sticky: true, noFocus: true });
   }
   function cropBox(c) {

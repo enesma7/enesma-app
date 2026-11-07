@@ -143,7 +143,7 @@
   }
   function emailOk(s) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(s || '').trim()); }
 
-  function sendEnvelope(header, lines, agent, broker) {
+  function sendEnvelope(header, lines, agent, broker, txnId) {
     var A = app();
     return fillPdf(header, lines).then(function (bytes) {
       var b64 = A.bytesToB64(bytes);
@@ -157,14 +157,15 @@
           var r = pdf.rects;
           function fld(type, who, box, label) { return { type: type, recipient: who, page: box.page, x: box.x, y: box.y, w: box.w, h: box.h, required: true, label: label }; }
           var fields = [fld('signature', 'agent', r.agentSig, 'Agent signature'), fld('date', 'agent', r.agentDate, 'Date'), fld('signature', 'owner', r.brokerSig, 'Broker signature'), fld('date', 'owner', r.brokerDate, 'Date')];
-          var title = 'CDA – ' + (header.address || 'Commission disbursement');
+          var heading = M.cdaSignHeading(header);
           return esignCall('createEnvelope', {
-            name: title,
-            subject: 'Please sign: ' + title,
-            message: 'Commission Disbursement Authorization for ' + (header.address || 'this file') + '. The agent signs first. The broker signs second.',
+            name: heading,
+            subject: 'Please sign: CDA',
+            message: '',
             orderMode: 'sequential',
             pages: pdf.pages || 1,
             templateId: '',
+            tcTxnId: txnId || '',
             fields: fields,
             pdf: pdf.b64,
             recipients: [
@@ -361,14 +362,14 @@
         }
         return A.api('cdaSaveDraft', { txnId: txn.id, lines: linesOut }).then(function () {
           if (A.DEMO) return { envelope: { id: 'demo-' + txn.id } };
-          return sendEnvelope(header, linesOut, { name: header.agentName || 'Agent', email: ae }, { name: bn || BROKER.name, email: be });
+          return sendEnvelope(header, linesOut, { name: header.agentName || 'Agent', email: ae }, { name: bn || BROKER.name, email: be }, txn.id);
         }).then(function (env) {
           var id = (env.envelope && env.envelope.id) || env.id;
           if (!id) throw new Error('E-Sign did not return an envelope.');
           return A.api('cdaMarkSent', { txnId: txn.id, envelopeId: id });
         }).then(function () {
           m.close();
-          A.toast(A.DEMO ? 'Demo: CDA marked sent. The owner records the signed PDF from this file.' : 'CDA sent. The agent signs first, then the broker.');
+          A.toast(A.DEMO ? 'Demo: CDA marked sent. The owner records the signed PDF from this file.' : 'CDA sent for signature.');
           A.refresh();
         }, function (e) {
           if (e.code === 'CONFLICT') fail('This CDA was already sent or signed. Revise it before sending again.');
@@ -385,7 +386,7 @@
       var env = (p.cda && p.cda.envelopeId) || '';
       var host = A.qs('#cdaSign', m);
       var owner = A.S.user && (A.S.user.owner || A.isAdmin());
-      host.innerHTML = '<p class="sub">Out for signature' + (env ? ' · envelope ' + h(env) : '') + '. Agent first, broker second.</p>' +
+      host.innerHTML = '<p class="sub">Out for signature' + (env ? ' · envelope ' + h(env) : '') + '.</p>' +
         (owner ? '<button type="button" class="btn" id="cdaPull">' + (A.DEMO ? 'Demo: record signed PDF' : 'Check E-Sign and file the signed PDF') + '</button>' : '<p class="sub">When both have signed, the owner files the signed PDF on this checklist.</p>');
       var pull = A.qs('#cdaPull', m);
       if (!pull) return;
@@ -393,22 +394,24 @@
         pull.disabled = true; err('');
         var done = function (msg) { m.close(); A.toast(msg); A.refresh(); };
         if (A.DEMO) {
-          A.api('cdaOnSigned', { txnId: txn.id, envelopeId: env || ('demo-' + txn.id), base64: 'JVBERi0xLjEK', name: 'CDA-signed.pdf' }).then(function () { done('Signed CDA filed. E-Books entries are waiting for owner approval.'); }, function (e) { pull.disabled = false; err(e.message); });
+          A.api('cdaOnSigned', { txnId: txn.id, envelopeId: env || ('demo-' + txn.id), base64: 'JVBERi0xLjEK', name: 'CDA-signed.pdf' }).then(function () { done('Signed CDA filed. Checklist compliance review is still pending. Owner amount approval in E-Books is separate.'); }, function (e) { pull.disabled = false; err(e.message); });
           return;
         }
         pullSigned(txn.id, env).then(function (r) {
           if (r.waiting) { pull.disabled = false; err('E-Sign is not finished yet' + (r.status ? ' (' + r.status + ').' : '.')); return; }
-          done('Signed CDA filed on the checklist. E-Books entries are waiting for approval.');
-        }, function (e) { pull.disabled = false; err(e.message); });
+          done('Signed CDA filed on the checklist. Compliance review is still pending. This did not approve the checklist item. Owner amount approval in E-Books is separate.');
+        }, function (e) { pull.disabled = false; err(e.message || 'The signed PDF could not be filed on the checklist.'); });
       };
       if (owner && !A.DEMO && env) {
-        pullSigned(txn.id, env).then(function (r) { if (r.signed) { m.close(); A.toast('Signed CDA filed on the checklist.'); A.refresh(); } }, function () { });
+        pullSigned(txn.id, env).then(function (r) {
+          if (r.signed) { m.close(); A.toast('Signed CDA filed on the checklist. Compliance review is still pending. This did not approve the checklist item.'); A.refresh(); }
+        }, function (e) { err(e.message || 'The signed PDF could not be filed on the checklist.'); });
       }
     }
     function renderExecuted(p) {
       var host = A.qs('#cdaSign', m);
       var q = p.cda && (p.cda.queued || p.queued);
-      host.innerHTML = '<div class="ok">Fully signed. The PDF is on this checklist item. Brokerage and ENESMA agent amounts are pending in E-Books until the owner approves them.' + (q ? ' ' + h(q) + ' queued.' : '') + '</div>';
+      host.innerHTML = '<div class="ok">Fully signed. The PDF is on this checklist item for compliance review and is not approved by filing. Owner amount approval, in E-Books, is the separate step that records brokerage and ENESMA agent amounts.' + (q ? ' ' + h(q) + ' queued.' : '') + '</div>';
     }
   }
 
@@ -425,9 +428,9 @@
     var chk = p.escrowCheck || {};
     var h = A.h;
     var prior = chk.date ? '<p class="' + (chk.match ? 'ok' : 'err') + '">Last confirmation ' + h(chk.date) + ' · check ' + h(chk.checkNumber || '') + ' · ' + money2(chk.amount) + (chk.match ? ' · match' : ' · mismatch ' + money2(chk.difference || 0)) + '.</p>' : '';
-    return '<div class="card gb cda-esc" id="cdaEsc"><h3>Escrow check</h3><p class="sub">Confirm the commission check against the signed CDA total gross of <b>' + money2(expected) + '</b>. A match locks books for this file. A mismatch leaves them open.</p>' + prior +
-      '<div id="cdaEscErr"></div><div class="cda-who"><label>Date<input type="date" id="escDate" value="' + h(chk.date || '') + '"></label><label>Check #<input id="escNum" value="' + h(chk.checkNumber || '') + '" maxlength="40"></label><label>Amount<input id="escAmt" inputmode="decimal" value="' + h(chk.amount != null && chk.amount !== '' ? chk.amount : '') + '" placeholder="0.00"></label></div>' +
-      '<p id="escLive" class="sub"></p><button type="button" class="btn" id="escGo">Confirm escrow check</button></div>';
+    return '<div class="card gb cda-esc" id="cdaEsc"><h3>Broker commission check</h3><p class="sub">Confirm the commission check against the signed CDA total gross of <b>' + money2(expected) + '</b>. Brokerage income is recorded only after you enter the date that check was deposited, and only for the approved brokerage amount. Agent commission amounts are not dated from this deposit.</p>' + prior +
+      '<div id="cdaEscErr"></div><div class="cda-who"><label>Date deposited<input type="date" id="escDate" value="' + h(chk.depositDate || '') + '"></label><label>Check #<input id="escNum" value="' + h(chk.checkNumber || '') + '" maxlength="40"></label><label>Amount<input id="escAmt" inputmode="decimal" value="' + h(chk.amount != null && chk.amount !== '' ? chk.amount : '') + '" placeholder="0.00"></label></div>' +
+      '<p id="escLive" class="sub"></p><button type="button" class="btn" id="escGo">Confirm deposit</button></div>';
   }
   function wireEscrow(root) {
     var A = app(), box = A.qs('#cdaEsc', root);
@@ -443,11 +446,11 @@
     A.qs('#escAmt', box).oninput = live; live();
     A.qs('#escGo', box).onclick = function () {
       var date = A.qs('#escDate', box).value, num = A.qs('#escNum', box).value.trim(), amt = A.qs('#escAmt', box).value.trim();
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !num || !(M.num(amt) > 0)) { A.qs('#cdaEscErr', box).innerHTML = '<div class="err">Enter the date, check number, and amount.</div>'; return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !num || !(M.num(amt) > 0)) { A.qs('#cdaEscErr', box).innerHTML = '<div class="err">Enter the date the check was deposited, the check number, and the amount.</div>'; return; }
       var b = this; b.disabled = true;
-      A.api('ebConfirmEscrowCheck', { txnId: A.S.txn.txn.id, date: date, checkNumber: num, amount: amt }).then(function (d) {
+      A.api('ebConfirmEscrowCheck', { txnId: A.S.txn.txn.id, depositDate: date, checkNumber: num, amount: amt }).then(function (d) {
         var c = (d && d.escrowCheck) || {};
-        A.toast(c.match ? 'Escrow check matches. Books for this file are locked.' : 'Recorded. The check does not match the CDA, so books stay open.');
+        A.toast(c.match ? (d.incomePosted ? 'Brokerage income recorded on the deposit date.' : 'Deposit date saved. Brokerage income is recorded when the signed CDA amount is approved.') : 'Recorded. The check does not match the CDA, so brokerage income was not recorded.');
         A.refresh();
       }, function (e) { b.disabled = false; A.qs('#cdaEscErr', box).innerHTML = '<div class="err">' + A.h(e.message) + '</div>'; });
     };
@@ -461,7 +464,7 @@
       var rows = (d && d.pending) || [];
       if (!rows.length) { host.innerHTML = '<p class="sub">No signed-CDA amounts are waiting for approval.</p>'; return; }
       var h = A.h;
-      host.innerHTML = '<h2 class="ebh2">Signed CDA · waiting for approval</h2><p class="sub">These are the brokerage portion and ENESMA agent amounts from a fully signed CDA. TC fee, admin fee, outside referral, other, and credits are not here. Approve to post them. Reject to drop this batch. The latest signed CDA replaces an older one.</p>' +
+      host.innerHTML = '<h2 class="ebh2">Owner amount approval</h2><p class="sub">This is not checklist compliance review. Compliance review is the separate Approve or Reject step on the CDA checklist item. Approving here records the latest signed CDA amounts: each ENESMA agent amount on the actual escrow closing date, with no agent deposit date. If that closing date is missing, the agent amount stays unrecorded. Brokerage income stays off the books until the check deposit date is confirmed. TC fee, admin fee, outside referral, other, and credits are not here.</p>' +
         '<div class="ebtable"><table class="ebt" id="cdaPendTbl"><thead><tr><th></th><th>File</th><th>Op</th><th>Payee</th><th>Kind</th><th class="r">Amount</th></tr></thead><tbody>' +
         rows.map(function (r) {
           return '<tr data-id="' + h(r.id) + '"><td><input type="checkbox" class="cdaP" checked aria-label="Include"></td><td>' + h(r.title || r.txnId || '') + '</td><td>' + h(r.op || '') + '</td><td>' + h(r.payeeName || r.name || '—') + '</td><td>' + h(r.kind || r.importKey || '') + '</td><td class="r">' + money2(r.amount) + '</td></tr>';
@@ -470,7 +473,16 @@
       function decide(decision) {
         var list = ids(); if (!list.length) { A.toast('Select at least one row.', 1); return; }
         A.api('ebCdaDecide', { ids: list, decision: decision }).then(function (res) {
-          return A.ebAfter((decision === 'approve' ? 'Approved ' + (res.approved || list.length) : 'Rejected ' + (res.rejected || list.length)) + '.');
+          res = res || {};
+          var parts = [];
+          if (decision === 'reject') parts.push('Rejected ' + (res.rejected || 0) + '.');
+          else {
+            if (res.approved) parts.push('Recorded ' + res.approved + ' commission amount' + (res.approved === 1 ? '' : 's') + '.');
+            if (res.awaitingDeposit) parts.push('Brokerage income waits for the deposit date.');
+            if (res.missingCloseDate) parts.push('Agent commission was not recorded. The actual escrow closing date is missing.');
+            if (!parts.length) parts.push('Nothing new was recorded.');
+          }
+          return A.ebAfter(parts.join(' '));
         }, function (e) { A.toast(e.message, 1); });
       }
       A.qs('#cdaAp', host).onclick = function () { decide('approve'); };

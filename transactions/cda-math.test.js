@@ -16,15 +16,53 @@ assert.ok(uiSrc.indexOf('No split is saved') < 0);
 assert.ok(uiSrc.indexOf('Standard per-transaction admin fee') < 0);
 assert.ok(uiSrc.indexOf('M.adminFeeNote(l.note)') >= 0, 'admin fee mail-to uses the office-address note');
 var html = fs.readFileSync(__dirname + '/index.html', 'utf8');
-assert.ok(html.indexOf('cda-math.js?v=8') >= 0);
-assert.ok(html.indexOf('cda-ui.js?v=9') >= 0);
+assert.ok(html.indexOf('cda-math.js?v=9') >= 0);
+assert.ok(html.indexOf('cda-ui.js?v=14') >= 0);
+assert.ok(html.indexOf('app.js?v=44') >= 0);
 assert.ok(html.indexOf('app.css?v=45') >= 0);
-assert.ok(html.indexOf('cda-math.js?v=7') < 0);
-assert.ok(html.indexOf('cda-ui.js?v=8') < 0);
+assert.ok(html.indexOf('cda-math.js?v=8') < 0);
+assert.ok(html.indexOf('cda-ui.js?v=13') < 0);
+var appSrc = fs.readFileSync(__dirname + '/app.js', 'utf8');
+var zd = appSrc.indexOf('id="zd"');
+var zdSnippet = appSrc.slice(Math.max(0, zd - 280), zd + 80);
+assert.ok(zd > 0);
+assert.ok(zdSnippet.indexOf('estCloseDate') < 0);
+assert.ok(appSrc.indexOf('Actual escrow closing date') >= 0);
+assert.ok(appSrc.indexOf("t.closedAt ? String(t.closedAt).slice(0, 10) : ''") >= 0);
+assert.ok(appSrc.indexOf('Nothing is saved until you press Save status.') >= 0);
+assert.ok(uiSrc.indexOf('Owner amount approval') >= 0);
+assert.ok(uiSrc.indexOf('not checklist compliance review') >= 0);
+assert.ok(uiSrc.indexOf('does not approve the checklist item') >= 0 || uiSrc.indexOf('not approved by filing') >= 0);
+assert.ok(uiSrc.indexOf('actual escrow closing date is missing') >= 0);
+assert.ok(uiSrc.indexOf('Date deposited') >= 0);
+assert.ok(uiSrc.indexOf('depositDate: date') >= 0);
+assert.ok(uiSrc.indexOf('M.cdaSignHeading') >= 0);
+assert.ok(uiSrc.indexOf('The agent signs first') < 0);
+assert.ok(uiSrc.indexOf("subject: 'Please sign: CDA'") >= 0);
 assert.ok(uiSrc.indexOf('Send agent, then broker') < 0);
 assert.ok(uiSrc.indexOf('id="cdaAE"') < 0);
 assert.ok(uiSrc.indexOf('id="cdaGo"') < 0);
 assert.ok(uiSrc.indexOf('not on file') >= 0);
+assert.ok(uiSrc.indexOf('tcTxnId: txnId') >= 0);
+assert.ok(uiSrc.indexOf('Compliance review is still pending') >= 0);
+assert.ok(uiSrc.indexOf('function () { }') < 0);
+var plan = require('./cda-file-plan');
+var latest = plan.cdaFileDecision([{ version: 1, status: 'sent', envelopeId: 'E1', signedDocId: '' }], 'E1');
+assert.strictEqual(latest.action, 'file-latest');
+assert.strictEqual(latest.docStatus, 'Pending');
+assert.strictEqual(latest.approve, false);
+assert.strictEqual(latest.queueEbooks, true);
+var again = plan.cdaFileDecision([{ version: 1, status: 'executed', envelopeId: 'E1', signedDocId: 'D1' }], 'E1');
+assert.strictEqual(again.action, 'already');
+assert.strictEqual(again.queueEbooks, false);
+var stale = plan.cdaFileDecision([
+  { version: 1, status: 'sent', envelopeId: 'E1', signedDocId: '' },
+  { version: 2, status: 'executed', envelopeId: 'E2', signedDocId: 'D2' }
+], 'E1');
+assert.strictEqual(stale.action, 'file-historical');
+assert.strictEqual(stale.queueEbooks, false);
+assert.strictEqual(stale.supersedeOlder, false);
+assert.strictEqual(plan.cdaFileDecision([{ version: 2, status: 'sent', envelopeId: 'E2' }], 'E1').action, 'reject');
 assert.ok(uiSrc.indexOf("order: 1") >= 0);
 assert.ok(uiSrc.indexOf("order: 2") >= 0);
 assert.ok(uiSrc.indexOf('Added payees come out of the Primary Agent') < 0);
@@ -219,6 +257,28 @@ assert.ok(M.isCdaItem({ code: 'P_CDA_COMMISSION_DISBURSEMENT_' }));
 assert.ok(M.isCdaItem({ code: 'CDA' }));
 assert.ok(!M.isCdaItem({ code: 'P_INVOICES' }));
 
+assert.strictEqual(M.cdaSignHeading({ street: '400 Sample St', city: 'Sample City', state: 'CA', zip: '90000' }), 'CDA\n400 Sample St\nSample City CA 90000');
+assert.strictEqual(M.cdaSignHeading({ street: '400 Sample St' }), 'CDA\n400 Sample St');
+assert.strictEqual(M.cdaSignHeading({ city: 'Sample City', zip: '90000' }), 'CDA\nSample City 90000');
+assert.strictEqual(M.cdaSignHeading({}), 'CDA');
+assert.ok(M.cdaSignHeading({ city: 'Sample City', zip: '90000' }).indexOf(' CA') < 0);
+var sampleHeader = M.headerFromTxn({ address: '9 Old St', city: 'Old City', zip: '11111', intake: { address: '400 Sample St', unit: '2', city: 'Sample City', zip: '90000' } });
+assert.strictEqual(sampleHeader.street, '400 Sample St #2');
+assert.strictEqual(sampleHeader.city, 'Sample City');
+assert.strictEqual(sampleHeader.state, '');
+assert.strictEqual(sampleHeader.zip, '90000');
+assert.strictEqual(M.cdaSignHeading(sampleHeader), 'CDA\n400 Sample St #2\nSample City 90000');
+var rects = M.signRects(612, 792);
+assert.strictEqual(rects.agentDate.x, rects.agentSig.x);
+assert.strictEqual(rects.brokerDate.x, rects.brokerSig.x);
+assert.ok(rects.agentDate.y > rects.agentSig.y + rects.agentSig.h - 0.005);
+assert.ok(rects.brokerDate.y > rects.brokerSig.y + rects.brokerSig.h - 0.005);
+assert.ok(rects.agentDate.x < 0.3);
+assert.strictEqual(rects.agentSig.y, +(608 / 792).toFixed(4));
+assert.strictEqual(rects.agentDate.y, +(630 / 792).toFixed(4));
+assert.strictEqual(rects.brokerSig.y, +(664 / 792).toFixed(4));
+assert.strictEqual(rects.brokerDate.y, +(686 / 792).toFixed(4));
+
 function call(body) { return mock.call(body).then(function (r) { if (!r.ok) { var e = new Error(r.error); e.code = r.code; throw e; } return r.data; }); }
 
 call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(function (d) {
@@ -252,7 +312,19 @@ call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(funct
         return call({ action: 'cdaOnSigned', token: token, txnId: closed.id, envelopeId: 'env-demo', base64: 'QQ==', name: 'CDA-signed.pdf' });
       }).then(function (done) {
         assert.strictEqual(done.cda.status, 'executed');
+        assert.strictEqual(done.already, false);
+        assert.strictEqual(done.itemStatus, 'Pending');
         assert.ok(done.queued >= 2);
+        var filed = done.docId;
+        return call({ action: 'cdaOnSigned', token: token, txnId: closed.id, envelopeId: 'env-demo', base64: 'QQ==', name: 'CDA-signed.pdf' }).then(function (repeat) {
+          assert.strictEqual(repeat.already, true);
+          assert.strictEqual(repeat.docId, filed);
+          assert.strictEqual(repeat.queued, 0);
+          return call({ action: 'cdaOnSigned', token: token, txnId: closed.id, envelopeId: 'env-other', base64: 'QQ==', name: 'CDA-signed.pdf' });
+        }).then(function () { throw new Error('stale envelope should conflict'); }, function (e) {
+          assert.strictEqual(e.code, 'CONFLICT');
+        });
+      }).then(function () {
         return call({ action: 'ebCdaPending', token: token });
       }).then(function (q) {
         var kinds = q.pending.map(function (p) { return p.kind; });
@@ -261,7 +333,8 @@ call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(funct
         assert.ok(!q.pending.some(function (p) { return p.kind === 'admin_fee' || p.kind === 'tc_fee'; }));
         return call({ action: 'ebCdaDecide', token: token, ids: q.pending.map(function (p) { return p.id; }), decision: 'approve' });
       }).then(function (res) {
-        assert.ok(res.approved >= 2);
+        assert.ok(res.approved >= 1);
+        assert.ok(res.awaitingDeposit >= 1);
         var gross = 0;
         return call({ action: 'cdaGet', token: token, txnId: closed.id }).then(function (again) {
           gross = again.header.totalGross;
