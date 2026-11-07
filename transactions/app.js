@@ -541,9 +541,9 @@ function ebLedger() {
     '<label>Category<select id="fCat"><option value="">All</option>' + ebCatOptions(f.type, f.cat, true) + '</select></label>' +
     '<label class="grow">Search<input type="search" id="fQ" value="' + h(f.q) + '" placeholder="Payee, memo, address…"></label></div>' +
     '<div class="ebsum"><div><small>Income</small><b>' + ebM(tin) + '</b></div><div><small>Expenses</small><b>' + ebM(tout) + '</b></div><div class="' + (tin - tout < 0 ? 'neg' : '') + '"><small>Net</small><b>' + ebM(tin - tout) + '</b></div><div><small>Entries</small><b>' + rows.length + '</b></div></div>';
-  if (waiting.length) html += '<p class="sub">Signed CDA amounts below are waiting for owner amount approval. They are not included in the totals, reports, or 1099. Checklist compliance review is separate.</p><div class="ebtable"><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Payee</th><th class="hm">Source</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + waiting.map(function (r) {
+  if (waiting.length) html += '<p class="sub">Signed CDA amounts below are waiting for owner amount approval. They are not included in the totals, reports, or 1099. Checklist compliance review is separate.</p><div class="ebtable"><table class="ebt"><thead><tr><th>Status</th><th>Category</th><th>Payee</th><th>Source</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + waiting.map(function (r) {
     var label = r.type === 'income' ? 'Commission Income' : 'Agent Commission Payouts';
-    return '<tr class="ebpendrow" data-cda="' + h(r.id) + '"><td data-l="Date">Not posted</td><td data-l="Category"><span class="ebtype ' + r.type + '">' + (r.type === 'income' ? 'In' : 'Out') + '</span>' + label + '</td><td data-l="Payee">' + h(r.payeeName || '—') + (r.payeeType === 'agent' ? ' <small class="muted">agent</small>' : '') + '</td><td data-l="Source" class="hm">Signed CDA' + (r.title ? ' · ' + h(r.title) : '') + (r.version ? ' · v' + h(r.version) : '') + '</td><td data-l="Amount" class="r amt ' + r.type + '">' + (r.type === 'expense' ? '−' : '') + ebM(r.amount) + '</td><td class="acts"><button type="button" class="ebred" aria-label="Review pending CDA amount ' + h(r.payeeName || label) + ' ' + ebM(r.amount) + (r.title ? ' for ' + h(r.title) : '') + '"><span aria-hidden="true">!</span> Review</button></td></tr>';
+    return '<tr class="ebpendrow" data-cda="' + h(r.id) + '"><td data-l="Status"><span class="ebflag">Pending</span></td><td data-l="Category"><span class="ebtype ' + r.type + '">' + (r.type === 'income' ? 'In' : 'Out') + '</span>' + label + '</td><td data-l="Payee">' + h(r.payeeName || '—') + (r.payeeType === 'agent' ? ' <small class="muted">agent</small>' : '') + '</td><td data-l="Source" class="src">Signed CDA' + (r.title ? ' · ' + h(r.title) : '') + (r.version ? ' · v' + h(r.version) : '') + '</td><td data-l="Amount" class="r amt ' + r.type + '">' + (r.type === 'expense' ? '−' : '') + ebM(r.amount) + '</td><td class="acts"><button type="button" class="ebred" aria-label="Review pending CDA amount ' + h(r.payeeName || label) + ' ' + ebM(r.amount) + (r.title ? ' for ' + h(r.title) : '') + '"><span aria-hidden="true">!</span> Review</button></td></tr>';
   }).join('') + '</tbody></table></div>';
   html += rows.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Payee</th><th class="hm">Method</th><th class="hm">Memo / Transaction</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + rows.map(function (e) {
     var t = ebTxn(e.txnId), c = ebCat(e.categoryId);
@@ -571,24 +571,31 @@ function ebLedger() {
       b.onclick = function () {
         var id = b.closest('tr').getAttribute('data-cda');
         var row = (EB.cdaPending || []).filter(function (r) { return r.id === id; })[0];
-        if (row) ebCdaReview(row);
+        if (row) ebCdaReview(row, this);
       };
     });
   } };
 }
-function ebCdaReview(r) {
+function ebCdaReview(r, opener) {
   var t = ebTxn(r.txnId), income = r.type === 'income';
   var close = t && /^\d{4}-\d{2}-\d{2}$/.test(String(t.closedAt || '').slice(0, 10)) ? String(t.closedAt).slice(0, 10) : '';
   var gate = income
     ? 'Approving this brokerage amount does not add it to income. It is recorded only after the commission check deposit date is confirmed on the transaction and the check matches the signed CDA total gross. The agent is not asked for a deposit date.'
     : (close ? 'Confirming records this agent commission on the actual escrow closing date ' + fmtDate(close) + '. It is not in the totals until you confirm.' : 'This file has no actual escrow closing date yet. Confirming will not record the amount, and it will not use today or the estimated close.');
+  opener = opener || document.activeElement;
   var m = modal('<h2>Review CDA amount</h2><p class="sub">This is owner amount approval. It does not approve the checklist item. Compliance review stays separate.</p><div id="cdaRv"></div><dl class="ebkv">' +
     '<div><dt>Transaction</dt><dd>' + (t ? '<a href="#/t/' + h(t.id) + '">' + h(t.title) + '</a>' : h(r.title || r.txnId || '—')) + '</dd></div>' +
     '<div><dt>Signed CDA</dt><dd>' + (r.version ? 'Version ' + h(r.version) : 'Latest signed version') + (r.op === 'update' ? ' · replaces the posted amount' : r.op === 'remove' ? ' · removes the posted amount' : '') + '</dd></div>' +
     '<div><dt>Where it belongs</dt><dd>' + (income ? 'Income · Commission Income' : 'Expenses · Agent Commission Payouts') + '</dd></div>' +
     '<div><dt>Payee</dt><dd>' + h(r.payeeName || '—') + (r.payeeType === 'agent' ? ' · agent' : income ? ' · brokerage' : '') + '</dd></div>' +
     '<div><dt>Amount</dt><dd><b>' + ebM(r.amount) + '</b></dd></div></dl><p>' + h(gate) + '</p><div class="actions"><button type="button" class="ub" id="cdaNo">Not now</button><button type="button" class="ub" id="cdaRj">Reject</button><button type="button" class="ebred" id="cdaYes">Approve this amount</button></div>', true);
-  qs('#cdaNo', m).onclick = m.close;
+  function restore() { if (opener && opener.focus) setTimeout(function () { opener.focus(); }, 0); }
+  function dismiss() { m.close(); restore(); }
+  qs('.close', m).onclick = dismiss;
+  m.addEventListener('click', function (e) { if (e.target === m) restore(); });
+  m.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); dismiss(); } });
+  qs('#cdaNo', m).onclick = dismiss;
+  qs('#cdaNo', m).focus();
   function decide(decision) {
     api('ebCdaDecide', { ids: [r.id], decision: decision }).then(function (res) {
       res = res || {};
@@ -707,7 +714,7 @@ function ebPayees() {
   var html = '<h2 class="ebh2">Agents <small class="muted">from Transaction Center users</small></h2><div class="ebtable"><table class="ebt"><thead><tr><th>Agent</th><th class="hm">Email</th><th>Default split</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' +
     EB.data.agents.map(function (a) {
     var owed = (EB.cdaPending || []).filter(function (p) { return p.type === 'expense' && p.payeeType === 'agent' && p.payeeId === a.id; });
-    return '<tr data-a="' + h(a.id) + '"><td data-l="Agent">' + h(a.name) + (a.active ? '' : ' <small class="muted">inactive</small>') + (owed.length ? ' <button type="button" class="ebred ebAgPend" data-cda="' + h(owed[0].id) + '" aria-label="Review pending CDA commission for ' + h(a.name) + ' ' + ebM(owed[0].amount) + '"><span aria-hidden="true">!</span> Review</button>' : '') + '</td><td data-l="Email" class="hm">' + h(a.email) + '</td><td data-l="Split">' + (a.splitPct === '' ? '—' : h(a.splitPct) + '%') + (a.capAmount === '' || a.capAmount == null ? '' : '<br><small class="muted">cap ' + ebM(a.capAmount) + '</small>') + '</td><td data-l="TIN">' + ebTinCell(a) + '</td><td data-l="Address" class="hm">' + h(a.address || '—') + '</td><td class="acts"><button class="ub sm ebAg">Edit</button></td></tr>';
+    return '<tr data-a="' + h(a.id) + '"><td data-l="Agent">' + h(a.name) + (a.active ? '' : ' <small class="muted">inactive</small>') + (owed.length ? ' <span class="ebflag">Pending</span>' : '') + '</td><td data-l="Email" class="hm">' + h(a.email) + '</td><td data-l="Split">' + (a.splitPct === '' ? '—' : h(a.splitPct) + '%') + (a.capAmount === '' || a.capAmount == null ? '' : '<br><small class="muted">cap ' + ebM(a.capAmount) + '</small>') + '</td><td data-l="TIN">' + ebTinCell(a) + '</td><td data-l="Address" class="hm">' + h(a.address || '—') + '</td><td class="acts">' + (owed.length ? '<button type="button" class="ebred ebAgPend" data-cda="' + h(owed[0].id) + '" aria-label="Review pending CDA commission for ' + h(a.name) + ' ' + ebM(owed[0].amount) + '"><span aria-hidden="true">!</span> Review</button>' : '') + '<button class="ub sm ebAg">Edit</button></td></tr>';
   }).join('') + '</tbody></table></div>' +
     '<h2 class="ebh2">Vendors <button class="btn sm" id="vAdd">+ Vendor</button></h2>' +
     (EB.data.vendors.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Vendor</th><th class="hm">Email / phone</th><th>1099</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' + EB.data.vendors.map(function (v) {
@@ -715,7 +722,7 @@ function ebPayees() {
     }).join('') + '</tbody></table></div>' : '<div class="empty">No vendors yet.</div>');
   return { html: html, wire: function () {
     qs('#vAdd').onclick = function () { ebPayeeModal('vendor', null); };
-    qsa('.ebAgPend').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); var row = (EB.cdaPending || []).filter(function (p) { return p.id === b.getAttribute('data-cda'); })[0]; if (row) ebCdaReview(row); }; });
+    qsa('.ebAgPend').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); var row = (EB.cdaPending || []).filter(function (p) { return p.id === b.getAttribute('data-cda'); })[0]; if (row) ebCdaReview(row, b); }; });
     qsa('tr[data-a]').forEach(function (tr) { qs('.ebAg', tr).onclick = function () { ebPayeeModal('agent', EB.data.agents.filter(function (a) { return a.id === tr.getAttribute('data-a'); })[0]); }; });
     qsa('tr[data-v]').forEach(function (tr) { qs('.ebVe', tr).onclick = function () { ebPayeeModal('vendor', EB.data.vendors.filter(function (v) { return v.id === tr.getAttribute('data-v'); })[0]); }; });
   } };
