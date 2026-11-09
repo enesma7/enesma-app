@@ -106,14 +106,14 @@ var PROPERTY = [
 var F = {
   listing: [
     { h: 'Property' }].concat(PROPERTY).concat([
-    { h: 'Listing agreement' },
+    { h: 'Listing Agreement' },
     { k: 'listingDate', l: 'Listing contract date', t: 'date', r: 1 }, { k: 'expirationDate', l: 'Expiration date', t: 'date', r: 1 },
     { k: 'listPrice', l: 'List price', t: 'money', r: 1 }, { k: 'listingCommission', l: 'Listing commission', r: 1, comm: 1 },
     { k: 'buyerBrokerComp', l: 'Offered to buyer broker', comm: 1 }, { k: 'occupancy', l: 'Occupancy', opts: ['Owner occupied', 'Tenant occupied', 'Vacant'] },
     { h: 'Sellers' }, { k: 'sellers', l: 'Sellers', people: 1, r: 1 },
     { h: 'Notes' }, { k: 'notes', l: 'Notes for the office', ta: 1, w: 3 }]),
   purchase: [
-    { h: 'Who we represent' }, { k: 'side', l: 'We represent', r: 1, radio: [['buyer', 'Buyer'], ['seller', 'Seller'], ['both', 'Both sides']], w: 3 },
+    { h: 'Who We Represent' }, { k: 'side', l: 'We represent', r: 1, radio: [['buyer', 'Buyer'], ['seller', 'Seller'], ['both', 'Both Sides']], w: 3 },
     { h: 'Property' }].concat(PROPERTY).concat([
     { h: 'Contract' },
     { k: 'contractDate', l: 'Contract (acceptance) date', t: 'date', r: 1 }, { k: 'estCloseDate', l: 'Estimated close of escrow', t: 'date', r: 1 },
@@ -134,13 +134,13 @@ var F = {
     { h: 'Notes' }, { k: 'notes', l: 'Notes for the office', ta: 1, w: 3 }]),
   lease_listing: [
     { h: 'Property' }].concat(PROPERTY).concat([
-    { h: 'Lease listing agreement' },
+    { h: 'Lease Listing Agreement' },
     { k: 'listingDate', l: 'Listing contract date', t: 'date', r: 1 }, { k: 'expirationDate', l: 'Expiration date', t: 'date', r: 1 },
     { k: 'monthlyRent', l: 'Monthly rent', t: 'money', r: 1 }, { k: 'listingCommission', l: 'Listing commission', r: 1, comm: 1 },
     { h: 'Landlords' }, { k: 'landlords', l: 'Landlords', people: 1, r: 1 },
     { h: 'Notes' }, { k: 'notes', l: 'Notes for the office', ta: 1, w: 3 }]),
   lease: [
-    { h: 'Who we represent' }, { k: 'side', l: 'We represent', r: 1, radio: [['tenant', 'Tenant'], ['landlord', 'Landlord'], ['both', 'Both sides']], w: 3 },
+    { h: 'Who We Represent' }, { k: 'side', l: 'We represent', r: 1, radio: [['tenant', 'Tenant'], ['landlord', 'Landlord'], ['both', 'Both Sides']], w: 3 },
     { h: 'Property' }].concat(PROPERTY).concat([
     { h: 'Lease' },
     { k: 'leaseStart', l: 'Lease start', t: 'date', r: 1 }, { k: 'leaseEnd', l: 'Lease end', t: 'date' },
@@ -180,7 +180,7 @@ function fieldHtml(f, v, pre, all) {
   if (f.people) {
     var arr = (v && v.length) ? v : [{}];
     return '<div class="f w3 people" data-k="' + f.k + '" data-r="' + (f.r ? 1 : '') + '"><label>' + h(f.l) + req + ' · name, phone, email</label><div class="plist">' +
-      arr.map(personRow).join('') + '</div><div><button type="button" class="link addp">+ Add another</button></div></div>';
+      arr.map(personRow).join('') + '</div><div><button type="button" class="link addp">+ Add Another</button></div></div>';
   }
   if (f.radio) {
     return '<div class="' + cls + '" data-k="' + f.k + '" data-r="' + (f.r ? 1 : '') + '"><label>' + h(f.l) + req + '</label><div class="radios">' + f.radio.map(function (o) {
@@ -311,7 +311,7 @@ function shell(active, inner) {
     '<a class="brand" href="#/" aria-label="Transaction Center home">' + titleMark('tc-sm tc-dark') + '</a>' +
     '<nav class="main" id="mnav" aria-label="Main">' + nav + '</nav><div class="hspace"></div>' + tog +
     '<div class="search"><span>' + SEARCH_ICON + '</span><input id="q" type="search" placeholder="Search address, client, escrow #" autocomplete="off" aria-label="Search transactions"><div class="sres hidden" id="sres"></div></div>' +
-    '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + h(roleLabel(S.user)) + (isDual() ? '<br><small>Now: ' + (isTC() ? 'TC View' : 'My Files') + '</small>' : '') + '</div>' + (canGoals() ? '<a href="#/" id="goalsLnk">Goals</a>' : '') + '<a href="#/account">Change password</a><button id="signout">Sign out</button></div></div></header>' +
+    '<div class="umenu"><button class="ubtn" id="ubtn" aria-label="Account">' + h(initials(uName(S.user))) + '</button><div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + h(roleLabel(S.user)) + (isDual() ? '<br><small>Now: ' + (isTC() ? 'TC View' : 'My Files') + '</small>' : '') + '</div>' + (canGoals() ? '<a href="#/" id="goalsLnk">Goals</a>' : '') + '<a href="#/account">Change Password</a><button id="signout">Sign Out</button></div></div></header>' +
     '<main>' + inner + '</main>';
 }
 var docClickBound = false;
@@ -399,16 +399,16 @@ function mebRender() {
     '<div class="ebbar"><label class="ebyr">Year <select id="mY">' + mebYears(d).map(function (y) { return '<option' + (y === Y ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select></label>' +
     '<button class="btn red" id="mAdd">+ Expense</button><span class="hspace"></span><button class="ub" id="mCsv">Export CSV</button><button class="ub" id="mPrint">Print</button></div>' +
     '<div class="ebsum"><div><small>Commission income</small><b>' + ebM(tin) + '</b></div><div><small>Expenses</small><b>' + ebM(tout) + '</b></div><div class="' + (tin - tout < 0 ? 'neg' : '') + '"><small>Net</small><b>' + ebM(tin - tout) + '</b></div><div><small>Closed files</small><b>' + com.length + '</b></div></div>' +
-    '<h2 class="ebh2">Commission earned</h2><p class="sub">From your closed transactions in ' + h(Y) + '. Read-only; the brokerage keeps these numbers.' + (pend ? ' ' + pend + ' file(s) have no amount yet.' : '') + '</p>' +
+    '<h2 class="ebh2">Commission Earned</h2><p class="sub">From your closed transactions in ' + h(Y) + '. Read-only; the brokerage keeps these numbers.' + (pend ? ' ' + pend + ' file(s) have no amount yet.' : '') + '</p>' +
     (com.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Closed</th><th>Transaction</th><th class="hm">Basis</th><th class="r">Amount</th></tr></thead><tbody>' + com.map(function (c) {
       return '<tr><td data-l="Closed">' + h(fmtDate(c.closedAt)) + '</td><td data-l="Transaction"><a href="#/t/' + h(c.txnId) + '">' + h(c.title) + '</a></td><td data-l="Basis" class="hm"><small class="muted">' + basis[c.basis] + '</small></td><td data-l="Amount" class="r"><b>' + (c.amount === null ? '<span class="muted">—</span>' : ebM(c.amount)) + '</b></td></tr>';
     }).join('') + '</tbody></table></div>' : '<div class="empty">No closed transactions in ' + h(Y) + '.</div>') +
-    '<h2 class="ebh2">My expenses</h2>' +
+    '<h2 class="ebh2">My Expenses</h2>' +
     (ex.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th class="hm">Memo</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + ex.map(function (e) {
       return '<tr data-id="' + h(e.id) + '"><td data-l="Date">' + h(fmtDate(e.date)) + '</td><td data-l="Category">' + h(e.category) + '</td><td data-l="Memo" class="hm">' + h(e.memo || '') + '</td><td data-l="Amount" class="r">' + ebM(-e.amount) + '</td>' +
         '<td class="acts">' + (e.receipt ? '<button class="ub sm mRc">Receipt</button>' : '') + '<button class="ub sm mEd">Edit</button><button class="ub sm mDl" aria-label="Delete">×</button></td></tr>';
     }).join('') + '</tbody></table></div>' : '<div class="empty">No expenses in ' + h(Y) + ' yet. Add one with + Expense.</div>') +
-    '<h2 class="ebh2">Tax summary ' + h(Y) + '</h2>' + mebSummaryTable(tin, tout, byCat) + (byCat.length ? '<div class="ebchart">' + ebBars(byCat) + '</div>' : '') + '</div>';
+    '<h2 class="ebh2">Tax Summary ' + h(Y) + '</h2>' + mebSummaryTable(tin, tout, byCat) + (byCat.length ? '<div class="ebchart">' + ebBars(byCat) + '</div>' : '') + '</div>';
   page('ebooks', html, function () {
     wireBooksSwitch();
     qs('#mY').onchange = function () { MEB.year = this.value; mebRender(); };
@@ -420,7 +420,7 @@ function mebRender() {
       r.push([]); r.push(['Total commission income', '', '', '', tin.toFixed(2)]); byCat.forEach(function (c) { r.push(['Expenses: ' + c.label, '', '', '', (-c.a).toFixed(2)]); }); r.push(['Total expenses', '', '', '', (-tout).toFixed(2)]); r.push(['Net', '', '', '', (tin - tout).toFixed(2)]);
       ebCsv('my-ebooks-' + Y + '.csv', r);
     };
-    qs('#mPrint').onclick = function () { ebPrint('My E-Books · Tax summary ' + Y + ' · ' + (S.user.name || ''), mebSummaryTable(tin, tout, byCat) + (ex.length ? '<h2>Expenses</h2><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Memo</th><th class="r">Amount</th></tr></thead><tbody>' + ex.map(function (e) { return '<tr><td>' + h(fmtDate(e.date)) + '</td><td>' + h(e.category) + '</td><td>' + h(e.memo || '') + '</td><td class="r">' + ebM(-e.amount) + '</td></tr>'; }).join('') + '</tbody></table>' : '')); };
+    qs('#mPrint').onclick = function () { ebPrint('My E-Books · Tax Summary ' + Y + ' · ' + (S.user.name || ''), mebSummaryTable(tin, tout, byCat) + (ex.length ? '<h2>Expenses</h2><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Memo</th><th class="r">Amount</th></tr></thead><tbody>' + ex.map(function (e) { return '<tr><td>' + h(fmtDate(e.date)) + '</td><td>' + h(e.category) + '</td><td>' + h(e.memo || '') + '</td><td class="r">' + ebM(-e.amount) + '</td></tr>'; }).join('') + '</tbody></table>' : '')); };
     qsa('.ebt tr[data-id]').forEach(function (tr) {
       var e = d.expenses.filter(function (x) { return x.id === tr.getAttribute('data-id'); })[0];
       var b; if ((b = qs('.mEd', tr))) b.onclick = function () { mebModal(e); };
@@ -436,7 +436,7 @@ function mebSummaryTable(tin, tout, byCat) {
 }
 function mebModal(e) {
   e = e || { date: new Date().toISOString().slice(0, 10), amount: '', category: '', memo: '' };
-  var m = modal('<h2>' + (e.id ? 'Edit expense' : 'New expense') + '</h2><div id="me"></div><div class="ebform">' +
+  var m = modal('<h2>' + (e.id ? 'Edit Expense' : 'New Expense') + '</h2><div id="me"></div><div class="ebform">' +
     '<label>Date<input type="date" id="mDate" value="' + h(e.date) + '"></label>' +
     '<label>Amount ($)<input type="text" inputmode="decimal" id="mAmt" value="' + h(e.amount ? Number(e.amount).toFixed(2) : '') + '" placeholder="0.00" autocomplete="off"></label>' +
     '<label class="full">Category<select id="mCat"><option value="">Pick a category</option>' + MEB.data.categories.map(function (c) { return '<option' + (c === e.category ? ' selected' : '') + '>' + h(c) + '</option>'; }).join('') + '</select></label>' +
@@ -603,7 +603,7 @@ function ebLedger() {
   if (batches.length) html += '<p class="sub">Each closed, archived file is one batch. Open it to review the agent commission going out and the broker commission and admin fee coming in. These amounts are not included in the totals, reports, or 1099. Checklist compliance review is separate.</p><div class="ebtable"><table class="ebt"><thead><tr><th>Status</th><th>Category</th><th>Transaction</th><th>Source</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + batches.map(function (b) {
     var inn = 0, out = 0; b.rows.forEach(function (r) { if (r.type === 'income') inn += Number(r.amount) || 0; else out += Number(r.amount) || 0; });
     var t = ebTxn(b.txnId), title = b.title || (t && t.title) || 'Transaction';
-    return '<tr class="ebpendrow" data-cda="' + h(b.txnId) + '"><td data-l="Status"><span class="ebflag">Pending</span></td><td data-l="Category">Signed CDA</td><td data-l="Transaction">' + h(title) + '</td><td data-l="Source" class="src">Version ' + h(b.version || '') + ' · ' + b.rows.length + ' lines</td><td data-l="Amount" class="r">In ' + ebM(inn) + '<br>Out ' + ebM(out) + '</td><td class="acts"><button type="button" class="ebred" aria-label="Review pending CDA amount for ' + h(title) + '"><span aria-hidden="true">!</span> Review</button></td></tr>';
+    return '<tr class="ebpendrow" data-cda="' + h(b.txnId) + '"><td data-l="Status"><span class="ebflag">Pending</span></td><td data-l="Category">Signed CDA</td><td data-l="Transaction">' + h(title) + '</td><td data-l="Source" class="src">Version ' + h(b.version || '') + ' · ' + b.rows.length + ' lines</td><td data-l="Amount" class="r">In ' + ebM(inn) + '<br>Out ' + ebM(out) + '</td><td class="acts"><button type="button" class="ebred" aria-label="Review Pending CDA Amount for ' + h(title) + '"><span aria-hidden="true">!</span> Review</button></td></tr>';
   }).join('') + '</tbody></table></div>';
   html += rows.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Payee</th><th class="hm">Method</th><th class="hm">Memo / Transaction</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + rows.map(function (e) {
     var t = ebTxn(e.txnId), c = ebCat(e.categoryId);
@@ -645,10 +645,10 @@ function ebCdaBatch(batch, opener) {
   }).join('');
   var gate = 'Approving this amount does not add it to income. Broker commission and the admin fee are recorded only after the commission check deposit date is confirmed and the check matches the signed CDA total gross. Agent commission is recorded on the actual escrow closing date' + (close ? ' ' + fmtDate(close) : '') + '. The agent is not asked for a deposit date.';
   opener = opener || document.activeElement;
-  var m = modal('<h2>Review CDA batch</h2><p class="sub">One closed file. This is owner amount approval. It does not approve the checklist item. Compliance review stays separate.</p><div id="cdaRv"></div><dl class="ebkv">' +
+  var m = modal('<h2>Review CDA Batch</h2><p class="sub">One closed file. This is owner amount approval. It does not approve the checklist item. Compliance review stays separate.</p><div id="cdaRv"></div><dl class="ebkv">' +
     '<div><dt>Transaction</dt><dd>' + (t ? '<a href="#/t/' + h(t.id) + '">' + h(t.title) + '</a>' : h(batch.title || '—')) + '</dd></div>' +
     '<div><dt>Signed CDA</dt><dd>' + (batch.version ? 'Version ' + h(batch.version) : 'Latest signed version') + '</dd></div>' +
-    lines + '</dl><p>' + h(gate) + '</p><div class="actions"><button type="button" class="ub" id="cdaNo">Not now</button><button type="button" class="ub" id="cdaRj">Reject</button><button type="button" class="ebred" id="cdaYes">Approve this batch</button></div>', true);
+    lines + '</dl><p>' + h(gate) + '</p><div class="actions"><button type="button" class="ub" id="cdaNo">Not Now</button><button type="button" class="ub" id="cdaRj">Reject</button><button type="button" class="ebred" id="cdaYes">Approve This Batch</button></div>', true);
   function restore() { if (opener && opener.focus) setTimeout(function () { opener.focus(); }, 0); }
   function dismiss() { m.close(); restore(); }
   qs('.close', m).onclick = dismiss;
@@ -690,7 +690,7 @@ function ebEntryModal(e, type) {
   e = e || { type: type, date: new Date().toISOString().slice(0, 10), amount: '', categoryId: '', payeeType: '', payeeId: '', payeeName: '', method: '', memo: '', txnId: '' };
   var st = { type: e.type };
   var txOpts = '<option value="">None</option>' + EB.data.txns.map(function (t) { return '<option value="' + h(t.id) + '"' + (t.id === e.txnId ? ' selected' : '') + '>' + h(t.title + (t.closedAt ? ' · closed ' + fmtDate(t.closedAt) : '')) + '</option>'; }).join('');
-  var m = modal('<h2>' + (e.id ? 'Edit entry' : 'New entry') + '</h2><div id="ee"></div>' +
+  var m = modal('<h2>' + (e.id ? 'Edit Entry' : 'New Entry') + '</h2><div id="ee"></div>' +
     '<div class="seg ebseg" role="group" aria-label="Type"><button type="button" data-t="income">Income</button><button type="button" data-t="expense">Expense</button></div>' +
     '<div class="ebform"><label>Date<input type="date" id="eDate" value="' + h(e.date) + '" required></label>' +
     '<label>Amount ($)<input type="text" inputmode="decimal" id="eAmt" value="' + h(e.amount ? Number(e.amount).toFixed(2) : '') + '" placeholder="0.00" autocomplete="off"></label>' +
@@ -737,10 +737,10 @@ function ebOpenReceipt(e) {
 /* ---- Payees ---- */
 function ebTinCell(p) { return p.hasTin ? '•••-••-' + h(p.tinLast4) : '<span class="ebwarn">Missing</span>'; }
 function ebPayees() {
-  var html = '<h2 class="ebh2">Agents <small class="muted">from Transaction Center users</small></h2><div class="ebtable"><table class="ebt"><thead><tr><th>Agent</th><th class="hm">Email</th><th>Default split</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' +
+  var html = '<h2 class="ebh2">Agents <small class="muted">from Transaction Center users</small></h2><div class="ebtable"><table class="ebt"><thead><tr><th>Agent</th><th class="hm">Email</th><th>Default Split</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' +
     EB.data.agents.map(function (a) {
     var owed = ebPendingVisible().filter(function (p) { return p.type === 'expense' && p.payeeType === 'agent' && p.payeeId === a.id; });
-    return '<tr data-a="' + h(a.id) + '"><td data-l="Agent">' + h(a.name) + (a.active ? '' : ' <small class="muted">inactive</small>') + (owed.length ? ' <span class="ebflag">Pending</span>' : '') + '</td><td data-l="Email" class="hm">' + h(a.email) + '</td><td data-l="Split">' + (a.splitPct === '' ? '—' : h(a.splitPct) + '%') + (a.capAmount === '' || a.capAmount == null ? '' : '<br><small class="muted">cap ' + ebM(a.capAmount) + '</small>') + '</td><td data-l="TIN">' + ebTinCell(a) + '</td><td data-l="Address" class="hm">' + h(a.address || '—') + '</td><td class="acts">' + (owed.length ? '<button type="button" class="ebred ebAgPend" data-txn="' + h(owed[0].txnId) + '" aria-label="Review pending CDA amount for ' + h(a.name) + '"><span aria-hidden="true">!</span> Review</button>' : '') + '<button class="ub sm ebAg">Edit</button></td></tr>';
+    return '<tr data-a="' + h(a.id) + '"><td data-l="Agent">' + h(a.name) + (a.active ? '' : ' <small class="muted">inactive</small>') + (owed.length ? ' <span class="ebflag">Pending</span>' : '') + '</td><td data-l="Email" class="hm">' + h(a.email) + '</td><td data-l="Split">' + (a.splitPct === '' ? '—' : h(a.splitPct) + '%') + (a.capAmount === '' || a.capAmount == null ? '' : '<br><small class="muted">cap ' + ebM(a.capAmount) + '</small>') + '</td><td data-l="TIN">' + ebTinCell(a) + '</td><td data-l="Address" class="hm">' + h(a.address || '—') + '</td><td class="acts">' + (owed.length ? '<button type="button" class="ebred ebAgPend" data-txn="' + h(owed[0].txnId) + '" aria-label="Review Pending CDA Amount for ' + h(a.name) + '"><span aria-hidden="true">!</span> Review</button>' : '') + '<button class="ub sm ebAg">Edit</button></td></tr>';
   }).join('') + '</tbody></table></div>' +
     '<h2 class="ebh2">Vendors <button class="btn sm" id="vAdd">+ Vendor</button></h2>' +
     (EB.data.vendors.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Vendor</th><th class="hm">Email / phone</th><th>1099</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' + EB.data.vendors.map(function (v) {
@@ -756,7 +756,7 @@ function ebPayees() {
 function ebPayeeModal(kind, p) {
   var ag = kind === 'agent'; p = p || { name: '', email: '', phone: '', address: '', is1099: true };
   var tinHelp = p.hasTin ? 'On file: •••-••-' + h(p.tinLast4) + '. Type a new one to replace it.' : 'SSN or EIN, 9 digits. Stored encrypted; only the last 4 show here.';
-  var m = modal('<h2>' + (ag ? h(p.name) : (p.id ? 'Edit vendor' : 'New vendor')) + '</h2><div id="pe"></div><div class="ebform">' +
+  var m = modal('<h2>' + (ag ? h(p.name) : (p.id ? 'Edit Vendor' : 'New Vendor')) + '</h2><div id="pe"></div><div class="ebform">' +
     (ag ? '<p class="sub full">Name, email and phone come from the Users page. Example split: Enrique Esparza, 90% agent / 10% brokerage.</p><label>Default payout split (% of gross)<input id="pSp" inputmode="decimal" value="' + h(p.splitPct === '' || p.splitPct === undefined ? '' : p.splitPct) + '" placeholder="e.g. 90"></label><label>Annual cap ($)<input id="pCap" inputmode="decimal" value="' + h(p.capAmount === '' || p.capAmount == null ? '' : p.capAmount) + '" placeholder="Optional"></label><label class="full">Cap note<textarea id="pCapN" rows="2" maxlength="240">' + h(p.capNote || '') + '</textarea></label>' :
       '<label class="full">Name<input id="pN" maxlength="120" value="' + h(p.name) + '"></label><label>Email<input id="pE" type="email" maxlength="120" value="' + h(p.email) + '"></label><label>Phone<input id="pPh" type="tel" maxlength="40" value="' + h(p.phone) + '"></label>') +
     '<label class="full">Address (for 1099)<textarea id="pA" rows="2" maxlength="250">' + h(p.address) + '</textarea></label>' +
@@ -803,7 +803,7 @@ function ebCats() {
 function eb1099View() {
   var y = EB.year || String(ebYear() - (new Date().getMonth() < 3 ? 1 : 0)), years = [], cy = ebYear();
   for (var i = cy; i >= cy - 6; i--) years.push(String(i));
-  var html = '<div class="ebbar"><label>Calendar year <select id="yY">' + years.map(function (x) { return '<option' + (x === y ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label><span class="hspace"></span><button class="ub" id="yCsv" disabled>Export CSV</button><button class="ub" id="yPa" disabled>Print all</button></div><div id="y99"><div class="loading"><span class="spin"></span>Loading…</div></div>';
+  var html = '<div class="ebbar"><label>Calendar year <select id="yY">' + years.map(function (x) { return '<option' + (x === y ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label><span class="hspace"></span><button class="ub" id="yCsv" disabled>Export CSV</button><button class="ub" id="yPa" disabled>Print All</button></div><div id="y99"><div class="loading"><span class="spin"></span>Loading…</div></div>';
   return { html: html, wire: function () {
     qs('#yY').onchange = function () { EB.year = this.value; page.keepScroll = true; ebRender(); };
     api('eb1099', { year: y }).then(function (d) {
@@ -814,7 +814,7 @@ function eb1099View() {
         (P.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Payee</th><th>TIN</th><th class="hm">Address</th><th class="r">Box 1 total</th><th>$' + d.threshold + '+</th><th></th></tr></thead><tbody>' + P.map(function (p, k) {
           return '<tr><td data-l="Payee">' + h(p.name) + ' <small class="muted">' + p.payeeType + '</small></td><td data-l="TIN">' + (p.tin ? '<span class="tinm" data-t="' + h(p.tin) + '">•••-••-' + h(p.tin.slice(-4)) + '</span>' : '<span class="ebwarn">Missing</span>') + '</td><td data-l="Address" class="hm">' + (p.address ? h(p.address) : '<span class="ebwarn">Missing</span>') + '</td><td data-l="Total" class="r"><b>' + ebM(p.total) + '</b></td><td data-l="Threshold">' + (p.over ? '<span class="ebflag">Over $' + d.threshold + '</span>' : '<span class="muted">Under</span>') + '</td><td class="acts"><button class="ub sm yPr" data-k="' + k + '">Print / PDF</button></td></tr>';
         }).join('') + '</tbody></table></div><p class="sub">Totals are every expense paid to the agent or 1099-eligible vendor dated in ' + h(d.year) + '. This is a worksheet for 1099-NEC filing, not the IRS form itself.</p>' : '<div class="empty">No payments to agents or 1099 vendors in ' + h(d.year) + '.</div>');
-      var sheet = function (p) { return '<div class="ebp-page"><h2>1099-NEC worksheet · ' + h(d.year) + '</h2><table class="ebkv"><tr><th>Payer</th><td>' + h(d.payer.name) + '</td></tr><tr><th>Recipient</th><td>' + h(p.name) + ' (' + p.payeeType + ')</td></tr><tr><th>Recipient TIN</th><td>' + (p.tin ? h(p.tin) : '<b class="ebwarn">MISSING</b>') + '</td></tr><tr><th>Address</th><td>' + (p.address ? h(p.address) : '<b class="ebwarn">MISSING</b>') + '</td></tr><tr><th>Email</th><td>' + h(p.email || '') + '</td></tr><tr><th>Box 1 · Nonemployee compensation</th><td><b>' + ebM(p.total) + '</b></td></tr><tr><th>Payments</th><td>' + p.count + (p.fromTxns ? ' (' + ebM(p.fromTxns) + ' from transactions)' : '') + '</td></tr><tr><th>$' + d.threshold + ' threshold</th><td>' + (p.over ? 'Reportable' : 'Under threshold') + '</td></tr></table></div>'; };
+      var sheet = function (p) { return '<div class="ebp-page"><h2>1099-NEC worksheet · ' + h(d.year) + '</h2><table class="ebkv"><tr><th>Payer</th><td>' + h(d.payer.name) + '</td></tr><tr><th>Recipient</th><td>' + h(p.name) + ' (' + p.payeeType + ')</td></tr><tr><th>Recipient TIN</th><td>' + (p.tin ? h(p.tin) : '<b class="ebwarn">MISSING</b>') + '</td></tr><tr><th>Address</th><td>' + (p.address ? h(p.address) : '<b class="ebwarn">MISSING</b>') + '</td></tr><tr><th>Email</th><td>' + h(p.email || '') + '</td></tr><tr><th>Box 1 · Nonemployee Compensation</th><td><b>' + ebM(p.total) + '</b></td></tr><tr><th>Payments</th><td>' + p.count + (p.fromTxns ? ' (' + ebM(p.fromTxns) + ' from transactions)' : '') + '</td></tr><tr><th>$' + d.threshold + ' threshold</th><td>' + (p.over ? 'Reportable' : 'Under threshold') + '</td></tr></table></div>'; };
       qsa('.yPr', host).forEach(function (b) { b.onclick = function () { var p = P[+b.getAttribute('data-k')]; ebPrint('1099-NEC · ' + p.name, sheet(p)); }; });
       qsa('.tinm', host).forEach(function (s) { s.title = 'Click to show'; s.onclick = function () { s.textContent = s.textContent.indexOf('•') >= 0 ? s.getAttribute('data-t') : '•••-••-' + s.getAttribute('data-t').slice(-4); }; });
       var c = qs('#yCsv'), pa = qs('#yPa'); c.disabled = pa.disabled = !P.length;
@@ -843,7 +843,7 @@ function ebReports() {
     var tb = '<table class="ebt ebrep"><tbody>' + sec('income', 'Income') + sec('expense', 'Expenses') + '<tr class="net ' + (tot.income - tot.expense < 0 ? 'neg' : '') + '"><td>Net income</td><td class="r">' + ebM(tot.income - tot.expense) + '</td></tr></tbody></table>';
     csv.push(['Net income', '', (tot.income - tot.expense).toFixed(2)]);
     var ex = Object.keys(by.expense).sort(function (a, b) { return by.expense[b] - by.expense[a]; }).slice(0, 10).map(function (id) { return { label: ebCat(id).name, a: by.expense[id], neg: true }; });
-    out = '<div class="ebrepg"><div>' + tb + '</div><div><h3>Income vs expenses</h3>' + ebBars([{ label: 'Income', a: tot.income }, { label: 'Expenses', a: tot.expense, neg: true }, { label: 'Net', a: tot.income - tot.expense, neg: tot.income - tot.expense < 0 }], { label: 'Income vs expenses' }) + '<h3>Top expense categories</h3>' + ebBars(ex, { label: 'Expenses by category' }) + '</div></div>';
+    out = '<div class="ebrepg"><div>' + tb + '</div><div><h3>Income vs Expenses</h3>' + ebBars([{ label: 'Income', a: tot.income }, { label: 'Expenses', a: tot.expense, neg: true }, { label: 'Net', a: tot.income - tot.expense, neg: tot.income - tot.expense < 0 }], { label: 'Income vs Expenses' }) + '<h3>Top Expense Categories</h3>' + ebBars(ex, { label: 'Expenses by Category' }) + '</div></div>';
     ptitle = 'Profit & Loss'; EB._print = tb;
   } else if (EB.rep === 'cf') {
     var mo = {}, prior = 0;
@@ -855,7 +855,7 @@ function ebReports() {
     csv.push(['Month', 'Money in', 'Money out', 'Net', 'Running balance']);
     var rowsH = keys.map(function (k) { var r = mo[k] || { i: 0, o: 0 }; run += r.i - r.o; csv.push([k, r.i.toFixed(2), r.o.toFixed(2), (r.i - r.o).toFixed(2), run.toFixed(2)]); return '<tr><td>' + h(mname(k)) + '</td><td class="r">' + ebM(r.i) + '</td><td class="r">' + ebM(r.o) + '</td><td class="r ' + (r.i - r.o < 0 ? 'neg' : '') + '">' + ebM(r.i - r.o) + '</td><td class="r"><b>' + ebM(run) + '</b></td></tr>'; }).join('');
     var tb2 = '<table class="ebt ebrep"><thead><tr><th>Month</th><th class="r">In</th><th class="r">Out</th><th class="r">Net</th><th class="r">Running balance</th></tr></thead><tbody>' + (prior ? '<tr class="muted"><td>Opening balance (before ' + h(fmtDate(from)) + ')</td><td></td><td></td><td></td><td class="r">' + ebM(prior) + '</td></tr>' : '') + rowsH + '</tbody></table>';
-    out = '<div class="ebrepg"><div class="ebtable">' + tb2 + '</div><div><h3>Monthly in / out</h3>' + ebBars(keys.map(function (k) { var r = mo[k] || { i: 0, o: 0 }; return { label: mname(k), a: r.i, b: r.o }; }), { pair: true, label: 'Monthly cash flow' }) + '</div></div>';
+    out = '<div class="ebrepg"><div class="ebtable">' + tb2 + '</div><div><h3>Monthly in / Out</h3>' + ebBars(keys.map(function (k) { var r = mo[k] || { i: 0, o: 0 }; return { label: mname(k), a: r.i, b: r.o }; }), { pair: true, label: 'Monthly Cash Flow' }) + '</div></div>';
     ptitle = 'Cash Flow'; EB._print = tb2;
   } else {
     var pp = {}, tt = 0;
@@ -863,11 +863,11 @@ function ebReports() {
     var ks = Object.keys(pp).sort(function (a, b) { return pp[b].a - pp[a].a; });
     csv.push(['Payee', 'Payee type', 'Payments', 'Total', 'Share']);
     var tb3 = '<table class="ebt ebrep"><thead><tr><th>Payee</th><th class="r">Payments</th><th class="r">Total</th><th class="r">Share</th></tr></thead><tbody>' + ks.map(function (k) { var sh = tt ? Math.round(pp[k].a / tt * 1000) / 10 : 0; csv.push([k, pp[k].t || 'other', pp[k].n, pp[k].a.toFixed(2), sh + '%']); return '<tr><td>' + h(k) + (pp[k].t === 'agent' ? ' <small class="muted">agent</small>' : '') + '</td><td class="r">' + pp[k].n + '</td><td class="r">' + ebM(pp[k].a) + '</td><td class="r">' + sh + '%</td></tr>'; }).join('') + '<tr class="tot"><td>Total expenses</td><td></td><td class="r">' + ebM(tt) + '</td><td></td></tr></tbody></table>';
-    out = '<div class="ebrepg"><div class="ebtable">' + tb3 + '</div><div><h3>Top payees</h3>' + ebBars(ks.slice(0, 12).map(function (k) { return { label: k, a: pp[k].a, neg: true }; }), { label: 'Expenses by payee' }) + '</div></div>';
+    out = '<div class="ebrepg"><div class="ebtable">' + tb3 + '</div><div><h3>Top Payees</h3>' + ebBars(ks.slice(0, 12).map(function (k) { return { label: k, a: pp[k].a, neg: true }; }), { label: 'Expenses by Payee' }) + '</div></div>';
     ptitle = 'Expenses by Payee'; EB._print = tb3;
   }
   var html = pendNote + '<div class="seg ebrseg" role="group" aria-label="Report">' + reps.map(function (r) { return '<button type="button" data-r="' + r[0] + '" class="' + (EB.rep === r[0] ? 'on' : '') + '" aria-pressed="' + (EB.rep === r[0]) + '">' + r[1] + '</button>'; }).join('') + '</div>' +
-    '<div class="ebfilt"><label>From<input type="date" id="rF" value="' + h(from) + '"></label><label>To<input type="date" id="rT" value="' + h(to) + '"></label><div class="ebpre"><button class="ub sm" data-p="ty">This year</button><button class="ub sm" data-p="ly">Last year</button><button class="ub sm" data-p="tm">This month</button><button class="ub sm" data-p="all">All time</button></div><span class="hspace"></span><button class="ub" id="rCsv">Export CSV</button><button class="ub" id="rPr">Print</button></div>' + out;
+    '<div class="ebfilt"><label>From<input type="date" id="rF" value="' + h(from) + '"></label><label>To<input type="date" id="rT" value="' + h(to) + '"></label><div class="ebpre"><button class="ub sm" data-p="ty">This Year</button><button class="ub sm" data-p="ly">Last Year</button><button class="ub sm" data-p="tm">This Month</button><button class="ub sm" data-p="all">All Time</button></div><span class="hspace"></span><button class="ub" id="rCsv">Export CSV</button><button class="ub" id="rPr">Print</button></div>' + out;
   return { html: html, wire: function () {
     var re = function () { page.keepScroll = true; ebRender(); };
     qsa('.ebrseg button').forEach(function (b) { b.onclick = function () { EB.rep = b.getAttribute('data-r'); re(); }; });
@@ -887,7 +887,7 @@ function loginView(msg) {
     (DEMO ? '<div class="ok">Demo preview. Sign in as <b>admin@demo.test</b> or <b>agent@demo.test</b> with password <b>demo</b>.</div>' : '') +
     '<div class="f"><label for="lu">Email</label><input id="lu" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" required></div>' +
     '<div class="f"><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password" required></div>' +
-    '<button class="btn" id="lb"' + (noApi ? ' disabled' : '') + '>Sign in</button><div class="fine"><a href="#" id="lc">First time or forgot password?</a><br>Private system · access is logged.</div></form></div>';
+    '<button class="btn" id="lb"' + (noApi ? ' disabled' : '') + '>Sign in</button><div class="fine"><a href="#" id="lc">First Time or Forgot Password?</a><br>Private system · access is logged.</div></form></div>';
   qs('#lc').onclick = function (e) { e.preventDefault(); codeView(qs('#lu').value.trim()); };
   qs('#lf').onsubmit = function (e) {
     e.preventDefault(); var b = qs('#lb'); b.disabled = true; b.innerHTML = '<span class="spin"></span>Signing in…';
@@ -900,13 +900,13 @@ function loginView(msg) {
 function otpView(ch, msg, okMsg) {
   var hint = (ch && ch.emailHint) || 'your account email';
   $app.innerHTML = '<div class="login"><form class="box" id="of" autocomplete="on"><h1 class="app">' + titleMark('tc-lg') + '</h1>' +
-    '<h2 style="font-size:17px;margin:0 0 6px">Enter your sign-in code</h2>' +
+    '<h2 style="font-size:17px;margin:0 0 6px">Enter Your Sign-In Code</h2>' +
     '<p class="sub" style="margin:0 0 14px">We emailed a 6-digit code to <b>' + h(hint) + '</b>. It expires in about 10 minutes. Check spam if you don’t see it.</p>' +
     (msg ? '<div class="err">' + h(msg) + '</div>' : '') + (okMsg ? '<div class="ok">' + h(okMsg) + '</div>' : '') +
     '<div class="f"><label for="oc">Code</label><input id="oc" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>' +
     '<label class="sub" style="display:flex;gap:8px;align-items:flex-start;margin:0 0 14px;font-size:13px"><input id="ot" type="checkbox" checked style="margin-top:3px"> Trust this device for 30 days. We won’t ask for a code again on this browser until then.</label>' +
-    '<button class="btn" id="ob">Verify and sign in</button>' +
-    '<div class="fine"><a href="#" id="or">Send a new code</a> · <a href="#" id="obk">Back to sign in</a></div></form></div>';
+    '<button class="btn" id="ob">Verify and Sign in</button>' +
+    '<div class="fine"><a href="#" id="or">Send a new code</a> · <a href="#" id="obk">Back to Sign in</a></div></form></div>';
   qs('#obk').onclick = function (e) { e.preventDefault(); loginView(); };
   qs('#or').onclick = function (e) {
     e.preventDefault();
@@ -926,18 +926,18 @@ function otpView(ch, msg, okMsg) {
 function codeView(email, step, msg, okMsg, need) {
   var two = step === 2; need = need || [];
   $app.innerHTML = '<div class="login"><form class="box" id="cf" autocomplete="on"><h1 class="app">' + titleMark('tc-lg') + '</h1>' +
-    '<h2 style="font-size:17px;margin:0 0 6px">' + (two ? 'Enter your code' : 'Set up or reset your password') + '</h2>' +
+    '<h2 style="font-size:17px;margin:0 0 6px">' + (two ? 'Enter Your Code' : 'Set Up or Reset Your Password') + '</h2>' +
     '<p class="sub" style="margin:0 0 14px">' + (two ? 'We emailed a 6-digit code to <b>' + h(email) + '</b>. It expires in 15 minutes. Check spam if you don’t see it.' : 'Enter the email address the office registered for you. We’ll email you a code.') + '</p>' +
     (msg ? '<div class="err">' + h(msg) + '</div>' : '') + (okMsg ? '<div class="ok">' + h(okMsg) + '</div>' : '') +
     (two ? '<input type="hidden" id="ce" value="' + h(email) + '"><div class="f"><label for="cc">Code</label><input id="cc" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>' +
-      '<div class="f"><label for="c1">New password</label><input id="c1" type="password" autocomplete="new-password" minlength="10" required></div>' +
-      '<div class="f"><label for="c2">Repeat new password</label><input id="c2" type="password" autocomplete="new-password" required></div>' +
+      '<div class="f"><label for="c1">New Password</label><input id="c1" type="password" autocomplete="new-password" minlength="10" required></div>' +
+      '<div class="f"><label for="c2">Repeat New Password</label><input id="c2" type="password" autocomplete="new-password" required></div>' +
       '<p class="sub" style="font-size:12px;margin:0 0 12px">At least 10 characters with letters and numbers.</p>' +
       (need.indexOf('firstName') >= 0 ? '<div class="f"><label for="cfn">First name</label><input id="cfn" type="text" autocomplete="given-name" maxlength="50" required></div>' : '') +
       (need.indexOf('lastName') >= 0 ? '<div class="f"><label for="cln">Last name</label><input id="cln" type="text" autocomplete="family-name" maxlength="50" required></div>' : '') +
       (need.indexOf('phone') >= 0 ? '<div class="f"><label for="cph">Phone</label><input id="cph" type="tel" inputmode="tel" autocomplete="tel" placeholder="000-000-0000" required></div>' : '')
       : '<div class="f"><label for="ce">Email</label><input id="ce" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" value="' + h(email) + '" required></div>') +
-    '<button class="btn" id="cb">' + (two ? 'Save password and sign in' : 'Email me a code') + '</button><div class="fine">' + (two ? '<a href="#" id="cr">Send a new code</a> · ' : '') + '<a href="#" id="cbk">Back to sign in</a></div></form></div>';
+    '<button class="btn" id="cb">' + (two ? 'Save Password and Sign in' : 'Email Me a Code') + '</button><div class="fine">' + (two ? '<a href="#" id="cr">Send a new code</a> · ' : '') + '<a href="#" id="cbk">Back to Sign in</a></div></form></div>';
   qs('#cbk').onclick = function (e) { e.preventDefault(); loginView(); };
   if (qs('#cr')) qs('#cr').onclick = function (e) { e.preventDefault(); codeView(email); };
   if (qs('#cph')) qs('#cph').oninput = function () { this.value = fmtPhone(this.value); };
@@ -968,11 +968,11 @@ function codeView(email, step, msg, okMsg, need) {
   };
 }
 function passwordView(forced) {
-  var inner = '<div style="max-width:520px"><h1>' + (forced ? 'Set your password' : 'Change password') + '</h1><p class="sub">' + (forced ? 'Choose your own password before continuing. ' : '') + 'At least 10 characters with letters and numbers.</p>' +
+  var inner = '<div style="max-width:520px"><h1>' + (forced ? 'Set Your Password' : 'Change Password') + '</h1><p class="sub">' + (forced ? 'Choose your own password before continuing. ' : '') + 'At least 10 characters with letters and numbers.</p>' +
     (forced ? '' : '<div class="card gb" id="acct" style="margin-bottom:14px"><h3>' + h(uName(S.user)) + '</h3><small>' + h(roleLabel(S.user)) + '</small></div>') +
     '<form class="card gb" id="pf"><div id="pe"></div><div class="f" style="margin-bottom:12px"><label>Current password</label><input type="password" id="p0" autocomplete="current-password" required></div>' +
-    '<div class="f" style="margin-bottom:12px"><label>New password</label><input type="password" id="p1" autocomplete="new-password" minlength="10" required></div>' +
-    '<div class="f"><label>Repeat new password</label><input type="password" id="p2" autocomplete="new-password" required></div><div class="actions">' + (forced ? '<button type="button" class="ub" id="pout">Sign out</button>' : '') + '<button class="btn">Save password</button></div></form></div>';
+    '<div class="f" style="margin-bottom:12px"><label>New Password</label><input type="password" id="p1" autocomplete="new-password" minlength="10" required></div>' +
+    '<div class="f"><label>Repeat New Password</label><input type="password" id="p2" autocomplete="new-password" required></div><div class="actions">' + (forced ? '<button type="button" class="ub" id="pout">Sign Out</button>' : '') + '<button class="btn">Save Password</button></div></form></div>';
   if (forced) {
     $app.innerHTML = '<header><a class="brand">' + titleMark('tc-sm') + '</a></header><main>' + inner + '</main>';
     qs('#pout').onclick = function () { api('logout').catch(function () { }); signOutLocal(); render(); };
@@ -993,7 +993,7 @@ function statusPill(st) {
 }
 function tileHtml(t) {
   var p = t.progress || {}, pct = p.required ? Math.round(p.approved / p.required * 100) : 0;
-  var pills = statusPill(t.status) + (p.rejected ? '<span class="pill p-rej"><span class="rt">' + p.rejected + ' Rejected</span></span>' : '') + (p.pending ? '<span class="pill p-pend">' + p.pending + ' Pending</span>' : '') + (t.cancelPending ? '<span class="pill p-rej"><span class="rt">Cancel requested</span></span>' : '');
+  var pills = statusPill(t.status) + (p.rejected ? '<span class="pill p-rej"><span class="rt">' + p.rejected + ' Rejected</span></span>' : '') + (p.pending ? '<span class="pill p-pend">' + p.pending + ' Pending</span>' : '') + (t.cancelPending ? '<span class="pill p-rej"><span class="rt">Cancel Requested</span></span>' : '');
   return '<a class="tile ' + (p.rejected || t.cancelPending ? 'rb' : 'gb') + '" href="#/t/' + h(t.id) + '"><div class="pills">' + pills + '</div>' + addrHtml(t, 'h3', 'tline') + '<p>' + h(t.typeLabel) + ' · ' + h(t.keyDate) + '</p><p>' + h(t.clients) + '</p>' +
     ((isAdmin() && S.scope === 'company') || isTC() || S.scope === 'team' ? '<p>' + h(agentRole(t)) + ': ' + h(t.agentName) + '</p>' : '') + (t.tcName && !isTC() ? '<p>TC: ' + h(t.tcName) + '</p>' : '') + '<div class="grow"></div><div class="bar"><i style="width:' + pct + '%"></i></div><p>' + (p.approved || 0) + '/' + (p.required || 0) + ' required docs approved</p></a>';
 }
@@ -1049,13 +1049,13 @@ function newView(type) {
       var ags = ppl.agents.filter(function (u) { return u.id !== me; });
       people = '<div class="card gb"><h3>Agent</h3><p class="sub" style="margin:0 0 12px">Pick the agent this file belongs to. It shows up in their files as their own, with you as the coordinator.</p><div class="fgrid"><div class="f w2"><label>Agent <span class="req">*</span></label><select id="agentId" required><option value="">Choose the agent…</option>' + ags.map(function (u) { return '<option value="' + h(u.id) + '">' + h(uName(u)) + '</option>'; }).join('') + '</select></div></div></div>';
     } else if (ppl) {
-      people = '<div class="card gb"><h3>Transaction coordinator</h3><p class="sub" style="margin:0 0 12px">Is there a TC on this file? They can upload and edit details but can’t approve anything. Optional.</p><div class="fgrid"><div class="f w2"><label>TC</label><select id="tcId">' + tcOpts(ppl.tcs.filter(function (u) { return u.id !== me; })) + '</select></div></div></div>';
+      people = '<div class="card gb"><h3>Transaction Coordinator</h3><p class="sub" style="margin:0 0 12px">Is there a TC on this file? They can upload and edit details but can’t approve anything. Optional.</p><div class="fgrid"><div class="f w2"><label>TC</label><select id="tcId">' + tcOpts(ppl.tcs.filter(function (u) { return u.id !== me; })) + '</select></div></div></div>';
     }
     var inner = '<h1>New Transaction</h1><p class="sub">Choose the type, then answer the intake questions. The checklist unlocks once intake is complete.</p>' +
       '<div class="types">' + TYPES.map(function (t) { return '<button class="type' + (type === t.k ? ' sel' : '') + '" data-t="' + t.k + '">' + t.l + '<small>' + t.d + '</small></button>'; }).join('') + '</div>' +
       (type ? '<form id="nf" novalidate><div id="ne"></div>' +
         people +
-        formHtml(type, {}, 'n') + '<div class="actions"><a class="ub" href="#/">Cancel</a><button class="btn" id="nb">Create &amp; open checklist</button></div></form>' : '');
+        formHtml(type, {}, 'n') + '<div class="actions"><a class="ub" href="#/">Cancel</a><button class="btn" id="nb">Create &amp; Open Checklist</button></div></form>' : '');
     page('new', inner, function () {
       qsa('.type').forEach(function (b) { b.onclick = function () { newView(b.getAttribute('data-t')); }; });
       var form = qs('#nf'); if (!form) return;
@@ -1066,7 +1066,7 @@ function newView(type) {
         if (r.missing.length) { qs('#ne').innerHTML = '<div class="err">Please complete: ' + h(r.missing.join(', ')) + '</div>'; qs('#ne').scrollIntoView({ behavior: 'smooth' }); return; }
         var b = qs('#nb'); b.disabled = true; b.innerHTML = '<span class="spin"></span>Creating folder…';
         api('createTransaction', { type: type, intake: r.intake, agentId: qs('#agentId') ? qs('#agentId').value : undefined, tcId: qs('#tcId') && qs('#tcId').value ? qs('#tcId').value : undefined }).then(function (d) { toast('Transaction created. Checklist unlocked.'); location.hash = '#/t/' + d.id; })
-          .catch(function (err) { b.disabled = false; b.textContent = 'Create & open checklist'; qs('#ne').innerHTML = '<div class="err">' + h(err.message) + '</div>'; qs('#ne').scrollIntoView({ behavior: 'smooth' }); });
+          .catch(function (err) { b.disabled = false; b.textContent = 'Create & Open Checklist'; qs('#ne').innerHTML = '<div class="err">' + h(err.message) + '</div>'; qs('#ne').scrollIntoView({ behavior: 'smooth' }); });
       };
     });
   }).catch(function (e) { failView('new', e); });
@@ -1138,11 +1138,11 @@ function drawTxn() {
   var acts = '';
   if (canEdit()) acts += '<button class="btn" id="aSplit">Upload &amp; Split Packet</button>';
   if (open && !t.readOnly && (t.type === 'listing' || t.type === 'lease_listing') && !crPending) acts += '<button class="ub" id="aConv">' + (t.type === 'listing' ? 'Accepted Contract' : 'Convert to Lease') + '</button>';
-  if (open && !crPending && !t.readOnly) acts += '<button class="ub red" id="aCancel">Request cancellation</button>';
-  if (isAdmin() || canEdit()) acts += '<button class="ub" id="aStatus">Set status</button>';
+  if (open && !crPending && !t.readOnly) acts += '<button class="ub red" id="aCancel">Request Cancellation</button>';
+  if (isAdmin() || canEdit()) acts += '<button class="ub" id="aStatus">Set Status</button>';
   var banner = '';
   var closeAsk = t.closeRequest && t.closeRequest.state === 'pending';
-  if (closeAsk) banner += '<div class="err"><b>Close requested</b> by ' + h(t.closeRequest.requestedByName || 'the file') + ' for ' + h(fmtDate(t.closeRequest.closeDate)) + '. The file stays open until an admin approves it and archives it as closed. E-Books does not see these amounts yet.' + (isAdmin() ? ' <button type="button" class="btn sm" id="aCloseOk">Approve and archive</button>' : '') + '</div>';
+  if (closeAsk) banner += '<div class="err"><b>Close requested</b> by ' + h(t.closeRequest.requestedByName || 'the file') + ' for ' + h(fmtDate(t.closeRequest.closeDate)) + '. The file stays open until an admin approves it and archives it as closed. E-Books does not see these amounts yet.' + (isAdmin() ? ' <button type="button" class="btn sm" id="aCloseOk">Approve and Archive</button>' : '') + '</div>';
   if (crPending) banner += '<div class="err"><b>Cancellation requested</b> by ' + h(cr.requestedByName) + ' on ' + h(fmtTs(cr.requestedAt)) + (cr.reason ? ' · “' + h(cr.reason) + '”' : '') + (cr.relist === true ? ' · Going back on the market (a new listing is created on approval)' : cr.relist === false ? ' · Not going back on the market' : '') + '. Waiting for admin approval.' + (isAdmin() ? ' <a href="#/review">Decide in Review</a>' : '') + '</div>';
   else if (cr && cr.state === 'denied') banner += '<div class="ok">Cancellation request was denied' + (cr.note ? ': “' + h(cr.note) + '”' : '') + '.</div>';
   if (t.readOnly) banner += '<div class="ok">Team view · ' + h(t.agentName) + '’s file. You can read the checklist, notes and documents; only ' + h(t.agentName) + ', their TC or an admin can change it.</div>';
@@ -1187,8 +1187,8 @@ function drawTab() {
         itemPill(it.status, it.req) + '<div class="acts">' + cdaActs(it) +
         (v15 && isAdmin() && !it.cancel ? '<button class="rq' + (it.req ? ' on' : '') + '" data-item="' + h(it.id) + '" data-r="' + (it.req ? '1' : '') + '" aria-pressed="' + (it.req ? 'true' : 'false') + '" title="Switch between Required and Not Required for this file">' + (it.req ? 'Required' : 'Not Required') + '</button>' : '') +
         (canEdit() && !(window.TCCda && TCCda.isCdaItem(it)) ? '<label class="ub">' + (it.status === 'Rejected' ? 'Re-upload' : 'Upload') + '<input type="file" class="hidden up" data-item="' + h(it.id) + '" accept="' + UP_ACCEPT + '"></label>' : '') +
-        (it.status === 'Rejected' && canEdit() ? '<button class="ub red resub" data-item="' + h(it.id) + '">Add note &amp; resubmit</button>' : '') +
-        (v15 ? '<button class="nind' + (allNotes.length ? ' has' : '') + '" data-item="' + h(it.id) + '" title="' + (allNotes.length ? 'Read notes' : 'Add a note') + '" aria-label="Notes (' + allNotes.length + ')"><span class="ico" aria-hidden="true"></span>' + (allNotes.length ? allNotes.length : '+') + '</button>'
+        (it.status === 'Rejected' && canEdit() ? '<button class="ub red resub" data-item="' + h(it.id) + '">Add Note &amp; Resubmit</button>' : '') +
+        (v15 ? '<button class="nind' + (allNotes.length ? ' has' : '') + '" data-item="' + h(it.id) + '" title="' + (allNotes.length ? 'Read Notes' : 'Add a Note') + '" aria-label="Notes (' + allNotes.length + ')"><span class="ico" aria-hidden="true"></span>' + (allNotes.length ? allNotes.length : '+') + '</button>'
           : (t.readOnly ? '' : '<button class="link addn" data-item="' + h(it.id) + '">Note</button>')) + '</div></div>';
     });
     if (groups) html += '</div>';
@@ -1198,9 +1198,9 @@ function drawTab() {
     qsa('.up', c).forEach(function (inp) { inp.onchange = function () { var f = inp.files[0], id = inp.getAttribute('data-item'); inp.value = ''; if (!f) return; var it = d.items.filter(function (x) { return x.id === id; })[0];
       if (S.v150 && needsMiscTitle(it)) return titleModal(it, function (mt) { return uploadFile(f, id, false, mt); });
       uploadFile(f, id); }; });
-    qsa('.resub', c).forEach(function (b) { b.onclick = function () { promptModal('Resubmit for review', 'Explain what you fixed. Re-upload first if a corrected document is needed.', 'Resubmit', function (txt) { return api('resubmit', { itemId: b.getAttribute('data-item'), note: txt }); }); }; });
+    qsa('.resub', c).forEach(function (b) { b.onclick = function () { promptModal('Resubmit for Review', 'Explain what you fixed. Re-upload first if a corrected document is needed.', 'Resubmit', function (txt) { return api('resubmit', { itemId: b.getAttribute('data-item'), note: txt }); }); }; });
     qsa('.ren', c).forEach(function (b) { b.onclick = function () { promptModal('Title this Misc item', 'Name it after the document it holds.', 'Save', function (txt) { return api('renameMisc', { itemId: b.getAttribute('data-item'), title: txt }); }, true, b.getAttribute('data-t')); }; });
-    qsa('.addn', c).forEach(function (b) { b.onclick = function () { promptModal('Add a note', 'Visible to the office and the agent on this file.', 'Add note', function (txt) { return api('addNote', { txnId: t.id, itemId: b.getAttribute('data-item'), text: txt }); }); }; });
+    qsa('.addn', c).forEach(function (b) { b.onclick = function () { promptModal('Add a Note', 'Visible to the office and the agent on this file.', 'Add Note', function (txt) { return api('addNote', { txnId: t.id, itemId: b.getAttribute('data-item'), text: txt }); }); }; });
     qsa('.nind', c).forEach(function (b) { b.onclick = function () { itemNotesModal(b.getAttribute('data-item')); }; });
     qsa('.ttl-att', c).forEach(function (b) { b.onclick = function () { itemDocsModal(b.getAttribute('data-item')); }; });
     qsa('.rq', c).forEach(function (b) { b.onclick = function () { b.disabled = true; var on = !b.getAttribute('data-r'); api('setItemRequired', { txnId: t.id, itemId: b.getAttribute('data-item'), required: on }).then(function () { toast(on ? 'Marked Required for this file.' : 'Marked Not Required for this file.'); refresh(); }).catch(function (e) { b.disabled = false; toast(e.message, 1); }); }; });
@@ -1209,7 +1209,7 @@ function drawTab() {
     var assignable = items.filter(function (x) { return !(window.TCCda && TCCda.isCdaItem(x)); });
     var opts = function (sel) { return '<option value="">Document Storage (unassigned)</option>' + assignable.map(function (x) { return '<option value="' + h(x.id) + '"' + (x.id === sel ? ' selected' : '') + '>' + h(x.title) + '</option>'; }).join(''); };
     var docs = d.documents.slice().sort(function (a, b) { return String(b.uploadedAt).localeCompare(String(a.uploadedAt)); });
-    c.innerHTML = '<div class="top"><p class="sub" style="margin:0;max-width:640px">Every file uploaded to this transaction. Store files here, then assign each one to a checklist item, or split a PDF packet into items.</p>' + (canEdit() ? '<label class="btn">Upload to storage<input type="file" class="hidden" id="stUp" multiple accept="' + UP_ACCEPT + '"></label>' : '') + '</div>' +
+    c.innerHTML = '<div class="top"><p class="sub" style="margin:0;max-width:640px">Every file uploaded to this transaction. Store files here, then assign each one to a checklist item, or split a PDF packet into items.</p>' + (canEdit() ? '<label class="btn">Upload to Storage<input type="file" class="hidden" id="stUp" multiple accept="' + UP_ACCEPT + '"></label>' : '') + '</div>' +
       '<div class="gb tbl" style="margin-top:14px"><table><thead><tr><th>File</th><th>Checklist item</th><th>Status</th><th>Uploaded</th><th></th></tr></thead><tbody>' +
       (docs.length ? docs.map(function (x) {
         var it = items.filter(function (y) { return y.id === x.itemId; })[0];
@@ -1222,7 +1222,7 @@ function drawTab() {
     var su = qs('#stUp'); if (su) su.onchange = function () { var fs = Array.prototype.slice.call(su.files); fs.reduce(function (pr, f) { return pr.then(function () { return uploadFile(f, '', true); }); }, Promise.resolve()).then(refresh); };
     qsa('.asg', c).forEach(function (s) { s.onchange = function () { withMiscTitle(s.value, function (mt) { return api('assignDocument', { docId: s.getAttribute('data-doc'), itemId: s.value, miscTitle: mt }); }, refresh).then(function () { toast(s.value ? 'Assigned and sent for review.' : 'Moved to Document Storage.'); refresh(); }).catch(function (e) { toast(e.message, 1); refresh(); }); }; });
     qsa('.spl', c).forEach(function (b) { b.onclick = function () { splitModal(b.getAttribute('data-doc')); }; });
-    qsa('.rm', c).forEach(function (b) { b.onclick = function () { if (S.v150) return delDocModal(b.getAttribute('data-doc')); promptModal('Remove document (admin)', 'The file leaves the checklist but stays in the Drive archive, flagged for Enrique. Nothing is deleted. Give a reason.', 'Remove', function (txt) { return api('removeDocument', { docId: b.getAttribute('data-doc'), reason: txt }); }); }; });
+    qsa('.rm', c).forEach(function (b) { b.onclick = function () { if (S.v150) return delDocModal(b.getAttribute('data-doc')); promptModal('Remove Document (Admin)', 'The file leaves the checklist but stays in the Drive archive, flagged for Enrique. Nothing is deleted. Give a reason.', 'Remove', function (txt) { return api('removeDocument', { docId: b.getAttribute('data-doc'), reason: txt }); }); }; });
     qsa('.rst', c).forEach(function (b) { b.onclick = function () { api('restoreDocument', { docId: b.getAttribute('data-doc') }).then(function () { toast('Restored.'); refresh(); }).catch(function (e) { toast(e.message, 1); }); }; });
   } else if (S.tab === 'details') {
     var ii = partyIntake(t.intake), defs = F[t.type], secOpen = false, secTitle = '';
@@ -1236,20 +1236,20 @@ function drawTab() {
       else if (f.radio) v = (f.radio.filter(function (o) { return o[0] === (f.k === 'side' ? t.side : v); })[0] || [])[1];
       else if (f.t === 'date') v = fmtDate(v); else if (f.t === 'money' && v) v = money(v); else if (f.comm) v = fmtComm(v, ii[f.k + 'Type']);
       return '<div' + (f.w === 3 || f.people ? ' style="grid-column:1/-1"' : '') + '><span>' + h(fl) + '</span><b style="white-space:pre-line">' + (v ? h(v) : '—') + '</b></div>';
-    }).join('') + (secOpen ? '</div><h3 class="dh">File</h3><div class="kv">' : '') + (ii.otherAgent && t.intake && t.intake.otherAgent ? '<div style="grid-column:1/-1"><span>' + h(oaLabel(t.type, t.side)) + ' (original entry)</span><b>' + h(t.intake.otherAgent) + '</b></div>' : '') + (ii.finalPrice ? '<div><span>Final sales price</span><b>' + money(ii.finalPrice) + '</b></div>' : '') + (t.closedAt ? '<div><span>Closed</span><b>' + fmtDate(t.closedAt) + '</b></div>' : '') +
-      (t.retentionUntil ? '<div><span>Keep records until</span><b>' + fmtDate(t.retentionUntil) + '</b></div>' : '') + (S.tcApi ? '<div><span>Transaction coordinator</span><b>' + (t.tcName ? h(t.tcName) : 'None') + '</b></div>' : '') + '<div><span>File ID</span><b>' + h(t.id) + '</b></div></div>' +
-      (canEdit() ? '<div class="actions">' + (S.tcApi && t.canAssignTc ? '<button class="ub" id="editTc">' + (t.tcName ? 'Change TC' : 'Add TC') + '</button>' : '') + '<button class="ub" id="editI">Edit intake</button></div>' : '') + '</div>';
+    }).join('') + (secOpen ? '</div><h3 class="dh">File</h3><div class="kv">' : '') + (ii.otherAgent && t.intake && t.intake.otherAgent ? '<div style="grid-column:1/-1"><span>' + h(oaLabel(t.type, t.side)) + ' (original entry)</span><b>' + h(t.intake.otherAgent) + '</b></div>' : '') + (ii.finalPrice ? '<div><span>Final Sales Price</span><b>' + money(ii.finalPrice) + '</b></div>' : '') + (t.closedAt ? '<div><span>Closed</span><b>' + fmtDate(t.closedAt) + '</b></div>' : '') +
+      (t.retentionUntil ? '<div><span>Keep Records Until</span><b>' + fmtDate(t.retentionUntil) + '</b></div>' : '') + (S.tcApi ? '<div><span>Transaction Coordinator</span><b>' + (t.tcName ? h(t.tcName) : 'None') + '</b></div>' : '') + '<div><span>File ID</span><b>' + h(t.id) + '</b></div></div>' +
+      (canEdit() ? '<div class="actions">' + (S.tcApi && t.canAssignTc ? '<button class="ub" id="editTc">' + (t.tcName ? 'Change TC' : 'Add TC') + '</button>' : '') + '<button class="ub" id="editI">Edit Intake</button></div>' : '') + '</div>';
     if (qs('#editTc')) qs('#editTc').onclick = tcModal;
     if (qs('#editI')) qs('#editI').onclick = function () {
-      c.innerHTML = '<form id="ef" novalidate><div id="ee"></div>' + formHtml(t.type, partyIntake(t.intake), 'e', { side: 1 }) + '<div class="actions"><button type="button" class="ub" id="ecan">Cancel</button><button class="btn">Save intake</button></div></form>';
+      c.innerHTML = '<form id="ef" novalidate><div id="ee"></div>' + formHtml(t.type, partyIntake(t.intake), 'e', { side: 1 }) + '<div class="actions"><button type="button" class="ub" id="ecan">Cancel</button><button class="btn">Save Intake</button></div></form>';
       var f = qs('#ef'); f.setAttribute('data-side', t.side || ''); f.setAttribute('data-type', t.type); wireForm(f); qs('#ecan').onclick = drawTab;
       qsa('.f[data-oa]', f).forEach(function (el) { var x = qs('input', el); if (x && !x.value) el.classList.add('bad'); });
       f.onsubmit = function (e) { e.preventDefault(); var r = readForm(f); if (r.missing.length) { qs('#ee').innerHTML = '<div class="err">Please complete: ' + h(r.missing.join(', ')) + '</div>'; return; }
         api('updateIntake', { id: t.id, intake: r.intake }).then(function () { toast('Saved.'); refresh(); }).catch(function (err) { qs('#ee').innerHTML = '<div class="err">' + h(err.message) + '</div>'; }); };
     };
   } else {
-    c.innerHTML = '<div class="split" style="grid-template-columns:1fr 1fr"><div class="card gb"><h3>Notes</h3><textarea id="nt" placeholder="Add a note for this file"></textarea><div class="actions" style="margin-top:8px"><button class="btn sm" id="ntb">Add note</button></div><div class="feed">' +
-      d.notes.slice().reverse().map(function (n) { var it = d.items.filter(function (x) { return x.id === n.itemId; })[0]; return '<div class="ev"><b>' + h(n.by) + '</b> ' + (n.kind === 'rejection' ? '<span class="rt">rejected</span> ' : n.kind === 'resubmit' ? '<span class="gt">resubmitted</span> ' : n.kind === 'review_update' ? '<span class="gt">review update</span> ' : n.kind === 'review' ? '<span class="gt">approved</span> ' : '') + (it ? '· ' + h(it.title) : '') + (canDelNotes() ? '<button class="nx" data-note="' + h(n.id) + '" title="Delete note" aria-label="Delete note">×</button>' : '') + '<br>' + h(n.text).replace(/\n/g, '<br>') + '<small>' + h(fmtTs(n.createdAt)) + '</small></div>'; }).join('') + '</div></div>' +
+    c.innerHTML = '<div class="split" style="grid-template-columns:1fr 1fr"><div class="card gb"><h3>Notes</h3><textarea id="nt" placeholder="Add a note for this file"></textarea><div class="actions" style="margin-top:8px"><button class="btn sm" id="ntb">Add Note</button></div><div class="feed">' +
+      d.notes.slice().reverse().map(function (n) { var it = d.items.filter(function (x) { return x.id === n.itemId; })[0]; return '<div class="ev"><b>' + h(n.by) + '</b> ' + (n.kind === 'rejection' ? '<span class="rt">rejected</span> ' : n.kind === 'resubmit' ? '<span class="gt">resubmitted</span> ' : n.kind === 'review_update' ? '<span class="gt">review update</span> ' : n.kind === 'review' ? '<span class="gt">approved</span> ' : '') + (it ? '· ' + h(it.title) : '') + (canDelNotes() ? '<button class="nx" data-note="' + h(n.id) + '" title="Delete Note" aria-label="Delete Note">×</button>' : '') + '<br>' + h(n.text).replace(/\n/g, '<br>') + '<small>' + h(fmtTs(n.createdAt)) + '</small></div>'; }).join('') + '</div></div>' +
       '<div class="card gb"><h3>Activity</h3><div class="feed">' + d.activity.map(function (a) { return '<div class="ev">' + h(actLabel(a, d.txn)) + '<small>' + h(a.by) + ' · ' + h(fmtTs(a.ts)) + '</small></div>'; }).join('') + '</div></div></div>';
     qsa('.nx', c).forEach(function (b) { b.onclick = function () { delNoteModal(b.getAttribute('data-note')); }; });
     qs('#ntb').onclick = function () { var v = qs('#nt').value.trim(); if (!v) return; api('addNote', { txnId: t.id, text: v }).then(function () { toast('Note added.'); refresh(); }).catch(function (e) { toast(e.message, 1); }); };
@@ -1262,7 +1262,7 @@ function tcModal() {
   var t = S.txn.txn;
   (isAdmin() ? api('listUsers').then(function (us) { return us.filter(function (u) { return u.active && rolesOf(u).indexOf('tc') >= 0; }); }) : api('listPeople').then(function (p) { return p.tcs; })).then(function (tcs) {
     tcs = tcs.filter(function (u) { return u.id !== t.agentId; });
-    var m = modal('<h2>Transaction coordinator</h2><p class="sub">The TC sees this file, can upload documents and edit details, but can’t review or approve anything. Changes are recorded in the activity log.</p><div id="te"></div><div class="f"><label>TC</label><select id="tcSel"><option value="">None</option>' +
+    var m = modal('<h2>Transaction Coordinator</h2><p class="sub">The TC sees this file, can upload documents and edit details, but can’t review or approve anything. Changes are recorded in the activity log.</p><div id="te"></div><div class="f"><label>TC</label><select id="tcSel"><option value="">None</option>' +
       tcs.map(function (u) { return '<option value="' + h(u.id) + '"' + (u.id === t.tcId ? ' selected' : '') + '>' + h(uName(u)) + '</option>'; }).join('') + '</select></div><div class="actions"><button class="btn" id="tcSave">Save</button></div>');
     qs('#tcSave', m).onclick = function () {
       api('setTransactionTc', { id: t.id, tcId: qs('#tcSel', m).value }).then(function () { m.close(); toast('Coordinator updated.'); refresh(); }).catch(function (e) { qs('#te', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
@@ -1546,8 +1546,8 @@ function splitModal(existingDocId) {
     return loadPdfLib().then(function (L) { return L.PDFDocument.load(bytes, { ignoreEncryption: true }); }).then(function (doc) {
       state.bytes = bytes; state.name = name; state.pages = doc.getPageCount();
       var url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-      qs('#sbody', m).innerHTML = '<div class="split" style="margin-top:14px"><div><iframe src="' + url + '" title="Packet preview"></iframe><p class="sub" style="margin-top:6px">' + h(name) + ' · ' + state.pages + (state.pages === 1 ? ' page' : ' pages') + '</p></div><div><b class="gt">Assign pages</b><p class="sub" style="margin:8px 0 12px">From page · to page · checklist item</p><div id="rngs"></div><button class="link" id="addr">+ Add range</button>' +
-        '<div class="actions"><button class="btn" id="sgo">Split &amp; upload</button></div></div></div>';
+      qs('#sbody', m).innerHTML = '<div class="split" style="margin-top:14px"><div><iframe src="' + url + '" title="Packet preview"></iframe><p class="sub" style="margin-top:6px">' + h(name) + ' · ' + state.pages + (state.pages === 1 ? ' page' : ' pages') + '</p></div><div><b class="gt">Assign Pages</b><p class="sub" style="margin:8px 0 12px">From page · to page · checklist item</p><div id="rngs"></div><button class="link" id="addr">+ Add Range</button>' +
+        '<div class="actions"><button class="btn" id="sgo">Split &amp; Upload</button></div></div></div>';
       addRange(1, state.pages);
       qs('#addr', m).onclick = function () { var last = qsa('.rng', m).pop(); var s = last ? Math.min(state.pages, Number(qsa('input', last)[1].value) + 1) : 1; addRange(s, state.pages); };
       qs('#rngs', m).addEventListener('change', function (e) { if (e.target.tagName === 'SELECT') { var it = items.filter(function (x) { return x.id === e.target.value; })[0]; qs('.rmt', e.target.closest('.rng')).classList.toggle('hidden', !needsMiscTitle(it)); } });
@@ -1582,7 +1582,7 @@ function splitModal(existingDocId) {
         });
       }, Promise.resolve());
     }).then(function () { m.close(); toast('Packet split into ' + ranges.length + ' part(s). Assigned parts are sent for review.'); S.tab = 'checklist'; refresh(); })
-      .catch(function (e) { btn.disabled = false; btn.textContent = 'Split & upload'; showErr(e.message); });
+      .catch(function (e) { btn.disabled = false; btn.textContent = 'Split & Upload'; showErr(e.message); });
   }
   if (existingDocId) {
     qs('#sbody', m).innerHTML = '<div class="loading"><span class="spin"></span>Loading packet…</div>';
@@ -1599,9 +1599,9 @@ function splitModal(existingDocId) {
 function convertModal() {
   var t = S.txn.txn, to = t.type === 'listing' ? 'purchase' : 'lease';
   var pre = Object.assign({}, t.intake); pre.side = to === 'purchase' ? 'seller' : 'landlord';
-  var sideField = { k: 'side', l: 'We represent', r: 1, w: 3, radio: to === 'purchase' ? [['seller', 'Seller only'], ['both', 'Both sides (we also have the buyer)']] : [['landlord', 'Landlord only'], ['both', 'Both sides (we also have the tenant)']] };
+  var sideField = { k: 'side', l: 'We represent', r: 1, w: 3, radio: to === 'purchase' ? [['seller', 'Seller Only'], ['both', 'Both Sides (We Also Have the Buyer)']] : [['landlord', 'Landlord Only'], ['both', 'Both Sides (We Also Have the Tenant)']] };
   var m = modal('<h2>' + (to === 'purchase' ? 'Accepted Contract' : 'Convert to Lease') + '</h2><p class="sub">' + (to === 'purchase' ? 'Offer accepted? Add the escrow details. The listing information is already filled in, and the purchase checklist items are added to this file.' : 'Tenant found? Add the lease details. The listing information is already filled in, and the lease checklist items are added to this file.') + '</p><div id="ce"></div><form id="cf" novalidate>' +
-    '<div class="card gb"><h3>Who we represent</h3><div class="fgrid">' + fieldHtml(sideField, pre.side, 'c') + '</div></div>' +
+    '<div class="card gb"><h3>Who We Represent</h3><div class="fgrid">' + fieldHtml(sideField, pre.side, 'c') + '</div></div>' +
     formHtml(to, pre, 'c', { side: 1 }) + '<div class="actions"><button class="btn" id="cb">' + (to === 'purchase' ? 'Save Accepted Contract' : 'Convert') + '</button></div></form>', true);
   var f = qs('#cf', m); f.setAttribute('data-type', to); wireForm(f);
   f.onsubmit = function (e) {
@@ -1617,14 +1617,14 @@ function cancelModal() {
   var ci = d.items.filter(function (x) { return x.cancel && x.active; })[0];
   var has = ci && docsOf(ci.id).length;
   if (!has) {
-    var m0 = modal('<h2>Request cancellation</h2><p class="sub">First upload the signed <b>' + h(ci ? ci.title : 'cancellation document') + '</b>' + (ci && ci.forms ? ' (' + h(ci.forms) + ')' : '') + '. Then you can send the request. An admin approves every cancellation.</p>' + (ci && canEdit() ? '<label class="btn">Upload ' + h(ci.title) + '<input type="file" class="hidden" id="xup" accept="' + UP_ACCEPT + '"></label>' : ''));
+    var m0 = modal('<h2>Request Cancellation</h2><p class="sub">First upload the signed <b>' + h(ci ? ci.title : 'cancellation document') + '</b>' + (ci && ci.forms ? ' (' + h(ci.forms) + ')' : '') + '. Then you can send the request. An admin approves every cancellation.</p>' + (ci && canEdit() ? '<label class="btn">Upload ' + h(ci.title) + '<input type="file" class="hidden" id="xup" accept="' + UP_ACCEPT + '"></label>' : ''));
     var xu = qs('#xup', m0);
     if (xu) xu.onchange = function () { var f = xu.files[0]; if (!f) return; uploadFile(f, ci.id, true).then(function () { m0.close(); return api('getTransaction', { id: t.id }); }).then(function (dd) { if (dd) { S.txn = dd; page.keepScroll = true; drawTxn(); if (docsOf(ci.id).length) cancelModal(); } }); };
     return;
   }
-  var html = '<h2>Request cancellation</h2><div id="xe"></div><p class="sub">Signed ' + h(ci.title) + ' is on file. An admin reviews your request.</p>';
-  if (t.relistQuestion) html += '<div class="card gb"><h3>Is the property going back on the market?</h3><div class="radios" id="rl"><label><input type="radio" name="rl" value="yes"> Yes, relist it</label><label><input type="radio" name="rl" value="no"> No</label></div><p class="sub" style="margin:10px 0 0">If yes, a new ' + (t.type === 'lease' ? 'lease listing' : 'listing') + ' is created automatically with the listing documents once the cancellation is approved.</p></div>';
-  html += '<div class="f"><label>Reason</label><textarea id="xr" placeholder="Why is this file cancelling?"></textarea></div><div class="actions"><button class="btn red" id="xb">Send cancellation request</button></div>';
+  var html = '<h2>Request Cancellation</h2><div id="xe"></div><p class="sub">Signed ' + h(ci.title) + ' is on file. An admin reviews your request.</p>';
+  if (t.relistQuestion) html += '<div class="card gb"><h3>Is the Property Going Back on the Market?</h3><div class="radios" id="rl"><label><input type="radio" name="rl" value="yes"> Yes, relist it</label><label><input type="radio" name="rl" value="no"> No</label></div><p class="sub" style="margin:10px 0 0">If yes, a new ' + (t.type === 'lease' ? 'lease listing' : 'listing') + ' is created automatically with the listing documents once the cancellation is approved.</p></div>';
+  html += '<div class="f"><label>Reason</label><textarea id="xr" placeholder="Why is this file cancelling?"></textarea></div><div class="actions"><button class="btn red" id="xb">Send Cancellation Request</button></div>';
   var m = modal(html);
   qsa('#rl input', m).forEach(function (r) { r.onchange = function () { qsa('#rl label', m).forEach(function (l) { l.classList.toggle('on', l.contains(r)); }); }; });
   qs('#xb', m).onclick = function () {
@@ -1636,10 +1636,10 @@ function cancelModal() {
 }
 function statusModal() {
   var t = S.txn.txn, i = (t.intake || {});
-  var m = modal('<h2>Set status</h2><p class="sub">Cancellations go through “Request cancellation” so the signed document is on file.' + (isAdmin() ? '' : ' Choosing Closed sends the date to an admin. The file is archived only after that approval.') + '</p><div id="ze"></div><div class="radios" id="zs">' +
+  var m = modal('<h2>Set Status</h2><p class="sub">Cancellations go through “Request Cancellation” so the signed document is on file.' + (isAdmin() ? '' : ' Choosing Closed sends the date to an admin. The file is archived only after that approval.') + '</p><div id="ze"></div><div class="radios" id="zs">' +
     ['Active', 'In Escrow', 'Closed', 'Expired Contract'].map(function (s) { return '<label class="' + (t.status === s ? 'on' : '') + '"><input type="radio" name="zs" value="' + s + '"' + (t.status === s ? ' checked' : '') + '> ' + s + '</label>'; }).join('') + '</div>' +
-    '<div class="fgrid hidden" id="zc" style="margin-top:16px"><div class="f"><label for="zd">Actual escrow closing date</label><input type="date" id="zd" value="' + h(t.closedAt ? String(t.closedAt).slice(0, 10) : '') + '"><p class="sub">Type the date escrow actually closed. An estimated close is not filled in. An existing closing date stays as it was saved. Nothing is saved until you press Save status.</p></div>' + (t.type === 'purchase' ? '<div class="f"><label>Final sales price</label><input type="text" inputmode="decimal" id="zp" value="' + h(i.finalPrice || i.purchasePrice || '') + '"></div>' : '') + '</div>' +
-    '<div class="actions"><button class="btn" id="zb">Save status</button></div>');
+    '<div class="fgrid hidden" id="zc" style="margin-top:16px"><div class="f"><label for="zd">Actual escrow closing date</label><input type="date" id="zd" value="' + h(t.closedAt ? String(t.closedAt).slice(0, 10) : '') + '"><p class="sub">Type the date escrow actually closed. An estimated close is not filled in. An existing closing date stays as it was saved. Nothing is saved until you press Save status.</p></div>' + (t.type === 'purchase' ? '<div class="f"><label>Final Sales Price</label><input type="text" inputmode="decimal" id="zp" value="' + h(i.finalPrice || i.purchasePrice || '') + '"></div>' : '') + '</div>' +
+    '<div class="actions"><button class="btn" id="zb">Save Status</button></div>');
   var sync = function () { var c = qs('#zs input:checked', m); qs('#zc', m).classList.toggle('hidden', !(c && c.value === 'Closed')); qsa('#zs label', m).forEach(function (l) { l.classList.toggle('on', !!c && l.contains(c)); }); };
   qsa('#zs input', m).forEach(function (r) { r.onchange = sync; }); sync();
   qs('#zb', m).onclick = function () {
@@ -1657,13 +1657,13 @@ function reviewView() {
     S.badges.review = d.items.length + d.cancellations.length;
     if (S.batchReview && d.groups) return batchQueue(d);
     var inner = '<h1>Review</h1><p class="sub">Admin only. Approve each submitted checklist item, or reject it with a note that goes back to the agent.</p>' +
-      (d.cancellations.length ? '<h2>Cancellation requests</h2>' + d.cancellations.map(function (c) {
+      (d.cancellations.length ? '<h2>Cancellation Requests</h2>' + d.cancellations.map(function (c) {
         var r = c.request || {};
         return '<div class="rb card" style="padding:18px"><div class="top"><div><b>' + h(c.title) + '</b><p class="sub" style="margin:2px 0 0">' + h(c.typeLabel) + ' · ' + h(c.agentName) + ' · requested ' + h(fmtTs(r.requestedAt)) + '</p>' + (r.reason ? '<div class="note">Reason: ' + h(r.reason) + '</div>' : '') +
           (r.relist === true ? '<div class="note"><b class="gt">Back on market: yes</b> · approving creates a new listing with the listing documents.</div>' : r.relist === false ? '<div class="note">Back on market: no</div>' : '') + '</div>' +
-          '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="ub" href="#/t/' + h(c.txnId) + '">Open file</a><button class="btn sm cdec" data-id="' + h(c.txnId) + '" data-a="1">Approve</button><button class="btn red sm cdec" data-id="' + h(c.txnId) + '" data-a="">Deny</button></div></div></div>';
+          '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="ub" href="#/t/' + h(c.txnId) + '">Open File</a><button class="btn sm cdec" data-id="' + h(c.txnId) + '" data-a="1">Approve</button><button class="btn red sm cdec" data-id="' + h(c.txnId) + '" data-a="">Deny</button></div></div></div>';
       }).join('') : '') +
-      '<h2>Checklist items waiting (' + d.items.length + ')</h2>' +
+      '<h2>Checklist Items Waiting (' + d.items.length + ')</h2>' +
       (d.items.length ? '<div class="gb" style="padding:4px 0">' + d.items.map(function (it) {
         return '<div class="row" style="align-items:flex-start"><div class="n"><b>' + h(it.itemTitle) + '</b><small>' + h(it.forms) + '</small><div class="note"><a href="#/t/' + h(it.txnId) + '">' + h(it.txnTitle) + '</a> · ' + h(it.typeLabel) + ' · ' + h(it.agentName) + ' · ' + h(fmtTs(it.submittedAt)) + '</div>' +
           '<div class="docs">' + it.docs.map(function (x) { return '<button class="dl" data-doc="' + h(x.id) + '">' + h(x.name) + (x.pageRange ? ' (pages ' + h(x.pageRange) + ')' : '') + '</button>'; }).join('') + '</div>' +
@@ -1683,7 +1683,7 @@ function reviewView() {
       qsa('.cdec').forEach(function (b) {
         b.onclick = function () {
           var approve = !!b.getAttribute('data-a');
-          promptModal(approve ? 'Approve cancellation' : 'Deny cancellation', approve ? 'The file becomes Cancelled and is kept 7 years. Add a note for the record.' : 'Tell the agent why.', approve ? 'Approve' : 'Deny', function (txt) {
+          promptModal(approve ? 'Approve Cancellation' : 'Deny Cancellation', approve ? 'The file becomes Cancelled and is kept 7 years. Add a note for the record.' : 'Tell the agent why.', approve ? 'Approve' : 'Deny', function (txt) {
             return api('decideCancel', { id: b.getAttribute('data-id'), approve: approve, note: txt }).then(function (r) { if (r && r.relistedId) setTimeout(function () { toast('Cancelled. A new listing was created.'); }, 400); });
           });
         };
@@ -1698,18 +1698,18 @@ function reviewView() {
    agent and TC. Nothing is final until Submit Review. */
 S.reviewDraft = S.reviewDraft || {};
 function cancelCards(cs) {
-  return cs.length ? '<h2>Cancellation requests</h2>' + cs.map(function (c) {
+  return cs.length ? '<h2>Cancellation Requests</h2>' + cs.map(function (c) {
     var r = c.request || {};
     return '<div class="rb card" style="padding:18px"><div class="top"><div><b>' + h(c.title) + '</b><p class="sub" style="margin:2px 0 0">' + h(c.typeLabel) + ' · ' + h(c.agentName) + ' · requested ' + h(fmtTs(r.requestedAt)) + '</p>' + (r.reason ? '<div class="note">Reason: ' + h(r.reason) + '</div>' : '') +
       (r.relist === true ? '<div class="note"><b class="gt">Back on market: yes</b> · approving creates a new listing with the listing documents.</div>' : r.relist === false ? '<div class="note">Back on market: no</div>' : '') + '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="ub" href="#/t/' + h(c.txnId) + '">Open file</a><button class="btn sm cdec" data-id="' + h(c.txnId) + '" data-a="1">Approve</button><button class="btn red sm cdec" data-id="' + h(c.txnId) + '" data-a="">Deny</button></div></div></div>';
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="ub" href="#/t/' + h(c.txnId) + '">Open File</a><button class="btn sm cdec" data-id="' + h(c.txnId) + '" data-a="1">Approve</button><button class="btn red sm cdec" data-id="' + h(c.txnId) + '" data-a="">Deny</button></div></div></div>';
   }).join('') : '';
 }
 function wireCancelCards() {
   qsa('.cdec').forEach(function (b) {
     b.onclick = function () {
       var approve = !!b.getAttribute('data-a');
-      promptModal(approve ? 'Approve cancellation' : 'Deny cancellation', approve ? 'The file becomes Cancelled and is kept 7 years. Add a note for the record.' : 'Tell the agent why.', approve ? 'Approve' : 'Deny', function (txt) {
+      promptModal(approve ? 'Approve Cancellation' : 'Deny Cancellation', approve ? 'The file becomes Cancelled and is kept 7 years. Add a note for the record.' : 'Tell the agent why.', approve ? 'Approve' : 'Deny', function (txt) {
         return api('decideCancel', { id: b.getAttribute('data-id'), approve: approve, note: txt }).then(function (r) { if (r && r.relistedId) setTimeout(function () { toast('Cancelled. A new listing was created.'); }, 400); });
       });
     };
@@ -1718,7 +1718,7 @@ function wireCancelCards() {
 function batchQueue(d) {
   var inner = '<h1>Review</h1><p class="sub">Admin only. New uploads are grouped by transaction. Open one to review everything waiting on it, then submit once. The agent and TC get one email with all your decisions.</p>' +
     cancelCards(d.cancellations) +
-    '<h2>Transactions waiting (' + d.groups.length + ')</h2>' +
+    '<h2>Transactions Waiting (' + d.groups.length + ')</h2>' +
     (d.groups.length ? '<div class="gb" style="padding:4px 0">' + d.groups.map(function (g) {
       var dr = S.reviewDraft[g.txnId] || {}, drafted = Object.keys(dr).filter(function (k) { return dr[k] && dr[k].decision; }).length;
       return '<a class="row" href="#/review/' + h(g.txnId) + '" style="text-decoration:none;color:inherit"><div class="n"><b>' + h(g.txnTitle) + '</b><small>' + h(g.typeLabel) + ' · ' + h(g.agentName) + (g.tcName ? ' · TC ' + h(g.tcName) : '') + '</small>' +
@@ -1736,7 +1736,7 @@ function batchReviewView(txnId) {
     var dr = S.reviewDraft[txnId] = S.reviewDraft[txnId] || {};
     var live = {}; g.items.forEach(function (it) { live[it.itemId] = 1; });
     Object.keys(dr).forEach(function (k) { if (!live[k]) delete dr[k]; });
-    var inner = '<p style="margin:0 0 8px"><a href="#/review">← Review</a></p><div class="top"><div><h1 style="margin-bottom:2px">' + h(g.txnTitle) + '</h1><p class="sub" style="margin:0">' + h(g.typeLabel) + ' · ' + h(g.agentName) + (g.tcName ? ' · TC ' + h(g.tcName) : '') + ' · <a href="#/t/' + h(txnId) + '">Open file</a></p></div></div>' +
+    var inner = '<p style="margin:0 0 8px"><a href="#/review">← Review</a></p><div class="top"><div><h1 style="margin-bottom:2px">' + h(g.txnTitle) + '</h1><p class="sub" style="margin:0">' + h(g.typeLabel) + ' · ' + h(g.agentName) + (g.tcName ? ' · TC ' + h(g.tcName) : '') + ' · <a href="#/t/' + h(txnId) + '">Open File</a></p></div></div>' +
       '<p class="sub">Mark each item Approve or Reject. These are drafts until you press <b>Submit Review</b>. Items you leave unmarked stay waiting.</p>' +
       g.items.map(function (it) {
         var x = dr[it.itemId] || {};
@@ -1811,26 +1811,26 @@ function usersView() {
     var row = function (u, sec) {
       var rs = rolesOf(u), pills = rs[0] === 'admin' ? '<span class="pill p-ok">Admin</span>' : rs.map(function (r) { return '<span class="pill ' + (r === sec ? 'p-ok' : 'p-pend') + '">' + (r === 'tc' ? 'TC' : 'Agent') + '</span>'; }).join(' ');
       return '<tr><td class="unm"><b class="un">' + h(uName(u)) + '</b></td><td class="uem" data-l="Email">' + (hasName(u) ? h(u.email || u.username) : '') + '</td><td data-l="Phone">' + h(u.phone || '') + '</td><td data-l="Role">' + pills + (u.owner ? ' <small>Owner</small>' : '') + '</td>' +
-        '<td data-l="Status">' + (u.active ? (u.locked ? '<span class="pill p-rej">Locked</span>' : u.mustChange ? '<span class="pill p-miss">Password not set</span>' : '<span class="pill p-ok">Active</span>') : '<span class="pill p-miss">Disabled</span>') + '</td><td data-l="Last sign-in"><small>' + h(fmtTs(u.lastLogin)) + '</small></td>' +
-        '<td class="uact">' + (u.owner && !S.user.owner ? '' : '<button class="link eu" data-id="' + h(u.id) + '">Edit</button> <button class="link rp" data-id="' + h(u.id) + '" data-n="' + h(uName(u)) + '">Reset password</button> ') + (u.owner || u.id === S.user.id ? '' : '<button class="link act" data-id="' + h(u.id) + '" data-a="' + (u.active ? '' : '1') + '">' + (u.active ? 'Disable' : 'Enable') + '</button>') + '</td></tr>';
+        '<td data-l="Status">' + (u.active ? (u.locked ? '<span class="pill p-rej">Locked</span>' : u.mustChange ? '<span class="pill p-miss">Password Not Set</span>' : '<span class="pill p-ok">Active</span>') : '<span class="pill p-miss">Disabled</span>') + '</td><td data-l="Last Sign-In"><small>' + h(fmtTs(u.lastLogin)) + '</small></td>' +
+        '<td class="uact">' + (u.owner && !S.user.owner ? '' : '<button class="link eu" data-id="' + h(u.id) + '">Edit</button> <button class="link rp" data-id="' + h(u.id) + '" data-n="' + h(uName(u)) + '">Reset Password</button> ') + (u.owner || u.id === S.user.id ? '' : '<button class="link act" data-id="' + h(u.id) + '" data-a="' + (u.active ? '' : '1') + '">' + (u.active ? 'Disable' : 'Enable') + '</button>') + '</td></tr>';
     };
     var section = function (key, title, list, empty) {
       return '<section class="usec" aria-labelledby="us_' + key + '"><div class="ush"><h2 id="us_' + key + '">' + title + '</h2><span class="ucount">' + list.length + '</span></div>' +
-        (list.length ? '<div class="gb tbl"><table class="utbl"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody>' + list.map(function (u) { return row(u, key); }).join('') + '</tbody></table></div>'
+        (list.length ? '<div class="gb tbl"><table class="utbl"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Last Sign-In</th><th></th></tr></thead><tbody>' + list.map(function (u) { return row(u, key); }).join('') + '</tbody></table></div>'
           : '<div class="card gb uempty">' + empty + '</div>') + '</section>';
     };
     var admins = users.filter(function (u) { return rolesOf(u)[0] === 'admin'; }), agents = users.filter(function (u) { return rolesOf(u).indexOf('agent') >= 0; }), tcs = users.filter(function (u) { return rolesOf(u).indexOf('tc') >= 0; });
-    var inner = '<div class="top"><div><h1>Users</h1></div><button class="btn" id="nu">' + (S.tcApi ? '+ Add user' : '+ Add agent') + '</button></div>' +
+    var inner = '<div class="top"><div><h1>Users</h1></div><button class="btn" id="nu">' + (S.tcApi ? '+ Add User' : '+ Add Agent') + '</button></div>' +
       section('admin', 'Admins', admins, 'No admins.') + section('agent', 'Agents', agents, 'No agents yet.') +
       section('tc', 'Transaction Coordinators', tcs, S.tcApi ? 'No transaction coordinators yet. Use <b>+ Add user</b> and tick Transaction Coordinator.' : 'Transaction coordinators arrive with the next backend update.') +
       (S.v150 ? '<section class="usec" id="teamsSec"><div class="loading"><span class="spin"></span>Loading teams…</div></section>' : '');
     page('users', inner, function () {
       qs('#nu').onclick = function () {
-        var m = modal('<h2>' + (S.tcApi ? 'Add user' : 'Add agent') + '</h2><div id="ae"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="af" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="al" maxlength="50" required></div>' +
+        var m = modal('<h2>' + (S.tcApi ? 'Add User' : 'Add Agent') + '</h2><div id="ae"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="af" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="al" maxlength="50" required></div>' +
           '<div class="f w2"><label>Email (their login) *</label><input type="email" id="am" autocapitalize="none" required></div><div class="f"><label>Phone *</label><input type="tel" id="ap" inputmode="tel" placeholder="000-000-0000" required></div>' +
           '<div class="f"><label>Split % <small>agent share of gross</small></label><input id="aSp" inputmode="decimal" value="90" placeholder="90"></div><div class="f"><label>Annual cap ($)</label><input id="aCap" inputmode="decimal" placeholder="Optional"></div><div class="f w3"><label>Cap note</label><input id="aCapN" maxlength="240" placeholder="Optional"></div>' +
           '<p class="sub" style="grid-column:1/-1;margin:0">90 means 90% agent / 10% brokerage, the Enrique Esparza example. Leave cap blank when there is no annual cap.</p>' +
-          (S.tcApi ? rolePicker(['agent'], !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="ab">Create user</button></div>');
+          (S.tcApi ? rolePicker(['agent'], !!S.user.owner) : '') + '</div><div class="actions"><button class="btn" id="ab">Create User</button></div>');
         if (S.tcApi) wireRolePicker(m);
         qs('#ap', m).oninput = function () { this.value = fmtPhone(this.value); };
         qs('#ab', m).onclick = function () {
@@ -1847,18 +1847,18 @@ function usersView() {
           var body = { firstName: fn, lastName: ln, name: fn + ' ' + ln /* older backends */, username: em, email: em, phone: qs('#ap', m).value.trim(), splitPct: spRaw, capAmount: capRaw, capNote: qs('#aCapN', m).value.trim() };
           if (roles) body.roles = roles; else body.role = 'agent';
           api('createUser', body).then(function (r) {
-            qs('.box', m).innerHTML = '<h2>' + (S.tcApi ? h(roleLabel(r.user)) + ' added' : 'Agent added') + '</h2><p>Tell <b>' + h(uName(r.user)) + '</b> to open ' + h(location.origin + location.pathname) + ', tap <b>First time or forgot password?</b> and enter <b>' + h(r.user.username) + '</b>. A code is emailed to them to set their own password.' + (S.tcApi ? ' Their roles are already set and they can’t change them.' : '') + '</p>' +
+            qs('.box', m).innerHTML = '<h2>' + (S.tcApi ? h(roleLabel(r.user)) + ' added' : 'Agent Added') + '</h2><p>Tell <b>' + h(uName(r.user)) + '</b> to open ' + h(location.origin + location.pathname) + ', tap <b>First Time or Forgot Password?</b> and enter <b>' + h(r.user.username) + '</b>. A code is emailed to them to set their own password.' + (S.tcApi ? ' Their roles are already set and they can’t change them.' : '') + '</p>' +
               (r.tempPassword /* older backend (before v1.2) */ ? '<div class="ok">Temporary password (shown once): <b style="font-family:monospace;font-size:16px">' + h(r.tempPassword) + '</b></div>' : '') + '<div class="actions"><button class="btn" id="dn">Done</button></div>';
             qs('#dn', m).onclick = function () { m.close(); usersView(); };
           }).catch(function (e) { qs('#ae', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
         };
       };
-      qsa('.rp').forEach(function (b) { b.onclick = function () { if (!confirm('Reset the password for ' + b.getAttribute('data-n') + '? Their current password stops working, they are signed out everywhere, and they get an email with a code to choose a new one.')) return; api('resetPassword', { userId: b.getAttribute('data-id') }).then(function (r) { modal(r.tempPassword /* older backend (before v1.2) */ ? '<h2>Temporary password</h2><div class="ok">' + h(b.getAttribute('data-n')) + ': <b style="font-family:monospace;font-size:16px">' + h(r.tempPassword) + '</b></div><p class="sub">Shown once. They must change it at sign-in.</p>'
-          : '<h2>Password reset</h2><div class="ok">' + h(b.getAttribute('data-n')) + ' was signed out and emailed a code to set a new password.</div><p class="sub">The code expires in 30 minutes and works once. Nobody else ever sees their password.</p>'); usersView(); }).catch(function (e) { toast(e.message, 1); }); }; });
+      qsa('.rp').forEach(function (b) { b.onclick = function () { if (!confirm('Reset the password for ' + b.getAttribute('data-n') + '? Their current password stops working, they are signed out everywhere, and they get an email with a code to choose a new one.')) return; api('resetPassword', { userId: b.getAttribute('data-id') }).then(function (r) { modal(r.tempPassword /* older backend (before v1.2) */ ? '<h2>Temporary Password</h2><div class="ok">' + h(b.getAttribute('data-n')) + ': <b style="font-family:monospace;font-size:16px">' + h(r.tempPassword) + '</b></div><p class="sub">Shown once. They must change it at sign-in.</p>'
+          : '<h2>Password Reset</h2><div class="ok">' + h(b.getAttribute('data-n')) + ' was signed out and emailed a code to set a new password.</div><p class="sub">The code expires in 30 minutes and works once. Nobody else ever sees their password.</p>'); usersView(); }).catch(function (e) { toast(e.message, 1); }); }; });
       qsa('.eu').forEach(function (b) { b.onclick = function () {
         var u = users.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (!u) return; var nm = splitNm(u);
         var canRoles = S.tcApi && !u.owner && u.id !== S.user.id && (rolesOf(u)[0] !== 'admin' || S.user.owner);
-        var m = modal('<h2>Edit user</h2><p class="sub">' + h(u.email || u.username) + '</p><div id="ee"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="ef" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="el" maxlength="50" required></div>' +
+        var m = modal('<h2>Edit User</h2><p class="sub">' + h(u.email || u.username) + '</p><div id="ee"></div><div class="fgrid"><div class="f"><label>First name *</label><input type="text" id="ef" maxlength="50" required></div><div class="f w2"><label>Last name *</label><input type="text" id="el" maxlength="50" required></div>' +
           '<div class="f"><label>Phone *</label><input type="tel" id="ep" inputmode="tel" placeholder="000-000-0000" required></div>' +
           '<div class="f"><label>Split %</label><input id="eSp" inputmode="decimal" placeholder="e.g. 90"></div><div class="f"><label>Annual cap ($)</label><input id="eCap" inputmode="decimal" placeholder="Optional"></div><div class="f w3"><label>Cap note</label><input id="eCapN" maxlength="240"></div>' +
           '<p class="sub" style="grid-column:1/-1;margin:0">Leave split blank to keep what is already saved. 90 / 10 is the Enrique Esparza example.</p>' +
@@ -1898,8 +1898,8 @@ function archiveView() {
   loading('archive');
   api('purgeQueue').then(function (d) {
     var inner = '<h1>Archive</h1><p class="sub">Every file is kept for 7 years after the transaction closes, expires or cancels. This app never deletes anything. Documents an admin removes from a checklist stay in the Drive archive, marked as removed and waiting for Enrique’s purge approval. Only Enrique decides on permanent deletion, after the keep-until date.</p>' +
-      '<div class="gb tbl"><table><thead><tr><th>Document</th><th>Transaction</th><th>Removed</th><th>Reason</th><th>Keep until</th><th></th></tr></thead><tbody>' +
-      (d.docs.length ? d.docs.map(function (x) { return '<tr><td>' + h(x.name) + '</td><td><a href="#/t/' + h(x.txnId) + '">' + h(x.txnTitle || x.txnId) + '</a></td><td><small>' + h(fmtTs(x.removedAt)) + '<br>' + h(x.removedBy) + '</small></td><td>' + h(x.reason) + '</td><td>' + h(fmtDate(x.retentionUntil) || 'Open file') + '</td><td><button class="link rst" data-doc="' + h(x.id) + '">Restore</button></td></tr>'; }).join('') : '<tr><td colspan="6">No removed documents.</td></tr>') + '</tbody></table></div>';
+      '<div class="gb tbl"><table><thead><tr><th>Document</th><th>Transaction</th><th>Removed</th><th>Reason</th><th>Keep Until</th><th></th></tr></thead><tbody>' +
+      (d.docs.length ? d.docs.map(function (x) { return '<tr><td>' + h(x.name) + '</td><td><a href="#/t/' + h(x.txnId) + '">' + h(x.txnTitle || x.txnId) + '</a></td><td><small>' + h(fmtTs(x.removedAt)) + '<br>' + h(x.removedBy) + '</small></td><td>' + h(x.reason) + '</td><td>' + h(fmtDate(x.retentionUntil) || 'Open File') + '</td><td><button class="link rst" data-doc="' + h(x.id) + '">Restore</button></td></tr>'; }).join('') : '<tr><td colspan="6">No removed documents.</td></tr>') + '</tbody></table></div>';
     page('archive', inner, function () { qsa('.rst').forEach(function (b) { b.onclick = function () { api('restoreDocument', { docId: b.getAttribute('data-doc') }).then(function () { toast('Restored.'); archiveView(); }).catch(function (e) { toast(e.message, 1); }); }; }); });
   }).catch(function (e) { failView('archive', e); });
 }
@@ -1947,7 +1947,7 @@ function remRow(r, c, withClient) {
   var b = remBucket(r);
   return '<div class="row crem" data-rid="' + h(r.id) + '"><div class="n">' + (withClient ? '<b><a href="#/crm/c/' + h(c.id) + '">' + h(cName(c)) + '</a></b>' : '') +
     '<small class="' + (b === 'overdue' && !r.done ? 'rt' : '') + '">' + (r.done ? 'Done · ' : b === 'overdue' ? 'Overdue · ' : '') + h(fmtTs(r.dueAt)) + '</small>' + (r.note ? '<div class="note">' + h(r.note) + '</div>' : '') + '</div>' +
-    '<div class="acts">' + (r.done ? '<button class="ub" data-act="undone">Reopen</button>' : '<button class="btn sm" data-act="done">Mark done</button>') +
+    '<div class="acts">' + (r.done ? '<button class="ub" data-act="undone">Reopen</button>' : '<button class="btn sm" data-act="done">Mark Done</button>') +
     '<a class="ub" href="' + h(gcalUrl(r, c)) + '" target="_blank" rel="noopener noreferrer">Google Calendar</a><button class="ub" data-act="ics">.ics</button>' + (withClient ? '' : '<button class="link" data-act="del">Delete</button>') + '</div></div>';
 }
 function wireRems(root, rems, clientsById, after) {
@@ -1981,10 +1981,10 @@ function crmHome() {
     CRM_UI.remTab = CRM_UI.remPick || (buckets.overdue.length ? 'overdue' : buckets.due.length ? 'due' : 'upcoming');
     var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(l) + '</option>'; };
     var inner = '<div class="top"><div><h1>CRM</h1><p class="sub">' + (d.admin ? (CRM_UI.agentId === d.me ? 'Your clients, notes and follow-ups. Use the Agent menu to see another agent’s clients.' : 'Viewing ' + (CRM_UI.agentId ? 'another agent’s' : 'every agent’s') + ' clients.') : 'Your clients, notes and follow-ups. Only you (and the admin) can see them.') + '</p></div>' +
-      '<div class="cact"><button class="btn" id="cAdd">+ Add client</button><button class="ub" id="cImp">Import</button><button class="ub" id="cExp">Export</button><button class="ub" id="cGrp">Groups</button>' + (LO ? '<a class="ub" id="cLen" href="#/crm/lenders">' + (d.admin ? 'Lender rosters' : 'My Lenders') + '</a>' : '') + '<button class="ub" id="cFeed">Calendar feed</button></div></div>' +
+      '<div class="cact"><button class="btn" id="cAdd">+ Add client</button><button class="ub" id="cImp">Import</button><button class="ub" id="cExp">Export</button><button class="ub" id="cGrp">Groups</button>' + (LO ? '<a class="ub" id="cLen" href="#/crm/lenders">' + (d.admin ? 'Lender Rosters' : 'My Lenders') + '</a>' : '') + '<button class="ub" id="cFeed">Calendar Feed</button></div></div>' +
       (d.admin ? '<div class="cagent f"><label for="cAg">Agent</label><select id="cAg">' + opt(d.me, 'My clients', CRM_UI.agentId) + opt('', 'All agents', CRM_UI.agentId) + (d.agents || []).filter(function (a) { return a.id !== d.me; }).map(function (a) { return opt(a.id, a.name, CRM_UI.agentId); }).join('') + '</select></div>' : '') +
-      '<div class="card gb crems"><div class="ush"><h2>Follow-ups</h2></div><div class="seg" role="group" aria-label="Follow-ups">' +
-      [['overdue', 'Overdue'], ['due', 'Due today'], ['upcoming', 'Upcoming']].map(function (x) { return '<button type="button" data-rt="' + x[0] + '" class="' + (CRM_UI.remTab === x[0] ? 'on' : '') + '" aria-pressed="' + (CRM_UI.remTab === x[0]) + '">' + x[1] + ' <span class="ucount' + (x[0] === 'overdue' && buckets.overdue.length ? ' red' : '') + '">' + buckets[x[0]].length + '</span></button>'; }).join('') + '</div>' +
+      '<div class="card gb crems"><div class="ush"><h2>Follow-Ups</h2></div><div class="seg" role="group" aria-label="Follow-Ups">' +
+      [['overdue', 'Overdue'], ['due', 'Due Today'], ['upcoming', 'Upcoming']].map(function (x) { return '<button type="button" data-rt="' + x[0] + '" class="' + (CRM_UI.remTab === x[0] ? 'on' : '') + '" aria-pressed="' + (CRM_UI.remTab === x[0]) + '">' + x[1] + ' <span class="ucount' + (x[0] === 'overdue' && buckets.overdue.length ? ' red' : '') + '">' + buckets[x[0]].length + '</span></button>'; }).join('') + '</div>' +
       '<div id="remList">' + (buckets[CRM_UI.remTab].length ? buckets[CRM_UI.remTab].slice(0, 50).map(function (r) { return remRow(r, byId[r.clientId], true); }).join('') : '<div class="uempty">' + { overdue: 'Nothing overdue.', due: 'Nothing due today.', upcoming: 'No upcoming follow-ups. Add one from a client’s page.' }[CRM_UI.remTab] + '</div>') + '</div></div>' +
       '<div class="cfil"><div class="f cq"><label for="cQ">Search</label><input type="search" id="cQ" placeholder="Name, phone, tag…" value="' + h(CRM_UI.q) + '" autocomplete="off"></div>' +
       '<div class="f"><label for="cSt">Status</label><select id="cSt">' + opt('', 'All', CRM_UI.status) + d.statuses.map(function (s) { return opt(s, s, CRM_UI.status); }).join('') + '</select></div>' +
@@ -2003,14 +2003,14 @@ function crmHome() {
           return !q || q.split(/\s+/).every(function (w) { return c._s.indexOf(w) >= 0; }) || (qd.length >= 3 && c._s.indexOf(qd) >= 0);
         }).sort(function (a, b) { return cName(a).localeCompare(cName(b)); });
         var shown = list.slice(0, CRM_UI.shown);
-        qs('#cRows').innerHTML = (list.length ? '<div class="tbl"><table class="ctbl"><thead><tr><th>Name</th><th>Status</th><th>Type</th><th>Phone</th><th>Email</th>' + (d.admin ? '<th>Agent</th>' : '') + (LO ? '<th>Lender</th>' : '') + '<th>Tags</th><th>Next follow-up</th></tr></thead><tbody>' +
+        qs('#cRows').innerHTML = (list.length ? '<div class="tbl"><table class="ctbl"><thead><tr><th>Name</th><th>Status</th><th>Type</th><th>Phone</th><th>Email</th>' + (d.admin ? '<th>Agent</th>' : '') + (LO ? '<th>Lender</th>' : '') + '<th>Tags</th><th>Next Follow-Up</th></tr></thead><tbody>' +
           shown.map(function (c) {
             return '<tr><td class="cnm"><a href="#/crm/c/' + h(c.id) + '"><b>' + h(cName(c)) + '</b></a></td><td data-l="Status">' + crmStatusPill(c.status) + '</td><td data-l="Type">' + h(d.types[c.type] || c.type) + '</td>' +
               '<td data-l="Phone">' + h(c.phone) + '</td><td data-l="Email" class="cem">' + h(c.email) + '</td>' + (d.admin ? '<td data-l="Agent">' + h(c.ownerName) + '</td>' : '') +
               (LO ? '<td data-l="Lender">' + (c.lenderId ? lenderLabel(c.lenderName, c.lenderCompany) : '') + '</td>' : '') +
-              '<td data-l="Tags">' + (c.tags || []).map(function (t) { return '<span class="ctag">' + h(t) + '</span>'; }).join('') + '</td><td data-l="Follow-up">' + (c.nextDue ? '<span class="' + (new Date(c.nextDue).getTime() < Date.now() ? 'rt' : '') + '">' + h(fmtTs(c.nextDue)) + '</span>' : '') + '</td></tr>';
+              '<td data-l="Tags">' + (c.tags || []).map(function (t) { return '<span class="ctag">' + h(t) + '</span>'; }).join('') + '</td><td data-l="Follow-Up">' + (c.nextDue ? '<span class="' + (new Date(c.nextDue).getTime() < Date.now() ? 'rt' : '') + '">' + h(fmtTs(c.nextDue)) + '</span>' : '') + '</td></tr>';
           }).join('') + '</tbody></table></div>' : '<div class="uempty">' + (d.clients.length ? 'No clients match these filters.' : 'No clients yet. Use <b>+ Add client</b> or <b>Import</b>.') + '</div>') +
-          '<div class="cfoot">' + h(list.length) + ' of ' + h(d.clients.length) + ' clients' + (list.length > shown.length ? ' · <button class="link" id="cMore">Show more</button>' : '') + '</div>';
+          '<div class="cfoot">' + h(list.length) + ' of ' + h(d.clients.length) + ' clients' + (list.length > shown.length ? ' · <button class="link" id="cMore">Show More</button>' : '') + '</div>';
         var mo = qs('#cMore'); if (mo) mo.onclick = function () { CRM_UI.shown += 200; draw(); };
       };
       draw();
@@ -2036,17 +2036,17 @@ function clientView(id) {
     var gName = {}; d.groups.forEach(function (x) { gName[x.id] = x.name; });
     var by = {}; by[c.id] = c;
     var kv = function (l, v) { return '<div><span>' + h(l) + '</span><b>' + (v || '—') + '</b></div>'; };
-    var inner = '<a class="link cback" href="#/crm">← All clients</a><div class="top"><div><div class="pills">' + crmStatusPill(c.status) + '<span class="pill p-pend">' + h(d.types[c.type] || c.type) + '</span></div><h1>' + h(cName(c)) + '</h1></div>' +
+    var inner = '<a class="link cback" href="#/crm">← All Clients</a><div class="top"><div><div class="pills">' + crmStatusPill(c.status) + '<span class="pill p-pend">' + h(d.types[c.type] || c.type) + '</span></div><h1>' + h(cName(c)) + '</h1></div>' +
       '<div class="cact"><button class="btn" id="cEdit">Edit</button><button class="ub red" id="cDel">Delete</button></div></div>' +
       '<div class="card gb"><div class="kv">' + kv('Phone', h(c.phone)) + kv('Email', h(c.email)) + kv('Address', h(c.address)) + (S.crmBday ? kv('Birthday', h(bdayLabel(c.birthday))) : '') + kv('Source', h(c.source)) +
       kv('Tags', (c.tags || []).map(function (t) { return '<span class="ctag">' + h(t) + '</span>'; }).join('')) + kv('Groups', (c.groups || []).map(function (x) { return h(gName[x] || ''); }).filter(Boolean).join(', ')) +
       (c.ownerName !== undefined ? kv('Agent', h(c.ownerName)) : '') +
       (lendOn(d) ? kv('Lender', g.lender ? lenderLabel(g.lender.name, g.lender.company) + ([g.lender.phone, g.lender.email, g.lender.nmls ? 'NMLS #' + g.lender.nmls : ''].filter(Boolean).length ? '<small class="lco">' + h([g.lender.phone, g.lender.email, g.lender.nmls ? 'NMLS #' + g.lender.nmls : ''].filter(Boolean).join(' · ')) + '</small>' : '') : '') : '') +
       kv('Added', h(fmtTs(c.createdAt))) + kv('Updated', h(fmtTs(c.updatedAt))) + '</div>' +
-      (g.txns.length ? '<h3 class="csub">Linked transactions</h3><div class="clinks">' + g.txns.map(function (t) { return '<a class="ub" data-ownfile="1" href="#/t/' + h(t.id) + '">' + h(t.title) + ' · ' + h(t.typeLabel) + ' · ' + h(t.status) + '</a>'; }).join('') + '</div>' : '') + '</div>' +
-      '<div class="cgrid"><div class="card gb"><h3>Follow-ups</h3><form id="rf" class="rform" novalidate><div class="f"><label for="rd">Date &amp; time</label><input type="datetime-local" id="rd" required></div><div class="f rnote"><label for="rn">Note</label><input type="text" id="rn" maxlength="300" placeholder="Call about…"></div><button class="btn" id="rb">Add follow-up</button></form><div id="re"></div>' +
+      (g.txns.length ? '<h3 class="csub">Linked Transactions</h3><div class="clinks">' + g.txns.map(function (t) { return '<a class="ub" data-ownfile="1" href="#/t/' + h(t.id) + '">' + h(t.title) + ' · ' + h(t.typeLabel) + ' · ' + h(t.status) + '</a>'; }).join('') + '</div>' : '') + '</div>' +
+      '<div class="cgrid"><div class="card gb"><h3>Follow-Ups</h3><form id="rf" class="rform" novalidate><div class="f"><label for="rd">Date &amp; time</label><input type="datetime-local" id="rd" required></div><div class="f rnote"><label for="rn">Note</label><input type="text" id="rn" maxlength="300" placeholder="Call about…"></div><button class="btn" id="rb">Add Follow-Up</button></form><div id="re"></div>' +
       '<div id="rl">' + (g.reminders.length ? g.reminders.map(function (r) { return remRow(r, c, false); }).join('') : '<div class="uempty">No follow-ups yet.</div>') + '</div></div>' +
-      '<div class="card gb"><h3>Notes</h3><form id="nf" novalidate><textarea id="nt" maxlength="5000" placeholder="Add a note…" aria-label="New note"></textarea><div class="actions"><button class="btn" id="nb">Add note</button></div></form><div id="ne"></div>' +
+      '<div class="card gb"><h3>Notes</h3><form id="nf" novalidate><textarea id="nt" maxlength="5000" placeholder="Add a note…" aria-label="New Note"></textarea><div class="actions"><button class="btn" id="nb">Add Note</button></div></form><div id="ne"></div>' +
       '<div class="feed">' + (g.notes.length ? g.notes.map(function (n) { return '<div class="ev"><small>' + h(fmtTs(n.createdAt)) + (n.by ? ' · ' + h(n.by) : '') + '</small><div class="ntext">' + h(n.text) + '</div></div>'; }).join('') : '<div class="uempty">No notes yet.</div>') + '</div></div></div>';
     page('crm', inner, function () {
       var again = function () { page.keepScroll = true; clientView(id); };
@@ -2125,7 +2125,7 @@ function clientForm(c, d, linked, curLender) {
   var ownerId = c.ownerId || (d.admin ? (CRM_UI.agentId || S.user.id) : S.user.id);
   var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(l) + '</option>'; };
   var inp = function (id, l, v, type, extra) { return '<div class="f' + (extra || '') + '"><label for="' + id + '">' + l + '</label><input type="' + (type || 'text') + '" id="' + id + '" value="' + h(v || '') + '"' + (type === 'email' ? ' autocapitalize="none" spellcheck="false"' : '') + '></div>'; };
-  var m = modal('<h2>' + (isNew ? 'Add client' : 'Edit client') + '</h2><div id="ce"></div><form id="cf" novalidate><div class="fgrid">' +
+  var m = modal('<h2>' + (isNew ? 'Add Client' : 'Edit Client') + '</h2><div id="ce"></div><form id="cf" novalidate><div class="fgrid">' +
     inp('cfF', 'First name', c.firstName) + inp('cfL', 'Last name', c.lastName) + '<div class="f"><label for="cfP">Phone</label><input type="tel" id="cfP" inputmode="tel" autocomplete="tel-national" placeholder="000-000-0000" maxlength="12" value="' + h(c.phone || '') + '"></div>' + inp('cfE', 'Email', c.email, 'email', ' w2') + inp('cfA', 'Address', c.address, 'text', ' w3') + (S.crmBday ? bdayFields(c.birthday) : '') +
     '<div class="f"><label for="cfT">Client type <span class="req">*</span></label><select id="cfT">' + opt('', 'Choose…', c.type) + Object.keys(d.types).map(function (k) { return opt(k, d.types[k], c.type); }).join('') + '</select></div>' +
     '<div class="f"><label for="cfS">Status</label><select id="cfS">' + d.statuses.map(function (s) { return opt(s, s, c.status); }).join('') + '</select></div>' +
@@ -2135,9 +2135,9 @@ function clientForm(c, d, linked, curLender) {
     (lendOn(d) ? '<div class="f w3"><label for="cfLq">Lender</label><div class="lpick" id="cfLp"><input type="search" id="cfLq" placeholder="Search this roster…" autocomplete="off" aria-label="Search lenders"><select id="cfLn" aria-label="Lender"></select>' +
       '<div class="lbtns"><button type="button" class="ub" id="cfLa">+ Add new lender</button><button type="button" class="link" id="cfLx">Clear</button></div></div><div id="cfLnew"></div></div>' : '') +
     '<div class="f w3"><label>Groups</label><div class="chips" id="cfG"></div></div>' +
-    '<div class="f w3"><label>Linked transactions</label><div class="clinkp" id="cfX"></div></div>' +
+    '<div class="f w3"><label>Linked Transactions</label><div class="clinkp" id="cfX"></div></div>' +
     (isNew ? '<div class="f w3"><label for="cfN">First note</label><textarea id="cfN" maxlength="5000"></textarea></div>' : '') +
-    '</div><div class="actions"><button class="btn" id="cfB">' + (isNew ? 'Add client' : 'Save') + '</button></div></form>', true);
+    '</div><div class="actions"><button class="btn" id="cfB">' + (isNew ? 'Add Client' : 'Save') + '</button></div></form>', true);
   var sel = { g: (c.groups || []).slice(), x: (c.txnIds || []).slice(), l: c.lenderId || '' };
   var LO = lendOn(d);
   // The client's current lender is always pickable, even if this boot's roster view was narrowed to another agent.
@@ -2159,7 +2159,7 @@ function clientForm(c, d, linked, curLender) {
       '<div class="f"><label for="lnN">Name <span class="req">*</span></label><input type="text" id="lnN" maxlength="80"></div><div class="f"><label for="lnC">Company</label><input type="text" id="lnC" maxlength="100"></div>' +
       '<div class="f"><label for="lnP">Phone</label><input type="tel" id="lnP" inputmode="tel" placeholder="000-000-0000" maxlength="12"></div><div class="f w2"><label for="lnE">Email</label><input type="email" id="lnE" maxlength="120" autocapitalize="none" spellcheck="false"></div>' +
       '<div class="f"><label for="lnM">NMLS #</label><input type="text" id="lnM" inputmode="numeric" maxlength="12"></div></div>' +
-      '<div class="actions"><button type="button" class="link" id="lnX">Cancel</button><button type="button" class="btn" id="lnB">Add lender</button></div></div>';
+      '<div class="actions"><button type="button" class="link" id="lnX">Cancel</button><button type="button" class="btn" id="lnB">Add Lender</button></div></div>';
     wirePhone(qs('#lnP', box)); qs('#lnN', box).focus();
     qs('#lnX', box).onclick = function () { box.innerHTML = ''; };
     qs('#lnB', box).onclick = function () {
@@ -2211,7 +2211,7 @@ function clientForm(c, d, linked, curLender) {
     api('crmSaveClient', p).then(function (r) { m.close(); toast(isNew ? 'Client added.' : 'Saved.'); S.crm = null; if (isNew) location.hash = '#/crm/c/' + r.id; else { page.keepScroll = true; clientView(c.id); } })
       .catch(function (e) {
         b.disabled = false;
-        qs('#ce', m).innerHTML = '<div class="err">' + h(e.message) + (e.code === 'DUPLICATE' ? ' <button type="button" class="link" id="cfDup">Save anyway</button>' : '') + '</div>';
+        qs('#ce', m).innerHTML = '<div class="err">' + h(e.message) + (e.code === 'DUPLICATE' ? ' <button type="button" class="link" id="cfDup">Save Anyway</button>' : '') + '</div>';
         var dup = qs('#cfDup', m); if (dup) dup.onclick = function () { save(true); };
         qs('.box', m).scrollTop = 0; m.scrollTop = 0;
       });
@@ -2221,7 +2221,7 @@ function clientForm(c, d, linked, curLender) {
 
 function exportModal(d) {
   var scope = d.admin ? (CRM_UI.agentId ? ((d.agents || []).filter(function (a) { return a.id === CRM_UI.agentId; })[0] || {}).name || 'this agent' : 'all agents') : 'your clients';
-  var m = modal('<h2>Export clients</h2><p class="sub">Downloads a CSV of ' + h(scope) + '. A private copy is also saved in Drive' + (d.admin ? ' (your CRM folder)' : ' (your CRM folder)') + '. Cells that start with = + - @ get a leading apostrophe so spreadsheets never run them as formulas.</p><div id="xe"></div><div class="actions"><button class="btn" id="xb">Download CSV</button></div>');
+  var m = modal('<h2>Export Clients</h2><p class="sub">Downloads a CSV of ' + h(scope) + '. A private copy is also saved in Drive' + (d.admin ? ' (your CRM folder)' : ' (your CRM folder)') + '. Cells that start with = + - @ get a leading apostrophe so spreadsheets never run them as formulas.</p><div id="xe"></div><div class="actions"><button class="btn" id="xb">Download CSV</button></div>');
   qs('#xb', m).onclick = function () {
     var b = this; b.disabled = true;
     api('crmExport', d.admin ? { agentId: crmAg() } : {}).then(function (r) { crmDownload(r.fileName, r.csv, 'text/csv;charset=utf-8'); m.close(); toast(r.count + ' clients exported.'); })
@@ -2234,8 +2234,8 @@ var CRM_TEMPLATE = 'First Name,Last Name,Phone,Email,Address,City,State,Zip,Clie
 function importModal(d) {
   var st = { csv: '', name: '', mapping: null, owner: d.admin ? (CRM_UI.agentId || S.user.id) : '' };
   var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + h(l) + '</option>'; };
-  var m = modal('<h2>Import clients</h2><p class="sub">Upload a CSV. You’ll match its columns, see every row, and confirm before anything is saved. Duplicates are found by email or phone.</p><div id="ie"></div>' +
-    '<div class="cact"><label class="btn" id="ipick">Choose CSV file<input type="file" class="hidden" id="ifile" accept=".csv,text/csv"></label><button type="button" class="ub" id="itpl">Download template</button></div>' +
+  var m = modal('<h2>Import Clients</h2><p class="sub">Upload a CSV. You’ll match its columns, see every row, and confirm before anything is saved. Duplicates are found by email or phone.</p><div id="ie"></div>' +
+    '<div class="cact"><label class="btn" id="ipick">Choose CSV file<input type="file" class="hidden" id="ifile" accept=".csv,text/csv"></label><button type="button" class="ub" id="itpl">Download Template</button></div>' +
     (d.admin ? '<div class="f cagent"><label for="iown">Import into</label><select id="iown">' + opt(S.user.id, uName(S.user) + ' (me)', st.owner) + (d.agents || []).filter(function (a) { return a.id !== S.user.id; }).map(function (a) { return opt(a.id, a.name, st.owner); }).join('') + '</select></div>' : '') +
     '<div id="ibody"></div>', true);
   var err = function (msg) { qs('#ie', m).innerHTML = msg ? '<div class="err">' + h(msg) + '</div>' : ''; };
@@ -2284,7 +2284,7 @@ function groupsModal(d) {
   var owner = d.admin ? (CRM_UI.agentId || S.user.id) : S.user.id;
   var mine = d.groups.filter(function (g) { return g.ownerId === owner; });
   var m = modal('<h2>Groups</h2><p class="sub">Your own lists, like “Open House Oct” or “Investors”.' + (d.admin && owner !== S.user.id ? ' Showing this agent’s groups.' : '') + '</p><div id="ge"></div>' +
-    '<form id="gf" class="rform" novalidate><div class="f rnote"><label for="gn">New group</label><input type="text" id="gn" maxlength="40"></div><button class="btn" id="gb">Add group</button></form>' +
+    '<form id="gf" class="rform" novalidate><div class="f rnote"><label for="gn">New group</label><input type="text" id="gn" maxlength="40"></div><button class="btn" id="gb">Add Group</button></form>' +
     '<div class="glist">' + (mine.length ? mine.map(function (g) { return '<div class="row" data-g="' + h(g.id) + '"><div class="n"><b>' + h(g.name) + '</b><small>' + g.count + ' client' + (g.count === 1 ? '' : 's') + '</small></div><div class="acts"><button class="ub" data-a="ren">Rename</button><button class="link" data-a="del">Delete</button></div></div>'; }).join('') : '<div class="uempty">No groups yet.</div>') + '</div>');
   var done = function (msg) { m.close(); toast(msg); S.crm = null; crmHome(); };
   var err = function (e) { qs('#ge', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; };
@@ -2316,7 +2316,7 @@ function lendersView() {
       var by = {}; d.lenders.forEach(function (l) { var k = l.ownerId; if (!by[k]) { by[k] = { name: l.ownerName || 'Agent', ls: [] }; groups.push(by[k]); } by[k].ls.push(l); });
       groups.sort(function (a, b) { return a.name.localeCompare(b.name); });
     }
-    var inner = '<a class="link cback" href="#/crm">← All clients</a><div class="top"><div><h1>' + (d.admin ? 'Lender rosters' : 'My Lenders') + '</h1><p class="sub">' +
+    var inner = '<a class="link cback" href="#/crm">← All Clients</a><div class="top"><div><h1>' + (d.admin ? 'Lender Rosters' : 'My Lenders') + '</h1><p class="sub">' +
       (d.admin ? 'Each agent keeps their own roster. Pick an agent to narrow it.' : 'Your own lenders, to pick on your clients. Other agents don’t see this roster.') + '</p></div>' +
       '<div class="cact"><button class="btn" id="lAdd">+ Add lender</button></div></div>' +
       (d.admin ? '<div class="cagent f"><label for="lAg">Agent</label><select id="lAg">' + opt(d.me, 'My clients', CRM_UI.agentId) + opt('', 'All agents', CRM_UI.agentId) + (d.agents || []).filter(function (a) { return a.id !== d.me; }).map(function (a) { return opt(a.id, a.name, CRM_UI.agentId); }).join('') + '</select></div>' : '') +
@@ -2342,13 +2342,13 @@ function lenderForm(l, d) {
   var owner = l.ownerId || (d.admin ? (CRM_UI.agentId || S.user.id) : S.user.id);
   var opt = function (v, t, cur) { return '<option value="' + h(v) + '"' + (v === cur ? ' selected' : '') + '>' + h(t) + '</option>'; };
   var inp = function (id, lab, v, extra, attrs) { return '<div class="f' + (extra || '') + '"><label for="' + id + '">' + lab + '</label><input id="' + id + '" value="' + h(v || '') + '" ' + (attrs || 'type="text"') + '></div>'; };
-  var m = modal('<h2>' + (isNew ? 'Add lender' : 'Edit lender') + '</h2><p class="sub">A contact card only: lenders don’t get a login and nothing is sent to them.</p><div id="le"></div><form id="lf" novalidate><div class="fgrid">' +
+  var m = modal('<h2>' + (isNew ? 'Add Lender' : 'Edit Lender') + '</h2><p class="sub">A contact card only: lenders don’t get a login and nothing is sent to them.</p><div id="le"></div><form id="lf" novalidate><div class="fgrid">' +
     inp('lfN', 'Name <span class="req">*</span>', l.name, '', 'type="text" maxlength="80"') + inp('lfC', 'Company', l.company, '', 'type="text" maxlength="100"') +
     inp('lfP', 'Phone', l.phone, '', 'type="tel" inputmode="tel" placeholder="000-000-0000" maxlength="12"') + inp('lfE', 'Email', l.email, ' w2', 'type="email" maxlength="120" autocapitalize="none" spellcheck="false"') +
     inp('lfM', 'NMLS #', l.nmls, '', 'type="text" inputmode="numeric" maxlength="12"') +
     (d.admin && isNew ? '<div class="f w2"><label for="lfO">Agent’s roster</label><select id="lfO">' + opt(S.user.id, uName(S.user) + ' (me)', owner) + (d.agents || []).filter(function (a) { return a.id !== S.user.id; }).map(function (a) { return opt(a.id, a.name, owner); }).join('') + '</select></div>' : '') +
     '<div class="f w3"><label for="lfT">Notes</label><textarea id="lfT" maxlength="1000">' + h(l.notes || '') + '</textarea></div>' +
-    '</div><div class="actions"><button class="btn" id="lfB">' + (isNew ? 'Add lender' : 'Save') + '</button></div></form>', true);
+    '</div><div class="actions"><button class="btn" id="lfB">' + (isNew ? 'Add Lender' : 'Save') + '</button></div></form>', true);
   wirePhone(qs('#lfP', m));
   qs('#lf', m).onsubmit = function (e) {
     e.preventDefault();
@@ -2362,12 +2362,12 @@ function lenderForm(l, d) {
 }
 
 function feedModal(d) {
-  var m = modal('<h2>Calendar feed</h2><p class="sub">Subscribe once and your open follow-ups appear in Google Calendar, Apple Calendar or Outlook, updating on their own. The link is private: anyone who has it can see your follow-ups, so don’t share it. You can turn it off or replace it any time.</p><div id="fe"></div><div id="fb"></div>');
+  var m = modal('<h2>Calendar Feed</h2><p class="sub">Subscribe once and your open follow-ups appear in Google Calendar, Apple Calendar or Outlook, updating on their own. The link is private: anyone who has it can see your follow-ups, so don’t share it. You can turn it off or replace it any time.</p><div id="fe"></div><div id="fb"></div>');
   function draw(active, token) {
     var url = token ? CFG.API_URL + (CFG.API_URL.indexOf('?') >= 0 ? '&' : '?') + 'feed=' + encodeURIComponent(token) : '';
     qs('#fb', m).innerHTML = (token ? '<div class="ok">Copy this link now. For safety it is shown only once.</div><div class="f"><label for="fu">Feed link</label><input type="text" id="fu" readonly value="' + h(url) + '"></div>' +
       '<p class="cmuted">Google Calendar (computer): Other calendars → + → From URL → paste. iPhone: Settings → Calendar → Accounts → Add Subscribed Calendar.</p>' : '<p>' + (active ? 'Your feed is <b>on</b>' + (d.feed.createdAt ? ' (since ' + h(fmtTs(d.feed.createdAt)) + ')' : '') + '. The link was shown when you created it; make a new one if you lost it (the old one stops working).' : 'Your feed is <b>off</b>.') + '</p>') +
-      '<div class="actions">' + (token ? '<button class="btn" id="fc">Copy link</button>' : '') + (active ? '<button class="ub red" id="fr">Turn off</button>' : '') + '<button class="' + (token ? 'ub' : 'btn') + '" id="fn">' + (active ? 'Make a new link' : 'Turn on') + '</button></div>';
+      '<div class="actions">' + (token ? '<button class="btn" id="fc">Copy Link</button>' : '') + (active ? '<button class="ub red" id="fr">Turn Off</button>' : '') + '<button class="' + (token ? 'ub' : 'btn') + '" id="fn">' + (active ? 'Make a New Link' : 'Turn On') + '</button></div>';
     var fc = qs('#fc', m); if (fc) fc.onclick = function () { var i = qs('#fu', m); i.select(); (navigator.clipboard ? navigator.clipboard.writeText(i.value) : Promise.reject()).then(function () { toast('Copied.'); }, function () { document.execCommand('copy'); toast('Copied.'); }); };
     var fr = qs('#fr', m); if (fr) fr.onclick = function () { api('crmFeed', { op: 'revoke' }).then(function () { d.feed = { active: false }; toast('Feed turned off.'); draw(false); }).catch(function (e) { qs('#fe', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; }); };
     qs('#fn', m).onclick = function () { if (active && !confirm('Make a new link? The old link stops working.')) return; api('crmFeed', { op: 'create' }).then(function (r) { d.feed = { active: true, createdAt: r.createdAt }; draw(true, r.token); }).catch(function (e) { qs('#fe', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; }); };
@@ -2394,7 +2394,7 @@ function formsRest(it) {   // the forms text minus the category (now a subtitle)
 }
 function needsMiscTitle(it) { return !!(it && it.misc && !it.customTitle); }
 function titleModal(it, fn) {
-  var m = modal('<h2>Title this Misc document</h2><p class="sub">' + h(it.title) + ' needs a title before a document goes in it. Name it after the document, for example “HOA Approval Letter”.</p><div id="me"></div><input type="text" id="mt" maxlength="80"><div class="actions"><button class="btn" id="mb">Continue</button></div>');
+  var m = modal('<h2>Title This Misc Document</h2><p class="sub">' + h(it.title) + ' needs a title before a document goes in it. Name it after the document, for example “HOA Approval Letter”.</p><div id="me"></div><input type="text" id="mt" maxlength="80"><div class="actions"><button class="btn" id="mb">Continue</button></div>');
   qs('#mt', m).focus();
   qs('#mt', m).onkeydown = function (e) { if (e.key === 'Enter') qs('#mb', m).click(); };
   qs('#mb', m).onclick = function () {
@@ -2416,13 +2416,13 @@ function confirmModal(title, body, btn, fn) {
 }
 function delDocModal(docId) {
   var x = S.txn.documents.filter(function (y) { return y.id === docId; })[0]; if (!x) return;
-  confirmModal('Delete attachment?', 'Delete <b>' + h(x.name) + '</b> from this file? It leaves the checklist and Document Storage. A copy stays in the Drive archive for records retention, and an admin can restore it.', 'Delete', function () {
+  confirmModal('Delete Attachment?', 'Delete <b>' + h(x.name) + '</b> from this file? It leaves the checklist and Document Storage. A copy stays in the Drive archive for records retention, and an admin can restore it.', 'Delete', function () {
     return api('removeDocument', { docId: docId }).then(function () { toast('Attachment deleted.'); refresh(); });
   });
 }
 function delNoteModal(noteId, after) {
   var n = S.txn.notes.filter(function (y) { return y.id === noteId; })[0]; if (!n) return;
-  confirmModal('Delete note?', 'Delete this note by <b>' + h(n.by) + '</b>? “' + h(String(n.text).slice(0, 140)) + (String(n.text).length > 140 ? '…' : '') + '”', 'Delete note', function () {
+  confirmModal('Delete Note?', 'Delete this note by <b>' + h(n.by) + '</b>? “' + h(String(n.text).slice(0, 140)) + (String(n.text).length > 140 ? '…' : '') + '”', 'Delete Note', function () {
     return api('deleteNote', { noteId: noteId }).then(function () { toast('Note deleted.'); if (after) after(); refresh(); });
   });
 }
@@ -2430,7 +2430,7 @@ function itemDocsModal(itemId) {   // checklist item attachments popup (replaces
   var d = S.txn, it = d.items.filter(function (x) { return x.id === itemId; })[0]; if (!it) return;
   var docs = docsOf(itemId), adm = !!S.v150 && isAdmin();
   var m = modal('<h2>Attachments · ' + h(it.title) + '</h2><p class="sub">' + docs.length + (docs.length === 1 ? ' attachment' : ' attachments') + '. Tap one to preview.</p><div class="docs adocs">' + docs.map(function (x) {
-    return '<span class="dwrap"><button class="dl" data-doc="' + h(x.id) + '">' + h(x.name) + (x.pageRange ? ' (pages ' + h(x.pageRange) + ')' : '') + '</button>' + (adm ? '<button class="dx" data-doc="' + h(x.id) + '" data-n="' + h(x.name) + '" title="Delete attachment" aria-label="Delete ' + h(x.name) + '">×</button>' : '') + '</span>';
+    return '<span class="dwrap"><button class="dl" data-doc="' + h(x.id) + '">' + h(x.name) + (x.pageRange ? ' (pages ' + h(x.pageRange) + ')' : '') + '</button>' + (adm ? '<button class="dx" data-doc="' + h(x.id) + '" data-n="' + h(x.name) + '" title="Delete Attachment" aria-label="Delete ' + h(x.name) + '">×</button>' : '') + '</span>';
   }).join('') + '</div>');
   var esc = function (e) { if (e.key === 'Escape' && document.body.contains(m) && !qs('.modal ~ .modal')) m.close(); };
   var close0 = m.close; m.close = function () { document.removeEventListener('keydown', esc); close0(); };
@@ -2443,8 +2443,8 @@ function itemNotesModal(itemId) {
   var d = S.txn, it = d.items.filter(function (x) { return x.id === itemId; })[0]; if (!it) return;
   var ns = d.notes.filter(function (n) { return n.itemId === itemId; }).slice().reverse();
   var m = modal('<h2>Notes · ' + h(it.title) + '</h2><p class="sub">' + (ns.length ? ns.length + (ns.length === 1 ? ' note' : ' notes') + ', newest first.' : 'No notes on this item yet.') + '</p><div class="feed nfeed">' + ns.map(function (n) {
-    return '<div class="ev"><b>' + h(n.by) + '</b> ' + (n.kind === 'rejection' ? '<span class="rt">rejected</span> ' : n.kind === 'resubmit' ? '<span class="gt">resubmitted</span> ' : n.kind === 'review' ? '<span class="gt">approved</span> ' : '') + (canDelNotes() ? '<button class="nx" data-note="' + h(n.id) + '" title="Delete note" aria-label="Delete note">×</button>' : '') + '<br>' + h(n.text).replace(/\n/g, '<br>') + '<small>' + h(fmtTs(n.createdAt)) + '</small></div>';
-  }).join('') + '</div>' + (d.txn.readOnly ? '' : '<div id="me"></div><textarea id="mt" placeholder="Add a note for this item"></textarea><div class="actions"><button class="btn" id="mb">Add note</button></div>'));
+    return '<div class="ev"><b>' + h(n.by) + '</b> ' + (n.kind === 'rejection' ? '<span class="rt">rejected</span> ' : n.kind === 'resubmit' ? '<span class="gt">resubmitted</span> ' : n.kind === 'review' ? '<span class="gt">approved</span> ' : '') + (canDelNotes() ? '<button class="nx" data-note="' + h(n.id) + '" title="Delete Note" aria-label="Delete Note">×</button>' : '') + '<br>' + h(n.text).replace(/\n/g, '<br>') + '<small>' + h(fmtTs(n.createdAt)) + '</small></div>';
+  }).join('') + '</div>' + (d.txn.readOnly ? '' : '<div id="me"></div><textarea id="mt" placeholder="Add a note for this item"></textarea><div class="actions"><button class="btn" id="mb">Add Note</button></div>'));
   qsa('.nx', m).forEach(function (b) { b.onclick = function () { m.close(); delNoteModal(b.getAttribute('data-note')); }; });
   if (qs('#mb', m)) qs('#mb', m).onclick = function () {
     var v = qs('#mt', m).value.trim(); if (!v) { qs('#me', m).innerHTML = '<div class="err">Write the note first.</div>'; return; }
@@ -2459,7 +2459,7 @@ function goalBars(g) {
     row('Units closed', g.closedUnits, g.units ? String(g.units) : '', g.unitsPct) + row('Volume closed', moneyShort(g.closedVolume), g.volume ? moneyShort(g.volume) : '', g.volumePct) + '</div>';
 }
 function teamTable(tm) {
-  return '<div class="gb tbl tprod"><div class="ttl">' + h(tm.name) + ' · ' + h(tm.year) + ' production</div><table><thead><tr><th>Agent</th><th>Open</th><th>Units</th><th>Volume</th><th>Units goal</th><th>Volume goal</th><th>Rank</th></tr></thead><tbody>' +
+  return '<div class="gb tbl tprod"><div class="ttl">' + h(tm.name) + ' · ' + h(tm.year) + ' production</div><table><thead><tr><th>Agent</th><th>Open</th><th>Units</th><th>Volume</th><th>Units Goal</th><th>Volume Goal</th><th>Rank</th></tr></thead><tbody>' +
     tm.agents.map(function (a) { return '<tr><td>' + h(a.name) + (a.leader ? ' <span class="pill p-pend">Team Leader</span>' : '') + '</td><td>' + a.open + '</td><td>' + a.closedUnits + '</td><td>' + moneyShort(a.closedVolume) + '</td><td>' + (a.goalUnits ? a.unitsPct + '% of ' + a.goalUnits : '—') + '</td><td>' + (a.goalVolume ? a.volumePct + '% of ' + moneyShort(a.goalVolume) : '—') + '</td><td>#' + a.rank + '</td></tr>'; }).join('') +
     '<tr class="tot"><td>Team total</td><td>' + tm.totals.open + '</td><td>' + tm.totals.closedUnits + '</td><td>' + moneyShort(tm.totals.closedVolume) + '</td><td></td><td></td><td></td></tr></tbody></table></div>';
 }
@@ -2467,7 +2467,7 @@ function goalsModal() {
   var m = modal('<h2>Goals</h2><div id="ge"><div class="loading"><span class="spin"></span>Loading…</div></div>');
   api('getGoals').then(function (r) {
     var g = r.goals || {};
-    qs('#ge', m).innerHTML = '<p class="sub">Your ' + h(goalsYear(g)) + ' goals. Closed units count each side you represent; volume is the sales price per side.</p><div id="gx"></div><div class="fgrid"><div class="f"><label for="gu">Units (closed sides)</label><input type="text" inputmode="numeric" id="gu" value="' + (g.units || '') + '" placeholder="e.g. 12"></div><div class="f w2"><label for="gv">Volume ($)</label><input type="text" inputmode="numeric" id="gv" value="' + (g.volume ? money(g.volume) : '') + '" placeholder="e.g. $10,000,000"></div></div><div class="actions"><button class="btn" id="gb">Save goals</button></div>';
+    qs('#ge', m).innerHTML = '<p class="sub">Your ' + h(goalsYear(g)) + ' goals. Closed units count each side you represent; volume is the sales price per side.</p><div id="gx"></div><div class="fgrid"><div class="f"><label for="gu">Units (closed sides)</label><input type="text" inputmode="numeric" id="gu" value="' + (g.units || '') + '" placeholder="e.g. 12"></div><div class="f w2"><label for="gv">Volume ($)</label><input type="text" inputmode="numeric" id="gv" value="' + (g.volume ? money(g.volume) : '') + '" placeholder="e.g. $10,000,000"></div></div><div class="actions"><button class="btn" id="gb">Save Goals</button></div>';
     qs('#gv', m).onblur = function () { var n = Number(this.value.replace(/[$,\s]/g, '')); if (n) this.value = money(n); };
     qs('#gb', m).onclick = function () {
       var u = qs('#gu', m).value.replace(/[,\s]/g, ''), v = qs('#gv', m).value.replace(/[$,\s]/g, '');
@@ -2489,10 +2489,10 @@ function teamsSection(users) {
     var edit = function (x) {
       x = x || { name: '', leaderId: '', memberIds: [] };
       var other = {}; teams.forEach(function (o) { if (o.id !== x.id) o.memberIds.forEach(function (id) { other[id] = o.name; }); });
-      var m = modal('<h2>' + (x.id ? 'Edit team' : 'New team') + '</h2><div id="te"></div><div class="fgrid"><div class="f w3"><label for="tn">Team name *</label><input type="text" id="tn" maxlength="60" value="' + h(x.name) + '"></div>' +
+      var m = modal('<h2>' + (x.id ? 'Edit Team' : 'New Team') + '</h2><div id="te"></div><div class="fgrid"><div class="f w3"><label for="tn">Team name *</label><input type="text" id="tn" maxlength="60" value="' + h(x.name) + '"></div>' +
         '<div class="f w3"><label for="tl">Team Leader *</label><select id="tl"><option value="">Choose an agent</option>' + agents.map(function (u) { return '<option value="' + h(u.id) + '"' + (u.id === x.leaderId ? ' selected' : '') + '>' + h(uName(u)) + (other[u.id] ? ' (on ' + h(other[u.id]) + ')' : '') + '</option>'; }).join('') + '</select></div>' +
         '<div class="f w3"><label>Agents on the team</label><div class="tpick">' + agents.map(function (u) { return '<label><input type="checkbox" value="' + h(u.id) + '"' + (x.memberIds.indexOf(u.id) >= 0 && u.id !== x.leaderId ? ' checked' : '') + '> ' + h(uName(u)) + (other[u.id] ? ' <small>(moves from ' + h(other[u.id]) + ')</small>' : '') + '</label>'; }).join('') + '</div></div></div>' +
-        '<div class="actions"><button class="btn" id="ts">Save team</button></div>', true);
+        '<div class="actions"><button class="btn" id="ts">Save Team</button></div>', true);
       var sync = function () { var l = qs('#tl', m).value; qsa('.tpick input', m).forEach(function (c) { c.disabled = c.value === l; if (c.value === l) c.checked = false; }); };
       qs('#tl', m).onchange = sync; sync();
       qs('#ts', m).onclick = function () {

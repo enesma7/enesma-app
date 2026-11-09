@@ -4,11 +4,11 @@ window.HubCalcs.flip = function (host) {
   (function(){
 const D={arv:900000,price:600000,repairs:85000,months:6,loanPct:100,rate:9,points:2,rehabRate:0,buyClose:1,buyComm:0,taxCredit:0,taxRate:1.25,ins:0.17,misc:0,mkt:0,listComm:2,sellComm:2,sellClose:1,credits:0,sellMisc:0};
 const V=Object.assign({},D);
-const CARDS=[["The deal",[["arv","Sale price (ARV)","d"],["price","Purchase price","d"],["repairs","Rehab / repairs","d"],["months","Holding period","m"]]],
+const CARDS=[["The Deal",[["arv","Sale price (ARV)","d"],["price","Purchase price","d"],["repairs","Rehab / repairs","d"],["months","Holding period","m"]]],
 ["Financing",[["loanPct","Loan-to-purchase","p"],["rate","Interest rate (annual)","p"],["points","Points &amp; loan closing","p"],["rehabRate","Rehab loan rate","p"]]],
-["Buying costs",[["buyClose","Escrow / title / misc","p"],["buyComm","Buyer's agent comm.","p"],["taxCredit","Tax proration","d"]]],
-["Holding costs",[["taxRate","Property tax (annual)","p"],["ins","Insurance","p"],["misc","Misc fees","d"],["mkt","Marketing / staging","d"]]],
-["Selling costs",[["listComm","Listing commission","p"],["sellComm","Buyer's agent comm.","p"],["sellClose","Escrow / title / misc","p"],["credits","Buyer credits","d"],["sellMisc","Misc selling fees","d"]]]];
+["Buying Costs",[["buyClose","Escrow / title / misc","p"],["buyComm","Buyer's agent comm.","p"],["taxCredit","Tax proration","d"]]],
+["Holding Costs",[["taxRate","Property tax (annual)","p"],["ins","Insurance","p"],["misc","Misc fees","d"],["mkt","Marketing / staging","d"]]],
+["Selling Costs",[["listComm","Listing commission","p"],["sellComm","Buyer's agent comm.","p"],["sellClose","Escrow / title / misc","p"],["credits","Buyer credits","d"],["sellMisc","Misc selling fees","d"]]]];
 const n=v=>{v=parseFloat(v);return isFinite(v)?v:0};
 const $=v=>(v<-.5?"−$":"$")+Math.abs(Math.round(v)).toLocaleString("en-US");
 const pc=(v,dp=1)=>isFinite(v)?(v<0?"−":"")+Math.abs(v*100).toFixed(dp)+"%":"—";
@@ -40,18 +40,18 @@ function upd(){const r=calc(),neg=r.net<0,cls=v=>v<0?"neg-t":"";
  document.getElementById("t0").innerHTML=`Spread <b>${$(r.arv-r.price-r.rep)}</b>`;document.getElementById("t1").innerHTML=`Interest <b>${$(r.int+r.rehabInt)}</b>`;document.getElementById("t2").innerHTML=`Total <b>${$(r.buying)}</b>`;document.getElementById("t3").innerHTML=`Total <b>${$(r.holding)}</b>`;document.getElementById("t4").innerHTML=`Total <b>${$(r.selling)}</b>`;
  const tot=Math.max(1,r.price+r.buying+r.rep+r.holding+r.selling+Math.max(0,r.net)),w=v=>Math.max(0,v)/tot*100;
  const seg=[["Purchase",r.price,COL.price],["Buying",r.buying,COL.buying],["Rehab",r.rep,COL.rep],["Holding",r.holding,COL.holding],["Selling",r.selling,COL.selling],["Profit",Math.max(0,r.net),"var(--gold)"]];
- document.getElementById("res").innerHTML=`<div class="top"><div class="k">Estimated net profit</div><div class="big ${neg?"neg":""}" id="out">${$(r.net)}</div><div class="note">${neg?"This deal loses money with these numbers.":`On a ${$(r.arv)} sale after ${+r.mo.toFixed(2)} months`}</div></div>
- <div class="kpis"><div class="kpi"><div class="k">Cash needed</div><div class="v">${$(r.cash)}</div><div class="s">Out of pocket</div></div>
- <div class="kpi"><div class="k">Cash-on-cash</div><div class="v ${cls(r.coc)}">${pc(r.coc,0)}</div><div class="s">Profit ÷ cash needed</div></div>
- <div class="kpi"><div class="k">ROI on total cost</div><div class="v ${cls(r.roi)}">${pc(r.roi)}</div><div class="s">Profit ÷ all-in cost</div></div>
- <div class="kpi" style="border-color:transparent!important;background:linear-gradient(var(--blk),var(--blk)) padding-box,${ST.c} border-box"><div class="k">Max Offer (80% rule)</div><div class="v" style="background:${ST.c};-webkit-background-clip:text;background-clip:text;color:transparent;display:inline-block;max-width:100%">${$(r.mao)}</div><div class="s">${r.price<=r.mao?$(r.mao-r.price)+" under max offer":$(r.price-r.mao)+" over max offer"} · <b style="background:${ST.c};-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:600">${ST.t}</b></div></div></div></div>
+ document.getElementById("res").innerHTML=`<div class="top"><div class="k">Estimated Net Profit</div><div class="big ${neg?"neg":""}" id="out">${$(r.net)}</div><div class="note">${neg?"This deal loses money with these numbers.":`On a ${$(r.arv)} sale after ${+r.mo.toFixed(2)} months`}</div></div>
+ <div class="kpis"><div class="kpi"><div class="k">Cash Needed</div><div class="v">${$(r.cash)}</div><div class="s">Out of pocket</div></div>
+ <div class="kpi"><div class="k">Cash-on-Cash</div><div class="v ${cls(r.coc)}">${pc(r.coc,0)}</div><div class="s">Profit ÷ cash needed</div></div>
+ <div class="kpi"><div class="k">ROI on Total Cost</div><div class="v ${cls(r.roi)}">${pc(r.roi)}</div><div class="s">Profit ÷ all-in cost</div></div>
+ <div class="kpi" style="border-color:transparent!important;background:linear-gradient(var(--blk),var(--blk)) padding-box,${ST.c} border-box"><div class="k">Max Offer (80% Rule)</div><div class="v" style="background:${ST.c};-webkit-background-clip:text;background-clip:text;color:transparent;display:inline-block;max-width:100%">${$(r.mao)}</div><div class="s">${r.price<=r.mao?$(r.mao-r.price)+" under max offer":$(r.price-r.mao)+" over max offer"} · <b style="background:${ST.c};-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:600">${ST.t}</b></div></div></div></div>
  <div class="stack">${seg.map(s=>`<div style="width:${w(s[1])}%;background:${s[2]}"></div>`).join("")}</div>
  <div class="legend">${seg.map(s=>`<span><i style="background:${s[2]}"></i>${s[0]} ${$(s[1])}</span>`).join("")}</div>
  <div class="tbl"><div class="h"><span>Sale price (ARV)</span><span>${$(r.arv)}</span></div>
  <div><span>Purchase price</span><span>−${$(r.price)}</span></div><div><span>Buying costs (points, escrow, commission, tax)</span><span>−${$(r.buying)}</span></div>
  <div><span>Rehab / repairs</span><span>−${$(r.rep)}</span></div><div><span>Holding (interest, taxes, insurance, misc)</span><span>−${$(r.holding)}</span></div>
  <div><span>Selling (commissions, escrow, credits)</span><span>−${$(r.selling)}</span></div><div><span>Total investment (all-in before selling)</span><span>${$(r.project)}</span></div>
- <div class="tot"><span>Estimated net profit</span><span class="${cls(r.net)}">${$(r.net)}</span></div></div>`}
+ <div class="tot"><span>Estimated Net Profit</span><span class="${cls(r.net)}">${$(r.net)}</span></div></div>`}
 upd();
 
 /* ENESMA one-page report (PDF / JPG), client-side */
@@ -138,10 +138,10 @@ document.getElementById("dlPdf").addEventListener("click",e=>run("pdf",e.current
 window.HubCalcs.net = function (host) {
   host.innerHTML = "<div class=\"wrap\" id=\"wrap\">\n<p class=\"eyebrow\">ENESMA Realty \u00b7 Seller Estimate</p><h1>Estimated Net Sheet</h1><p class=\"sub\">Estimate a seller's net proceeds at closing. Results update as you type; blank fields count as $0.</p>\n<div class=\"lay\"><div class=\"col\" id=\"cards\"></div><div class=\"card res\" id=\"res\"></div></div>\n<p class=\"fine\"><b>Disclosure:</b> This calculator provides an estimate only, for informational purposes. It is not financial, tax, legal or lending advice and does not guarantee results. Actual figures will vary. Please consult your ENESMA agent before relying on these numbers. Escrow, title and payoff figures must be confirmed with escrow and the lender.</p></div>";
   (function(){
-const G=[["Sale & commissions",[["price","Sale price","d",800000],["listPct","Listing agent comm.","p",3],["sellPct","Selling agent comm.","p",2],["prorate","County tax proration","d",""]]],
-["Title charges",[["owners","Owner's title policy","d",0],["subEsc","Sub-escrow fee","d",68],["tWire","Title wire fee","d",30],["tMess","Title messenger fee","d",55],["tRec","Recording service fee","d",30],["xfer","County transfer tax","d",682],["half","1st half taxes","d",0]]],
-["Escrow & recording",[["escrow","Escrow fee","d",0],["docs","Doc prep / demand fee","d",250],["eWire","Wire fee","d",100],["eMess","Overnight / messenger","d",75],["notary","Notary (grant deed)","d",150],["email","Email doc fee","d",100],["f593","593 processing fee","d",0],["lien","Release of lien","d",50]]],
-["Payoffs & disbursements",[["pay1","1st loan payoff","d",230000],["pay2","2nd loan payoff","d",0],["nhd","Natural hazard report","d",99],["warr","Home warranty","d",0],["tc","Transaction coordinator","d",400],["comp","Compliance fee","d",250],["risk","Risk management","d",99],["termite","Termite report","d",0],["ftb","FTB withholding","d",0]]]];
+const G=[["Sale & Commissions",[["price","Sale price","d",800000],["listPct","Listing agent comm.","p",3],["sellPct","Selling agent comm.","p",2],["prorate","County tax proration","d",""]]],
+["Title Charges",[["owners","Owner's title policy","d",0],["subEsc","Sub-escrow fee","d",68],["tWire","Title wire fee","d",30],["tMess","Title messenger fee","d",55],["tRec","Recording service fee","d",30],["xfer","County transfer tax","d",682],["half","1st half taxes","d",0]]],
+["Escrow & Recording",[["escrow","Escrow fee","d",0],["docs","Doc prep / demand fee","d",250],["eWire","Wire fee","d",100],["eMess","Overnight / messenger","d",75],["notary","Notary (grant deed)","d",150],["email","Email doc fee","d",100],["f593","593 processing fee","d",0],["lien","Release of lien","d",50]]],
+["Payoffs & Disbursements",[["pay1","1st loan payoff","d",230000],["pay2","2nd loan payoff","d",0],["nhd","Natural hazard report","d",99],["warr","Home warranty","d",0],["tc","Transaction coordinator","d",400],["comp","Compliance fee","d",250],["risk","Risk management","d",99],["termite","Termite report","d",0],["ftb","FTB withholding","d",0]]]];
 const V={};G.forEach(g=>g[1].forEach(f=>V[f[0]]=f[3]));
 const n=v=>{v=parseFloat(v);return isFinite(v)?v:0},$=v=>(v<-.5?"−$":"$")+Math.abs(Math.round(v)).toLocaleString("en-US");
 let mobile=false;
@@ -167,16 +167,16 @@ function calc(){const g=k=>n(V[k]),r={};
  r.costs=r.pror+r.comm+r.title+r.rec+r.esc+r.disb;r.net=r.price-r.costs-r.pay;return r}
 function upd(){const r=calc();document.getElementById("t0").innerHTML=`Comm. <b>${$(r.comm)}</b>`;document.getElementById("t1").innerHTML=`Total <b>${$(r.title)}</b>`;document.getElementById("t2").innerHTML=`Total <b>${$(r.esc+r.rec)}</b>`;document.getElementById("t3").innerHTML=`Total <b>${$(r.pay+r.disb)}</b>`;
  const seg=[["Payoffs",r.pay,"#FBFBFB"],["Commissions",r.comm,"linear-gradient(135deg,rgba(234,213,158,.75),rgba(213,190,135,.75))"],["Title, escrow & fees",r.costs-r.comm,"linear-gradient(135deg,rgba(234,213,158,.4),rgba(213,190,135,.4))"],["Net to seller",Math.max(0,r.net),"var(--gold)"]],tot=Math.max(1,seg.reduce((a,s)=>a+Math.max(0,s[1]),0));
- document.getElementById("res").innerHTML=`<div class="top"><div class="k">Approximate net proceeds</div><div class="big ${r.net<0?"neg":""}" id="out">${$(r.net)}</div><div class="note">${mobile?"Mobile home: 593 fee added, no title insurance":"On a "+$(r.price)+" sale"}</div></div>
- <div class="kpis"><div class="kpi"><div class="k">Total selling costs</div><div class="v">${$(r.costs)}</div><div class="s">${r.price?(r.costs/r.price*100).toFixed(1):0}% of sale price</div></div><div class="kpi"><div class="k">Loan payoffs</div><div class="v">${$(r.pay)}</div><div class="s">1st + 2nd</div></div></div>
+ document.getElementById("res").innerHTML=`<div class="top"><div class="k">Approximate Net Proceeds</div><div class="big ${r.net<0?"neg":""}" id="out">${$(r.net)}</div><div class="note">${mobile?"Mobile home: 593 fee added, no title insurance":"On a "+$(r.price)+" sale"}</div></div>
+ <div class="kpis"><div class="kpi"><div class="k">Total Selling Costs</div><div class="v">${$(r.costs)}</div><div class="s">${r.price?(r.costs/r.price*100).toFixed(1):0}% of sale price</div></div><div class="kpi"><div class="k">Loan Payoffs</div><div class="v">${$(r.pay)}</div><div class="s">1st + 2nd</div></div></div>
  <div class="stack">${seg.map(s=>`<div style="width:${Math.max(0,s[1])/tot*100}%;background:${s[2]}"></div>`).join("")}</div>
  <div class="legend">${seg.map(s=>`<span><i style="background:${s[2]}"></i>${s[0]}</span>`).join("")}</div>
  <div class="tbl"><div class="h"><span>Total consideration</span><span>${$(r.price)}</span></div>
  <div><span>Prorations (county taxes)</span><span>−${$(r.pror)}</span></div><div><span>Commissions</span><span>−${$(r.comm)}</span></div>
  <div><span>Title charges${mobile?" (no title insurance)":""}</span><span>−${$(r.title)}</span></div><div><span>Recording charges</span><span>−${$(r.rec)}</span></div>
- <div><span>Escrow charges${mobile?" (incl. $300 593 fee)":""}</span><span>−${$(r.esc)}</span></div><div><span>Loan payoffs</span><span>−${$(r.pay)}</span></div>
+ <div><span>Escrow charges${mobile?" (incl. $300 593 fee)":""}</span><span>−${$(r.esc)}</span></div><div><span>Loan Payoffs</span><span>−${$(r.pay)}</span></div>
  <div><span>Additional disbursements</span><span>−${$(r.disb)}</span></div>
- <div class="tot"><span>Approximate net proceeds</span><span class="${r.net<0?"neg-t":""}">${$(r.net)}</span></div></div>`}
+ <div class="tot"><span>Approximate Net Proceeds</span><span class="${r.net<0?"neg-t":""}">${$(r.net)}</span></div></div>`}
 upd();
 
 /* ENESMA one-page report (PDF / JPG), client-side */
@@ -266,9 +266,9 @@ window.HubCalcs.mortgage = function (host) {
 const V={price:600000,down:60000,downPct:10,rate:6.5,term:30,taxPct:1.25,ins:1500,hoa:0,pmi:0.5};
 const n=v=>{v=parseFloat(v);return isFinite(v)?v:0},$=(v,c)=>(v<-.005?"−$":"$")+Math.abs(c?v:Math.round(v)).toLocaleString("en-US",c?{minimumFractionDigits:2,maximumFractionDigits:2}:{});
 const F=(k,l,t,id)=>`<label><span class="t">${l}</span><span class="box ${t}">${t==="d"?'<i class="pre">$</i>':'<i class="suf">'+(t==="p"?"%":"/yr")+'</i>'}<input type="number" step="any" min="0" inputmode="decimal" value="${V[k]}" placeholder="0" data-k="${k}" aria-label="${l}"></span><span class="calc" id="c_${k}"></span></label>`;
-document.getElementById("cards").innerHTML=`<div class="card"><h2>Home &amp; loan<span id="t0"></span></h2><div class="f">${F("price","Purchase price","d")}${F("down","Down payment ($)","d")}${F("downPct","Down payment (%)","p")}${F("rate","Interest rate","p")}
+document.getElementById("cards").innerHTML=`<div class="card"><h2>Home &amp; Loan<span id="t0"></span></h2><div class="f">${F("price","Purchase price","d")}${F("down","Down payment ($)","d")}${F("downPct","Down payment (%)","p")}${F("rate","Interest rate","p")}
 <label><span class="t">Loan term</span><div class="seg" id="term">${[15,20,30].map(y=>`<button type="button" data-y="${y}" class="${y==V.term?"on":""}">${y} yr</button>`).join("")}</div><span class="calc" id="c_term"></span></label></div></div>
-<div class="card"><h2>Monthly costs<span id="t1"></span></h2><div class="f">${F("taxPct","Property tax","p")}${F("ins","Homeowners ins.","y")}${F("hoa","HOA dues (monthly)","d")}${F("pmi","PMI rate (annual)","p")}</div></div>`;
+<div class="card"><h2>Monthly Costs<span id="t1"></span></h2><div class="f">${F("taxPct","Property tax","p")}${F("ins","Homeowners ins.","y")}${F("hoa","HOA dues (monthly)","d")}${F("pmi","PMI rate (annual)","p")}</div></div>`;
 document.querySelectorAll("input[data-k]").forEach(e=>e.addEventListener("input",()=>{const k=e.dataset.k;V[k]=e.value;const p=n(V.price);
  if(k==="down"){V.downPct=p?+(n(V.down)/p*100).toFixed(3):0;q("downPct").value=V.downPct}
  if(k==="downPct"||k==="price"){V.down=Math.round(p*n(V.downPct)/100);q("down").value=V.down}upd()}));
@@ -282,12 +282,12 @@ function upd(){const r=calc();document.getElementById("t0").innerHTML=`Loan <b>$
  document.getElementById("c_price").innerHTML="<em>home price</em>";document.getElementById("c_down").innerHTML=`<em>${(r.dp*100).toFixed(1)}% down</em>`;document.getElementById("c_downPct").innerHTML=r.dp<.2?"PMI applies <em>· under 20%</em>":"<em>no PMI · 20%+</em>";
  document.getElementById("c_rate").innerHTML=`${$(r.pi,1)} <em>P&amp;I / mo</em>`;document.getElementById("c_term").innerHTML=`<em>${r.N} payments</em>`;document.getElementById("c_taxPct").innerHTML=`${$(r.tax,1)} <em>/ mo</em>`;document.getElementById("c_ins").innerHTML=`${$(r.ins,1)} <em>/ mo</em>`;document.getElementById("c_hoa").innerHTML="<em>if applicable</em>";
  document.getElementById("c_pmi").innerHTML=r.pmiOn?`${$(r.pmi,1)} <em>/ mo · of loan</em>`:"<em>off at 20%+ down</em>";
- const seg=[["Principal &amp; interest",r.pi,"var(--gold)"],["Property tax",r.tax,"linear-gradient(135deg,rgba(234,213,158,.75),rgba(213,190,135,.75))"],["Insurance",r.ins,"#FBFBFB"],["HOA",r.hoa,"rgba(251,251,251,.45)"],["PMI",r.pmi,"linear-gradient(135deg,rgba(234,213,158,.4),rgba(213,190,135,.4))"]],tot=Math.max(.01,r.total);
- document.getElementById("res").innerHTML=`<div class="top"><div class="k">Estimated monthly payment</div><div class="big" id="out">${$(r.total,1)}</div><div class="note">${V.term}-year fixed at ${n(V.rate)}%</div></div>
- <div class="kpis"><div class="kpi"><div class="k">Principal &amp; interest</div><div class="v">${$(r.pi,1)}</div><div class="s">per month</div></div><div class="kpi"><div class="k">Loan amount</div><div class="v">${$(r.loan)}</div><div class="s">${(r.dp*100).toFixed(1)}% down · ${$(n(V.down))}</div></div></div>
+ const seg=[["Principal &amp; Interest",r.pi,"var(--gold)"],["Property tax",r.tax,"linear-gradient(135deg,rgba(234,213,158,.75),rgba(213,190,135,.75))"],["Insurance",r.ins,"#FBFBFB"],["HOA",r.hoa,"rgba(251,251,251,.45)"],["PMI",r.pmi,"linear-gradient(135deg,rgba(234,213,158,.4),rgba(213,190,135,.4))"]],tot=Math.max(.01,r.total);
+ document.getElementById("res").innerHTML=`<div class="top"><div class="k">Estimated Monthly Payment</div><div class="big" id="out">${$(r.total,1)}</div><div class="note">${V.term}-year fixed at ${n(V.rate)}%</div></div>
+ <div class="kpis"><div class="kpi"><div class="k">Principal &amp; Interest</div><div class="v">${$(r.pi,1)}</div><div class="s">per month</div></div><div class="kpi"><div class="k">Loan Amount</div><div class="v">${$(r.loan)}</div><div class="s">${(r.dp*100).toFixed(1)}% down · ${$(n(V.down))}</div></div></div>
  <div class="stack">${seg.map(s=>`<div style="width:${s[1]/tot*100}%;background:${s[2]}"></div>`).join("")}</div>
  <div class="legend">${seg.map(s=>`<span><i style="background:${s[2]}"></i>${s[0]}</span>`).join("")}</div>
- <div class="tbl"><div><span>Principal &amp; interest</span><span>${$(r.pi,1)}</span></div><div><span>Property tax</span><span>${$(r.tax,1)}</span></div><div><span>Homeowners insurance</span><span>${$(r.ins,1)}</span></div>
+ <div class="tbl"><div><span>Principal &amp; Interest</span><span>${$(r.pi,1)}</span></div><div><span>Property tax</span><span>${$(r.tax,1)}</span></div><div><span>Homeowners insurance</span><span>${$(r.ins,1)}</span></div>
  <div><span>HOA dues</span><span>${$(r.hoa,1)}</span></div><div><span>PMI${r.pmiOn?"":" (not required)"}</span><span>${$(r.pmi,1)}</span></div>
  <div class="tot"><span>Total monthly payment</span><span>${$(r.total,1)}</span></div><div style="border:0"><span>Total interest over ${V.term} years</span><span>${$(r.interest)}</span></div></div>`}
 upd();
@@ -383,8 +383,8 @@ const $=(v,c)=>(v<-.005?"−$":"$")+Math.abs(c?v:Math.round(v)).toLocaleString("
 const pct=(v,d=2)=>{if(!isFinite(v))return "—";return (v<0?"−":"")+(Math.abs(v)*100).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})+"%"};
 const F=(k,l,t)=>`<label><span class="t">${l}</span><span class="box ${t}">${t==="d"?'<i class="pre">$</i>':'<i class="suf">%</i>'}<input type="number" step="any" min="0"${t==="p"?' max="100"':""} inputmode="decimal" value="${V[k]}" placeholder="0" data-k="${k}" aria-label="${l}"></span><span class="calc" id="c_${k}"></span></label>`;
 const seg=(id,key,a,b)=>`<label><span class="t">${id==="rentPer"?"Rent period":"Expense period"}</span><div class="seg" id="${id}"><button type="button" data-v="mo" class="${V[key]==="mo"?"on":""}">${a}</button><button type="button" data-v="yr" class="${V[key]==="yr"?"on":""}">${b}</button></div><span class="calc" id="c_${id}"></span></label>`;
-document.getElementById("cards").innerHTML=`<div class="card"><h2>Purchase &amp; income<span id="t0"></span></h2><div class="f">${F("price","Purchase price","d")}${F("rent","Gross rent","d")}${seg("rentPer","rentPer","Monthly","Annual")}${F("vacancy","Vacancy","p")}</div></div>
-<div class="card"><h2>Operating expenses<span id="t1"></span></h2><div class="f">${F("opex","Operating expenses","d")}${seg("opexPer","opexPer","Monthly","Annual")}</div></div>`;
+document.getElementById("cards").innerHTML=`<div class="card"><h2>Purchase &amp; Income<span id="t0"></span></h2><div class="f">${F("price","Purchase price","d")}${F("rent","Gross rent","d")}${seg("rentPer","rentPer","Monthly","Annual")}${F("vacancy","Vacancy","p")}</div></div>
+<div class="card"><h2>Operating Expenses<span id="t1"></span></h2><div class="f">${F("opex","Operating Expenses","d")}${seg("opexPer","opexPer","Monthly","Annual")}</div></div>`;
 document.querySelectorAll("input[data-k]").forEach(e=>e.addEventListener("input",()=>{V[e.dataset.k]=e.value;upd()}));
 function bindSeg(id,key){document.getElementById(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;V[key]=b.dataset.v;document.getElementById(id).querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));upd()})}
 bindSeg("rentPer","rentPer");bindSeg("opexPer","opexPer");
@@ -399,14 +399,14 @@ function upd(){const r=calc();
  document.getElementById("c_opexPer").innerHTML=`<em>${$(r.opex)} / yr</em>`;
  const noPrice=!(r.price>0),neg=isFinite(r.cap)&&r.cap<0,out=noPrice?"—":pct(r.cap,2);
  const note=noPrice?"Enter a purchase price":`NOI of ${$(r.noi)} on a ${$(r.price)} purchase`;
- const seg=[["Vacancy loss",r.vac,"linear-gradient(135deg,rgba(234,213,158,.4),rgba(213,190,135,.4))"],["Operating expenses",r.opex,"linear-gradient(135deg,rgba(234,213,158,.75),rgba(213,190,135,.75))"],["NOI",Math.max(0,r.noi),"var(--gold)"]];
+ const seg=[["Vacancy loss",r.vac,"linear-gradient(135deg,rgba(234,213,158,.4),rgba(213,190,135,.4))"],["Operating Expenses",r.opex,"linear-gradient(135deg,rgba(234,213,158,.75),rgba(213,190,135,.75))"],["NOI",Math.max(0,r.noi),"var(--gold)"]];
  const tot=Math.max(.01,seg.reduce((a,s)=>a+s[1],0));
  const implied=[5,6,7,8].map(p=>[p,r.noi>0?r.noi/(p/100):NaN]);
- document.getElementById("res").innerHTML=`<div class="top"><div class="k">Cap rate</div><div class="big${neg||noPrice?" neg":""}" id="out">${out}</div><div class="note">${note}</div></div>
- <div class="kpis"><div class="kpi"><div class="k">Net operating income</div><div class="v${r.noi<0?" neg-t":""}">${$(r.noi)}</div><div class="s">${$(r.noim)} per month</div></div><div class="kpi"><div class="k">Effective gross income</div><div class="v">${$(r.egi)}</div><div class="s">after ${pct(r.vacPct,1)} vacancy</div></div><div class="kpi"><div class="k">Gross rent multiplier</div><div class="v">${isFinite(r.grm)?r.grm.toFixed(2):"n/a"}</div><div class="s">Price ÷ annual gross rent</div></div><div class="kpi"><div class="k">Expense ratio</div><div class="v">${isFinite(r.er)?pct(r.er,1):"n/a"}</div><div class="s">Operating exp. ÷ EGI</div></div></div>
+ document.getElementById("res").innerHTML=`<div class="top"><div class="k">Cap Rate</div><div class="big${neg||noPrice?" neg":""}" id="out">${out}</div><div class="note">${note}</div></div>
+ <div class="kpis"><div class="kpi"><div class="k">Net Operating Income</div><div class="v${r.noi<0?" neg-t":""}">${$(r.noi)}</div><div class="s">${$(r.noim)} per month</div></div><div class="kpi"><div class="k">Effective Gross Income</div><div class="v">${$(r.egi)}</div><div class="s">after ${pct(r.vacPct,1)} vacancy</div></div><div class="kpi"><div class="k">Gross Rent Multiplier</div><div class="v">${isFinite(r.grm)?r.grm.toFixed(2):"n/a"}</div><div class="s">Price ÷ annual gross rent</div></div><div class="kpi"><div class="k">Expense Ratio</div><div class="v">${isFinite(r.er)?pct(r.er,1):"n/a"}</div><div class="s">Operating exp. ÷ EGI</div></div></div>
  <div class="stack">${seg.map(s=>`<div style="width:${s[1]/tot*100}%;background:${s[2]}"></div>`).join("")}</div>
  <div class="legend">${seg.map(s=>`<span><i style="background:${s[2]}"></i>${s[0]}</span>`).join("")}</div>
- <div class="tbl"><div><span>Gross scheduled rent</span><span>${$(r.gsr)}</span></div><div><span>Vacancy &amp; credit loss (${pct(r.vacPct,1)} of rent)</span><span>−${$(r.vac)}</span></div><div class="h"><span>Effective gross income (EGI)</span><span>${$(r.egi)}</span></div><div><span>Operating expenses</span><span>−${$(r.opex)}</span></div><div class="h"><span>Net operating income (NOI)</span><span>${$(r.noi)}</span></div><div class="tot"><span>Cap rate</span><span>${out}</span></div><div><span>Monthly NOI</span><span>${$(r.noim)}</span></div><div><span>Gross rent multiplier</span><span>${isFinite(r.grm)?r.grm.toFixed(2):"n/a"}</span></div><div><span>Expense ratio</span><span>${isFinite(r.er)?pct(r.er,1):"n/a"}</span></div><div><span>Break-even occupancy</span><span class="${isFinite(r.beo)&&r.beo>1?"neg-t":""}">${isFinite(r.beo)?pct(r.beo,1):"n/a"}</span></div><div class="h"><span>Implied value at common caps</span><span></span></div>${implied.map(([p,v])=>`<div><span>At ${p.toFixed(2)}% cap</span><span>${isFinite(v)?$(v):"n/a"}</span></div>`).join("")}</div>`}
+ <div class="tbl"><div><span>Gross scheduled rent</span><span>${$(r.gsr)}</span></div><div><span>Vacancy &amp; credit loss (${pct(r.vacPct,1)} of rent)</span><span>−${$(r.vac)}</span></div><div class="h"><span>Effective gross income (EGI)</span><span>${$(r.egi)}</span></div><div><span>Operating Expenses</span><span>−${$(r.opex)}</span></div><div class="h"><span>Net operating income (NOI)</span><span>${$(r.noi)}</span></div><div class="tot"><span>Cap Rate</span><span>${out}</span></div><div><span>Monthly NOI</span><span>${$(r.noim)}</span></div><div><span>Gross Rent Multiplier</span><span>${isFinite(r.grm)?r.grm.toFixed(2):"n/a"}</span></div><div><span>Expense Ratio</span><span>${isFinite(r.er)?pct(r.er,1):"n/a"}</span></div><div><span>Break-even occupancy</span><span class="${isFinite(r.beo)&&r.beo>1?"neg-t":""}">${isFinite(r.beo)?pct(r.beo,1):"n/a"}</span></div><div class="h"><span>Implied value at common caps</span><span></span></div>${implied.map(([p,v])=>`<div><span>At ${p.toFixed(2)}% cap</span><span>${isFinite(v)?$(v):"n/a"}</span></div>`).join("")}</div>`}
 upd();
 
 /* ENESMA one-page report (PDF / JPG), client-side */

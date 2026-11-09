@@ -43,12 +43,12 @@
     });
   }
   function showError(msg) {
-    root.innerHTML = '<article class="sheet"><h1>Sign-in unavailable</h1><div class="err" role="alert">' + esc(msg) + '</div></article>';
+    root.innerHTML = '<article class="sheet"><h1>Sign-In Unavailable</h1><div class="err" role="alert">' + esc(msg) + '</div></article>';
   }
   function show(data) {
     var view = viewOf(data);
     if (!view.open) {
-      root.innerHTML = '<article class="sheet"><h1 class="addr">' + esc(view.addressLine || 'Open house') + '</h1>' +
+      root.innerHTML = '<article class="sheet"><h1 class="addr">' + esc(view.addressLine || 'Open House') + '</h1>' +
         (view.whenLabel ? '<p class="when">' + esc(view.whenLabel) + '</p>' : '') +
         '<div class="ok" role="status">This open house sign-in is closed.</div><pre class="disc">' + esc(window.OHLogic.DISCLOSURE) + '</pre></article>';
       return;

@@ -86,14 +86,14 @@
       : mode() === 'local'
         ? '<div class="demo"><b>THIS BROWSER ONLY</b> · add the Open House web app URL before visitors use a QR code on their own phones</div>'
         : '';
-    var nav = '<a href="#/" class="' + (active === 'home' || active === 'house' ? 'on' : '') + '">Open houses</a><a href="#/new" class="' + (active === 'new' ? 'on' : '') + '">New</a>';
+    var nav = '<a href="#/" class="' + (active === 'home' || active === 'house' ? 'on' : '') + '">Open Houses</a><a href="#/new" class="' + (active === 'new' ? 'on' : '') + '">New</a>';
     return banner + '<header id="hdr"><button class="nbtn" id="nbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><span></span><span></span><span></span></button>' +
-      '<a class="brand" href="#/" aria-label="Open House Dashboard home">' + titleMark('oh-sm', 'oh-on-dark') + '</a>' +
+      '<a class="brand" href="#/" aria-label="Open House Dashboard Home">' + titleMark('oh-sm', 'oh-on-dark') + '</a>' +
       '<nav class="main" id="mnav" aria-label="Main">' + nav + '</nav><div class="hspace"></div>' +
       '<a class="hub" href="https://agent.enesmarealty.com">Agent Hub</a>' +
       '<div class="umenu"><button class="ubtn" id="ubtn" type="button" aria-label="Account">' + h(initials(uName(S.user))) + '</button>' +
       '<div class="udrop hidden" id="udrop"><div class="who"><b>' + h(uName(S.user)) + '</b>' + h(S.user.email || S.user.username || '') + '</div>' +
-      '<a href="https://app.enesmarealty.com/transactions/#/account">Change password</a><button type="button" id="signout">Sign out</button></div></div></header><main>' + inner + '</main>';
+      '<a href="https://app.enesmarealty.com/transactions/#/account">Change Password</a><button type="button" id="signout">Sign Out</button></div></div></header><main>' + inner + '</main>';
   }
   function wireShell() {
     var exit = qs('#exitDemo');
@@ -126,7 +126,7 @@
       (mode() === 'demo' ? '<div class="ok">Demo preview. Username <b>agent@demo.test</b>, password <b>demo</b>.</div>' : '') +
       '<div class="f"><label for="lu">Username</label><input id="lu" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" required></div>' +
       '<div class="f"><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password" required></div>' +
-      '<button class="btn" id="lb" type="submit">Sign in</button><p class="fine"><a href="#" id="lc">First time or forgot password?</a><br>Same sign-in as Transaction Center.</p></form></div>';
+      '<button class="btn" id="lb" type="submit">Sign in</button><p class="fine"><a href="#" id="lc">First Time or Forgot Password?</a><br>Same sign-in as Transaction Center.</p></form></div>';
     qs('#lc').onclick = function (e) { e.preventDefault(); codeView(qs('#lu').value.trim()); };
     qs('#lf').onsubmit = function (e) {
       e.preventDefault();
@@ -152,10 +152,10 @@
   function otpView(ch, msg) {
     var hint = (ch && ch.emailHint) || 'your account email';
     $app.innerHTML = '<div class="login"><form class="box" id="of"><div class="mark">' + titleMark('oh-lg', 'oh-on-light') + '</div>' +
-      '<h2>Enter your sign-in code</h2><p class="sub">We emailed a 6-digit code to <b>' + h(hint) + '</b>.</p>' +
+      '<h2>Enter Your Sign-In Code</h2><p class="sub">We emailed a 6-digit code to <b>' + h(hint) + '</b>.</p>' +
       (msg ? '<div class="err" role="alert">' + h(msg) + '</div>' : '') +
       '<div class="f"><label for="oc">Code</label><input id="oc" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required></div>' +
-      '<button class="btn" type="submit">Verify and sign in</button><p class="fine"><a href="#" id="obk">Back to sign in</a></p></form></div>';
+      '<button class="btn" type="submit">Verify and Sign in</button><p class="fine"><a href="#" id="obk">Back to Sign in</a></p></form></div>';
     qs('#obk').onclick = function (e) { e.preventDefault(); loginView(); };
     qs('#of').onsubmit = function (e) {
       e.preventDefault();
@@ -166,12 +166,12 @@
   function codeView(email, step, msg) {
     var two = step === 2;
     $app.innerHTML = '<div class="login"><form class="box" id="cf"><div class="mark">' + titleMark('oh-lg', 'oh-on-light') + '</div>' +
-      '<h2>' + (two ? 'Enter your code' : 'Set up or reset your password') + '</h2>' +
+      '<h2>' + (two ? 'Enter Your Code' : 'Set Up or Reset Your Password') + '</h2>' +
       (msg ? '<div class="err" role="alert">' + h(msg) + '</div>' : '') +
       (two
-        ? '<input type="hidden" id="ce" value="' + h(email) + '"><div class="f"><label for="cc">Code</label><input id="cc" inputmode="numeric" maxlength="6" required></div><div class="f"><label for="c1">New password</label><input id="c1" type="password" minlength="10" required></div><div class="f"><label for="c2">Repeat new password</label><input id="c2" type="password" required></div>'
+        ? '<input type="hidden" id="ce" value="' + h(email) + '"><div class="f"><label for="cc">Code</label><input id="cc" inputmode="numeric" maxlength="6" required></div><div class="f"><label for="c1">New Password</label><input id="c1" type="password" minlength="10" required></div><div class="f"><label for="c2">Repeat New Password</label><input id="c2" type="password" required></div>'
         : '<div class="f"><label for="ce">Username</label><input id="ce" type="text" autocomplete="username" value="' + h(email || '') + '" required></div>') +
-      '<button class="btn" type="submit">' + (two ? 'Save password and sign in' : 'Email me a code') + '</button><p class="fine"><a href="#" id="cbk">Back to sign in</a></p></form></div>';
+      '<button class="btn" type="submit">' + (two ? 'Save Password and Sign in' : 'Email Me a Code') + '</button><p class="fine"><a href="#" id="cbk">Back to Sign in</a></p></form></div>';
     qs('#cbk').onclick = function (e) { e.preventDefault(); loginView(); };
     qs('#cf').onsubmit = function (e) {
       e.preventDefault();
@@ -186,11 +186,11 @@
     };
   }
   function passwordView() {
-    $app.innerHTML = shell('', '<h1>Set your password</h1><p class="sub">Choose a password before continuing. At least 10 characters with letters and numbers.</p>' +
-      '<form class="card gb" id="pf"><div id="pe"></div><div class="f"><label for="p0">Current password</label><input id="p0" type="password" required></div>' +
-      '<div class="f"><label for="p1">New password</label><input id="p1" type="password" required></div>' +
-      '<div class="f"><label for="p2">Repeat new password</label><input id="p2" type="password" required></div>' +
-      '<div class="actions"><button class="btn" type="submit">Save password</button></div></form>');
+    $app.innerHTML = shell('', '<h1>Set Your Password</h1><p class="sub">Choose a password before continuing. At least 10 characters with letters and numbers.</p>' +
+      '<form class="card gb" id="pf"><div id="pe"></div><div class="f"><label for="p0">Current Password</label><input id="p0" type="password" required></div>' +
+      '<div class="f"><label for="p1">New Password</label><input id="p1" type="password" required></div>' +
+      '<div class="f"><label for="p2">Repeat New Password</label><input id="p2" type="password" required></div>' +
+      '<div class="actions"><button class="btn" type="submit">Save Password</button></div></form>');
     wireShell();
     qs('#pf').onsubmit = function (e) {
       e.preventDefault();
@@ -248,10 +248,10 @@
         '<span class="pill p-pend">' + h(dayWord(item.date)) + '</span></div><h2>' + h(item.address || line) + '</h2><p>' + h([item.city, [item.state, item.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')) + '</p>' +
         '<p class="meta">' + h(window.OHLogic.fmtDay(item.date)) + (timeRange(item) ? '<br>' + timeRange(item) : '') + '</p><p class="count"><b>' + item.guestCount + '</b> ' + (item.guestCount === 1 ? 'guest' : 'guests') + ' · <b>' + item.crmCount + '</b> in CRM' +
         (item.pendingCount ? ' · <span class="wait">' + item.pendingCount + ' waiting</span>' : '') + '</p></a>';
-    }).join('') : '<div class="empty gb"><h2>No open houses yet</h2><p>Start a sign-in sheet with the property address. You can type it, or pick it from your Transaction Center files.</p><a class="btn" href="#/new">New open house</a></div>';
-    $app.innerHTML = shell('home', '<div class="top"><div><h1>Open houses</h1><p class="sub">Sign-in sheets for your open houses. Every guest is saved here and sent to your CRM.</p></div><a class="btn" href="#/new">New open house</a></div>' +
-      '<div class="stats"><div class="stat gb"><b>' + open + '</b><span>Open now</span></div><div class="stat gb"><b>' + guests + '</b><span>Guests</span></div><div class="stat gb"><b>' + crm + '</b><span>In CRM</span></div></div>' +
-      '<div class="f searchline"><label for="hq">Search history</label><input id="hq" type="search" placeholder="Address or city" autocomplete="off"></div>' +
+    }).join('') : '<div class="empty gb"><h2>No Open Houses Yet</h2><p>Start a sign-in sheet with the property address. You can type it, or pick it from your Transaction Center files.</p><a class="btn" href="#/new">New Open House</a></div>';
+    $app.innerHTML = shell('home', '<div class="top"><div><h1>Open Houses</h1><p class="sub">Sign-in sheets for your open houses. Every guest is saved here and sent to your CRM.</p></div><a class="btn" href="#/new">New Open House</a></div>' +
+      '<div class="stats"><div class="stat gb"><b>' + open + '</b><span>Open Now</span></div><div class="stat gb"><b>' + guests + '</b><span>Guests</span></div><div class="stat gb"><b>' + crm + '</b><span>In CRM</span></div></div>' +
+      '<div class="f searchline"><label for="hq">Search History</label><input id="hq" type="search" placeholder="Address or city" autocomplete="off"></div>' +
       '<div class="houses" id="houses">' + cards + '</div>');
     wireShell();
     var q = qs('#hq');
@@ -273,9 +273,9 @@
   }
   function houseForm(existing) {
     var x = existing || { state: 'CA', date: todayIso(), startTime: '13:00', endTime: '16:00' };
-    $app.innerHTML = shell(existing ? 'house' : 'new', '<div class="top"><div><h1>' + (existing ? 'Edit open house' : 'New open house') + '</h1><p class="sub">Type the address, or choose one from your Transaction Center files.</p></div></div>' +
+    $app.innerHTML = shell(existing ? 'house' : 'new', '<div class="top"><div><h1>' + (existing ? 'Edit Open House' : 'New Open House') + '</h1><p class="sub">Type the address, or choose one from your Transaction Center files.</p></div></div>' +
       '<form class="card gb" id="hf" autocomplete="off"><div id="he"></div><div class="fgrid">' +
-      '<div class="f w3 combo"><label for="ha">Street address <span class="req">*</span></label><input id="ha" required maxlength="120" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="hsug" aria-autocomplete="list" value="' + h(x.address || '') + '"><div class="sugg hidden" id="hsug" role="listbox"></div></div>' +
+      '<div class="f w3 combo"><label for="ha">Street Address <span class="req">*</span></label><input id="ha" required maxlength="120" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="hsug" aria-autocomplete="list" value="' + h(x.address || '') + '"><div class="sugg hidden" id="hsug" role="listbox"></div></div>' +
       '<div class="f"><label for="hu">Apt / Unit</label><input id="hu" maxlength="20" value="' + h(x.unit || '') + '"></div>' +
       '<div class="f"><label for="hc">City <span class="req">*</span></label><input id="hc" required maxlength="60" value="' + h(x.city || '') + '"></div>' +
       '<div class="f"><label for="hs">State</label><input id="hs" maxlength="2" value="' + h(x.state || 'CA') + '"></div>' +
@@ -283,7 +283,7 @@
       '<div class="f"><label for="hd">Date <span class="req">*</span></label><input id="hd" type="date" required value="' + h(x.date || '') + '"></div>' +
       '<div class="f"><label for="h1">Starts</label><input id="h1" type="time" value="' + h(x.startTime || '') + '"></div>' +
       '<div class="f"><label for="h2">Ends</label><input id="h2" type="time" value="' + h(x.endTime || '') + '"></div>' +
-      '</div><div class="actions"><a class="ub" href="' + (existing ? '#/h/' + h(existing.id) : '#/') + '">Cancel</a><button class="btn" type="submit">' + (existing ? 'Save' : 'Create sign-in sheet') + '</button></div></form>');
+      '</div><div class="actions"><a class="ub" href="' + (existing ? '#/h/' + h(existing.id) : '#/') + '">Cancel</a><button class="btn" type="submit">' + (existing ? 'Save' : 'Create Sign-In Sheet') + '</button></div></form>');
     wireShell();
     var box = qs('#hsug'), input = qs('#ha'), open = false;
     function show(list) {
@@ -367,12 +367,12 @@
   }
   function guestCard(guest, house) {
     var name = [guest.firstName, guest.lastName].filter(Boolean).join(' ');
-    var crm = guest.crmStatus === 'synced' ? '<span class="pill p-ok">In CRM</span>' : '<span class="pill p-pend">CRM pending</span>';
-    return '<article class="guest gb"><div class="grow"><div class="pills">' + crm + '<span class="pill p-pend">' + h(window.OHLogic.labelOf(window.OHLogic.INTENT, guest.intent)) + '</span></div>' +
+    var crm = guest.crmStatus === 'synced' ? '<span class="pill p-ok">In CRM</span>' : '<span class="pill p-pend">CRM Pending</span>';
+    return '<article class="guest gb"><div class="grow"><div class="pills">' + crm + '<span class="pill p-pend">' + h(window.OHLogic.displayOf(window.OHLogic.INTENT, guest.intent)) + '</span></div>' +
       '<h3>' + h(name) + '</h3><p>' + h(guest.phone) + (guest.email ? ' · ' + h(guest.email) : '') + '</p>' +
-      '<p class="meta">' + h(window.OHLogic.VIA[guest.via] || 'Sign-in') + ' · ' + h(new Date(guest.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '</p>' +
+      '<p class="meta">' + h(window.OHLogic.VIA[guest.via] || 'Sign-In') + ' · ' + h(new Date(guest.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '</p>' +
       '<div class="tags">' + tagsHtml(guest, house) + '</div>' +
-      '<details><summary>CRM note</summary><pre class="note">' + h(window.OHLogic.buildNote(guest, house)) + '</pre></details></div>' +
+      '<details><summary>CRM Note</summary><pre class="note">' + h(window.OHLogic.buildNote(guest, house)) + '</pre></details></div>' +
       (guest.crmStatus !== 'synced' ? '<button type="button" class="ub retry" data-g="' + h(guest.id) + '">Send to CRM</button>' : '') +
       (guest.crmError ? '<p class="errtext">' + h(guest.crmError) + '</p>' : '') + '</article>';
   }
@@ -391,15 +391,15 @@
     var house = d.house, guests = d.guests || [];
     var sheetHouse = { addressLine: house.addressLine, whenLabel: house.whenLabel, host: house.agentName };
     var actions = '<div class="actions start">' +
-      (house.status === 'open' ? '<a class="btn" href="#/kiosk/' + h(house.id) + '">iPad sign-in</a>' : '') +
-      '<a class="ub" href="#/qr/' + h(house.id) + '">QR code</a>' +
+      (house.status === 'open' ? '<a class="btn" href="#/kiosk/' + h(house.id) + '">iPad Sign-In</a>' : '') +
+      '<a class="ub" href="#/qr/' + h(house.id) + '">QR Code</a>' +
       '<a class="ub" href="#/h/' + h(house.id) + '/edit">Edit</a>' +
-      (house.status === 'open' ? '<button type="button" class="ub" id="end">End open house</button>' : '<button type="button" class="ub" id="reopen">Reopen</button>') +
+      (house.status === 'open' ? '<button type="button" class="ub" id="end">End Open House</button>' : '<button type="button" class="ub" id="reopen">Reopen</button>') +
       (!guests.length ? '<button type="button" class="ub danger" id="del">Delete</button>' : '') +
       '</div>';
-    $app.innerHTML = shell('house', '<p class="crumb"><a href="#/">Open houses</a></p><div class="top"><div><div class="pills"><span class="pill ' + (house.status === 'open' ? 'p-ok' : 'p-dark') + '">' + (house.status === 'open' ? 'Open' : 'Closed') + '</span><span class="pill p-pend">' + h(dayWord(house.date)) + '</span></div>' +
+    $app.innerHTML = shell('house', '<p class="crumb"><a href="#/">Open Houses</a></p><div class="top"><div><div class="pills"><span class="pill ' + (house.status === 'open' ? 'p-ok' : 'p-dark') + '">' + (house.status === 'open' ? 'Open' : 'Closed') + '</span><span class="pill p-pend">' + h(dayWord(house.date)) + '</span></div>' +
       '<h1>' + h(house.address) + '</h1><p class="sub">' + h(house.addressLine) + (house.whenLabel ? ' · ' + h(house.whenLabel) : '') + '</p></div></div>' + actions +
-      (house.status === 'open' ? '<h2 class="sec">Sign-in sheet</h2>' + window.OHSheet.html(sheetHouse) : '<div class="ok">This sign-in sheet is closed. Guests and CRM notes stay in the history below.</div>') +
+      (house.status === 'open' ? '<h2 class="sec">Sign-In Sheet</h2>' + window.OHSheet.html(sheetHouse) : '<div class="ok">This sign-in sheet is closed. Guests and CRM notes stay in the history below.</div>') +
       '<h2 class="sec">Guests <span class="countline">' + guests.length + '</span></h2>' +
       (guests.length ? '<div class="guestlist">' + guests.map(function (g) { return guestCard(g, house); }).join('') + '</div>' : '<div class="empty gb"><p>No guests yet. Use the sign-in sheet, hand the iPad to visitors, or show the QR code.</p></div>'));
     wireShell();
@@ -470,9 +470,9 @@
   function kioskGate(id) {
     var hold = document.createElement('div');
     hold.className = 'modal';
-    hold.innerHTML = '<form class="box" id="kf"><h2>Back to the dashboard</h2><p class="sub">Enter your password. The iPad stays on the sign-in sheet until you do.</p><div id="ke"></div>' +
+    hold.innerHTML = '<form class="box" id="kf"><h2>Back to the Dashboard</h2><p class="sub">Enter your password. The iPad stays on the sign-in sheet until you do.</p><div id="ke"></div>' +
       '<div class="f"><label for="kp">Password</label><input id="kp" type="password" autocomplete="current-password" required></div>' +
-      '<div class="actions"><button type="button" class="ub" id="kx">Stay here</button><button class="btn" type="submit">Continue</button></div></form>';
+      '<div class="actions"><button type="button" class="ub" id="kx">Stay Here</button><button class="btn" type="submit">Continue</button></div></form>';
     document.body.appendChild(hold);
     qs('#kp', hold).focus();
     qs('#kx', hold).onclick = function () { hold.remove(); };
@@ -535,7 +535,7 @@
       var house = d.house;
       var url = publicUrl(house.publicKey);
       var file = 'open-house-' + String(house.address || 'sheet').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.png';
-      $app.innerHTML = shell('house', '<p class="crumb"><a href="#/h/' + h(house.id) + '">' + h(house.address) + '</a></p><div class="top"><div><h1>QR code</h1><p class="sub">Visitors scan this and sign in on their own phone. The page only accepts a sign-in. It does not show other guests.</p></div></div>' +
+      $app.innerHTML = shell('house', '<p class="crumb"><a href="#/h/' + h(house.id) + '">' + h(house.address) + '</a></p><div class="top"><div><h1>QR Code</h1><p class="sub">Visitors scan this and sign in on their own phone. The page only accepts a sign-in. It does not show other guests.</p></div></div>' +
         '<div class="qrwrap gb"><div class="qrbox">' + qrSvg(url) + '</div><h2>' + h(house.addressLine) + '</h2><p class="when">' + h(house.whenLabel) + '</p>' +
         '<p class="url">' + h(url) + '</p><div class="actions"><button type="button" class="btn" id="qdl">Download PNG</button><button type="button" class="ub" id="qpr">Print</button></div></div>');
       wireShell();

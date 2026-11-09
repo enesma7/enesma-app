@@ -20,7 +20,7 @@ assert.ok(app.indexOf('fontIsCursive') >= 0);
 assert.ok(app.indexOf("mode !== 'type'") >= 0);
 assert.ok(css.indexOf('.dochead{white-space:pre-line}') >= 0);
 var html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-assert.ok(html.indexOf('app.js?v=14') >= 0);
+assert.ok(html.indexOf('app.js?v=15') >= 0);
 assert.ok(app.indexOf("class: 'err' }, 'The signed PDF could not be filed") >= 0);
 assert.ok(html.indexOf('app.css?v=10') >= 0);
 console.log('esign signature font checks passed');

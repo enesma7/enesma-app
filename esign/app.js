@@ -173,8 +173,8 @@
   $user.addEventListener('click', function (e) {
     e.stopPropagation(); var old = document.querySelector('.menu'); if (old) return old.remove();
     var m = h('div', { class: 'menu' }, h('div', { class: 'me' }, h('b', null, S.user.name), S.user.email, h('div', null, h('span', { class: 'pill' + (isAdmin() ? ' dark' : '') }, isAdmin() ? 'Admin' : 'Agent'))),
-      h('button', { type: 'button', onclick: function () { m.remove(); go('#/profile'); } }, 'Profile & email' + (S.gmail && !S.gmail.connected ? ' · connect' : '')),
-      h('button', { type: 'button', onclick: function () { m.remove(); api('logout').catch(function () { }); setSession(null); go('#/login'); } }, 'Sign out'));
+      h('button', { type: 'button', onclick: function () { m.remove(); go('#/profile'); } }, 'Profile & Email' + (S.gmail && !S.gmail.connected ? ' · connect' : '')),
+      h('button', { type: 'button', onclick: function () { m.remove(); api('logout').catch(function () { }); setSession(null); go('#/login'); } }, 'Sign Out'));
     document.body.appendChild(m); setTimeout(function () { document.addEventListener('click', function z(ev) { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('click', z); } }); });
   });
   function go(hash) { if (location.hash === hash) render(); else location.hash = hash; }
@@ -205,7 +205,7 @@
     chrome(); fn(r);
   }
   function loading(msg) { clear($app).appendChild(h('div', { class: 'loading' }, msg || 'Loading…')); }
-  function fatal(err, retry) { clear($app); $app.appendChild(h('div', { style: { maxWidth: '560px', margin: '40px auto' } }, errBox(err.message || String(err)), retry ? h('button', { class: 'btn', type: 'button', onclick: retry }, 'Try again') : null)); }
+  function fatal(err, retry) { clear($app); $app.appendChild(h('div', { style: { maxWidth: '560px', margin: '40px auto' } }, errBox(err.message || String(err)), retry ? h('button', { class: 'btn', type: 'button', onclick: retry }, 'Try Again') : null)); }
   function testBar() { return S.testMode ? h('div', { class: 'testbar' }, h('b', null, 'Test mode'), ' · emails only go to the test allowlist (enrique@enesmabroker.com). Other recipients are skipped and logged.') : null; }
 
   function comingSoon() {
@@ -231,22 +231,22 @@
       var ch = S._otpCh, hint = ch.emailHint || 'your account email';
       var code = h('input', { type: 'text', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '6', required: true, id: 'oc' });
       var trust = h('input', { type: 'checkbox', id: 'ot', checked: true });
-      var msg = h('div'), btn = h('button', { class: 'btn red wide', type: 'submit' }, 'Verify and sign in');
+      var msg = h('div'), btn = h('button', { class: 'btn red wide', type: 'submit' }, 'Verify and Sign in');
       var form = h('form', { novalidate: true, onsubmit: function (e) {
         e.preventDefault(); clear(msg);
         busy(btn, true, 'Verifying…');
         api('verifyLoginOtp', { challengeId: ch.challengeId, code: code.value.trim(), rememberDevice: trust.checked, deviceLabel: (navigator.userAgent || '').slice(0, 120) })
           .then(function (d) { S._otpCh = null; finishEsignAuth(d); })
           .catch(function (err) { busy(btn, false); msg.appendChild(errBox(err.message)); });
-      } }, h('div', { class: 'f' }, h('label', { for: 'oc' }, 'Sign-in code'), code),
+      } }, h('div', { class: 'f' }, h('label', { for: 'oc' }, 'Sign-In Code'), code),
         h('label', { class: 'hint', style: { display: 'flex', gap: '8px', alignItems: 'flex-start', margin: '0 0 14px' } }, trust, ' Trust this device for 30 days.'),
         msg, btn);
       $app.appendChild(h('div', { class: 'auth' }, h('div', { class: 'card' }, h('img', { class: 'logo', src: 'assets/esign-logo-light.svg', alt: 'ENESMA E-Sign' }),
         h('p', { class: 'sub' }, 'We emailed a 6-digit code to ', h('b', null, hint), '. It expires in about 10 minutes.'), form,
         h('p', { class: 'hint', style: { textAlign: 'center', marginTop: '16px' } },
-          h('a', { href: '#', onclick: function (ev) { ev.preventDefault(); api('resendLoginOtp', { challengeId: ch.challengeId }).then(function (d) { if (d && d.emailHint) ch.emailHint = d.emailHint; toast('A new code is on its way.'); }).catch(function (err) { toast(err.message); }); } }, 'Send a new code'),
+          h('a', { href: '#', onclick: function (ev) { ev.preventDefault(); api('resendLoginOtp', { challengeId: ch.challengeId }).then(function (d) { if (d && d.emailHint) ch.emailHint = d.emailHint; toast('A new code is on its way.'); }).catch(function (err) { toast(err.message); }); } }, 'Send a New Code'),
           ' · ',
-          h('a', { href: '#', onclick: function (ev) { ev.preventDefault(); S._otpCh = null; render(); } }, 'Back to sign in')))));
+          h('a', { href: '#', onclick: function (ev) { ev.preventDefault(); S._otpCh = null; render(); } }, 'Back to Sign in')))));
       setTimeout(function () { code.focus(); }, 30);
       return;
     }
@@ -277,8 +277,8 @@
       .catch(function (er) { busy(btn, false); toast(er.message); });
   }
   function gmailCard(blocked) {
-    var g = S.gmail || {}, btn = h('button', { class: 'btn red wide', type: 'button', id: 'connectBtn', onclick: function (ev) { gmailStart(ev.currentTarget); } }, g.error ? 'Reconnect your Google email' : 'Connect your Google email');
-    return h('div', { class: 'card connect' }, h('span', { class: 'rule' }), h('h1', null, blocked ? 'Connect your email to send' : 'Connect your Google email'),
+    var g = S.gmail || {}, btn = h('button', { class: 'btn red wide', type: 'button', id: 'connectBtn', onclick: function (ev) { gmailStart(ev.currentTarget); } }, g.error ? 'Reconnect Your Google Email' : 'Connect Your Google Email');
+    return h('div', { class: 'card connect' }, h('span', { class: 'rule' }), h('h1', null, blocked ? 'Connect Your Email to Send' : 'Connect Your Google Email'),
       h('p', { class: 'sub' }, 'Invitations, reminders and completion emails go out from your own Gmail — ', h('b', null, S.user.email), ' — so clients see you as the sender and replies come straight to you.'),
       g.error ? errBox('Your connection stopped working: ' + g.error) : null,
       g.configured === false ? errBox('Google sign-in is not set up yet. Ask the admin to finish the OAuth setup.') : null,
@@ -291,11 +291,11 @@
     var g = S.gmail || {};
     var status = g.connected ? h('div', { class: 'ok', id: 'gstatus' }, h('b', null, 'Connected'), ' · sending as ' + g.email + (g.connectedAt ? ' · since ' + fmtDate(g.connectedAt) : ''))
       : h('div', { class: 'err', id: 'gstatus' }, h('b', null, g.error ? 'Needs reconnecting' : 'Not connected'), g.error ? ' · ' + g.error : ' · you can’t send envelopes yet');
-    var acts = h('div', { class: 'actions' }, h('button', { class: 'btn ' + (g.connected ? 'ghost' : 'red'), type: 'button', id: 'reconnectBtn', onclick: function (ev) { S.afterConnect = '#/profile'; gmailStart(ev.currentTarget); } }, g.connected || g.error ? 'Reconnect' : 'Connect your Google email'),
+    var acts = h('div', { class: 'actions' }, h('button', { class: 'btn ' + (g.connected ? 'ghost' : 'red'), type: 'button', id: 'reconnectBtn', onclick: function (ev) { S.afterConnect = '#/profile'; gmailStart(ev.currentTarget); } }, g.connected || g.error ? 'Reconnect' : 'Connect Your Google Email'),
       g.connected ? h('button', { class: 'btn plain', type: 'button', onclick: function (ev) { if (!confirm('Disconnect your Gmail? You won’t be able to send until you connect again.')) return; var b = ev.currentTarget; busy(b, true); api('gmailDisconnect').then(function (d) { S.gmail = d; render(); }).catch(function (er) { busy(b, false); toast(er.message); }); } }, 'Disconnect') : null);
     add($app, [h('div', { class: 'head' }, h('div', null, h('span', { class: 'rule' }), h('h1', null, 'Profile'))),
       h('div', { class: 'card', style: { maxWidth: '640px' } }, h('h2', null, S.user.name), h('p', { class: 'hint' }, S.user.email + ' · ' + (isAdmin() ? 'Admin' : 'Agent')),
-        h('h2', { style: { marginTop: '18px' } }, 'Sending email'), status,
+        h('h2', { style: { marginTop: '18px' } }, 'Sending Email'), status,
         h('p', { class: 'hint' }, 'Every invitation, resend and completion email is sent through Gmail from your own address. E-Sign only has permission to send — it can’t read your mail. Files stay in ENESMA’s business Drive.'), acts)]);
   };
   function fmtDate(iso) { try { return new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }); } catch (e) { return iso; } }
@@ -330,7 +330,7 @@
       clear(listEl); if (!data) return;
       var f = TABS.filter(function (t) { return t[0] === st.tab; })[0][2], q = st.q.toLowerCase();
       var rows = data.filter(f).filter(function (e) { return !q || (e.name + ' ' + e.recipients.map(function (r) { return r.name + ' ' + r.email; }).join(' ') + ' ' + e.ownerName).toLowerCase().indexOf(q) >= 0; });
-      if (!rows.length) return listEl.appendChild(h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, data.length ? 'Nothing here' : 'No envelopes yet'), data.length ? 'Try another tab or search.' : 'Upload a PDF, add signers, place fields and send.', !data.length ? h('div', { style: { marginTop: '14px' } }, h('a', { class: 'btn red', href: '#/new' }, 'New envelope')) : null)));
+      if (!rows.length) return listEl.appendChild(h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, data.length ? 'Nothing Here' : 'No Envelopes Yet'), data.length ? 'Try another tab or search.' : 'Upload a PDF, add signers, place fields and send.', !data.length ? h('div', { style: { marginTop: '14px' } }, h('a', { class: 'btn red', href: '#/new' }, 'New Envelope')) : null)));
       listEl.appendChild(h('div', { class: 'list' }, rows.map(function (e) {
         var signed = e.recipients.filter(function (r) { return r.status === 'signed'; }).length;
         return h('a', { class: 'item', href: '#/envelope/' + e.id }, h('div', { style: { minWidth: 0 } }, h('div', { class: 't' }, e.name),
@@ -340,11 +340,11 @@
       })));
     }
     var search = h('input', { type: 'search', placeholder: 'Search envelopes, signers…', 'aria-label': 'Search', oninput: function () { st.q = search.value; draw(); } });
-    var scope = isAdmin() ? h('div', { class: 'seg' }, [['mine', 'Mine'], ['all', 'All agents']].map(function (s) {
+    var scope = isAdmin() ? h('div', { class: 'seg' }, [['mine', 'Mine'], ['all', 'All Agents']].map(function (s) {
       return h('button', { type: 'button', class: st.scope === s[0] ? 'on' : '', onclick: function () { st.scope = S.envScope = s[0]; Array.prototype.forEach.call(scope.children, function (b, i) { b.className = (i === 0) === (s[0] === 'mine') ? 'on' : ''; }); load(); } }, s[1]);
     })) : null;
     add(body, [testBar(), h('div', { class: 'head' }, h('div', null, h('span', { class: 'rule' }), h('h1', null, 'Envelopes'), h('p', { class: 'sub' }, 'Track what’s out for signature and what’s done.')),
-      h('div', { class: 'toolbar', style: { margin: 0 } }, h('a', { class: 'btn ghost', href: '#/templates' }, 'Use a template'), h('a', { class: 'btn red', href: '#/new' }, 'New envelope'))),
+      h('div', { class: 'toolbar', style: { margin: 0 } }, h('a', { class: 'btn ghost', href: '#/templates' }, 'Use a Template'), h('a', { class: 'btn red', href: '#/new' }, 'New Envelope'))),
       h('div', { class: 'toolbar' }, search, scope), tabsEl, listEl]);
     $app.appendChild(body); draw(); load(); refreshMe().then(function () { var tb = testBar(); if (tb && !body.querySelector('.testbar')) body.insertBefore(tb, body.firstChild); }).catch(function () { });
   };
@@ -357,16 +357,16 @@
       clear($app);
       if (e.status === 'finalizing' && polls < 20) { polls++; setTimeout(function () { if (S.route === 'envelope' && parseRoute().arg === id) load(); }, 6000); }
       var acts = h('div', { class: 'actions', style: { marginTop: 0 } });
-      if (e.status === 'completed') { acts.appendChild(h('button', { class: 'btn red', type: 'button', onclick: function (ev) { dl(ev.currentTarget, true); } }, 'Download signed PDF'));
+      if (e.status === 'completed') { acts.appendChild(h('button', { class: 'btn red', type: 'button', onclick: function (ev) { dl(ev.currentTarget, true); } }, 'Download Signed PDF'));
         acts.appendChild(h('button', { class: 'btn ghost', type: 'button', onclick: function (ev) { dl(ev.currentTarget, 'cert'); } }, 'Certificate PDF')); }
       acts.appendChild(h('button', { class: 'btn ghost', type: 'button', onclick: function (ev) { dl(ev.currentTarget, false); } }, 'Original PDF'));
       if (e.status === 'sent') acts.appendChild(h('button', { class: 'btn plain', type: 'button', onclick: voidIt }, 'Void'));
-      if (e.status === 'completed' && e.mailError) acts.appendChild(h('button', { class: 'btn', type: 'button', onclick: function (ev) { var b = ev.currentTarget; busy(b, true, 'Sending…'); api('resendCompletion', { id: id }).then(function () { toast('Completion email sent from your Gmail.'); load(); }).catch(function (er) { busy(b, false); toast(er.message); }); } }, 'Resend completion email'));
-      if (e.status === 'finalizing' && e.finalizeError) acts.appendChild(h('button', { class: 'btn', type: 'button', onclick: function (ev) { var b = ev.currentTarget; busy(b, true); api('retryFinalize', { id: id }).then(function (d) { toast('Finishing up… this takes a minute.'); draw(d.envelope); }).catch(function (er) { busy(b, false); toast(er.message); }); } }, 'Retry finishing'));
+      if (e.status === 'completed' && e.mailError) acts.appendChild(h('button', { class: 'btn', type: 'button', onclick: function (ev) { var b = ev.currentTarget; busy(b, true, 'Sending…'); api('resendCompletion', { id: id }).then(function () { toast('Completion email sent from your Gmail.'); load(); }).catch(function (er) { busy(b, false); toast(er.message); }); } }, 'Resend Completion Email'));
+      if (e.status === 'finalizing' && e.finalizeError) acts.appendChild(h('button', { class: 'btn', type: 'button', onclick: function (ev) { var b = ev.currentTarget; busy(b, true); api('retryFinalize', { id: id }).then(function (d) { toast('Finishing up… this takes a minute.'); draw(d.envelope); }).catch(function (er) { busy(b, false); toast(er.message); }); } }, 'Retry Finishing'));
       function dl(btn, final) { busy(btn, true, 'Preparing…'); api('getEnvelopePdf', { id: id, final: final === true, certificate: final === 'cert' }).then(function (d) { busy(btn, false); downloadPdf(d.name + (final === 'cert' ? ' - Certificate' : final ? ' - Signed' : ''), d.pdf); }).catch(function (er) { busy(btn, false); toast(er.message); }); }
       function voidIt() {
         var reason = h('input', { type: 'text', maxlength: 200, placeholder: 'e.g. Sent the wrong version' }), msg = h('div');
-        var b = h('button', { class: 'btn red', type: 'button', onclick: function () { if (!reason.value.trim()) return reason.focus(); busy(b, true); api('voidEnvelope', { id: id, reason: reason.value.trim() }).then(function (d) { closeModal(); toast('Envelope voided. Signing links no longer work.'); draw(d.envelope); }).catch(function (er) { busy(b, false); clear(msg).appendChild(errBox(er.message)); }); } }, 'Void envelope');
+        var b = h('button', { class: 'btn red', type: 'button', onclick: function () { if (!reason.value.trim()) return reason.focus(); busy(b, true); api('voidEnvelope', { id: id, reason: reason.value.trim() }).then(function (d) { closeModal(); toast('Envelope voided. Signing links no longer work.'); draw(d.envelope); }).catch(function (er) { busy(b, false); clear(msg).appendChild(errBox(er.message)); }); } }, 'Void Envelope');
         openModal('Void this envelope?', h('div', null, h('p', { class: 'sub' }, 'Signers can no longer open or sign it. This can’t be undone.'), h('div', { class: 'f' }, h('label', null, 'Reason (shown to you only)'), reason), msg, h('div', { class: 'actions' }, b)));
       }
       var signers = h('div', null, e.recipients.map(function (rc) {
@@ -378,14 +378,14 @@
           h('ul', { class: 'ev' }, evs.map(function (x) { return h('li', null, ({ sent: 'Invited', resent: 'Invite resent', viewed: 'First viewed', signed: 'Signed', declined: 'Declined', corrected: 'Email corrected', completed: 'Completed copy sent' }[x.t] || x.t) + ' · ' + fmt(x.at)); }),
             rc.declineReason ? h('li', null, 'Reason: ' + rc.declineReason) : null),
           canFix ? h('div', { class: 'acts' }, (st === 'sent' || st === 'viewed') ? h('button', { class: 'link resend', type: 'button', onclick: function (ev) { var b = ev.currentTarget; b.disabled = true; api('resendInvite', { id: id, recipientId: rc.id }).then(function (d) { toast('Invite resent to ' + rc.email); draw(d.envelope); }).catch(function (er) { b.disabled = false; toast(er.message); }); } }, 'Resend') : null,
-            h('button', { class: 'link', type: 'button', onclick: function () { fix(rc); } }, 'Fix name / email')) : null);
+            h('button', { class: 'link', type: 'button', onclick: function () { fix(rc); } }, 'Fix Name / Email')) : null);
       }));
       function fix(rc) {
         var n = h('input', { type: 'text', value: rc.name, maxlength: 120 }), em = h('input', { type: 'email', value: rc.email }), msg = h('div');
-        var b = h('button', { class: 'btn', type: 'button', onclick: function () { if (!n.value.trim() || !emailOk(em.value)) return clear(msg).appendChild(errBox('Enter a name and a valid email.')); busy(b, true); api('updateRecipient', { id: id, recipientId: rc.id, name: n.value.trim(), email: em.value.trim() }).then(function (d) { closeModal(); toast('Signer updated. Their old link no longer works.'); draw(d.envelope); }).catch(function (er) { busy(b, false); clear(msg).appendChild(errBox(er.message)); }); } }, 'Save & send new link');
+        var b = h('button', { class: 'btn', type: 'button', onclick: function () { if (!n.value.trim() || !emailOk(em.value)) return clear(msg).appendChild(errBox('Enter a name and a valid email.')); busy(b, true); api('updateRecipient', { id: id, recipientId: rc.id, name: n.value.trim(), email: em.value.trim() }).then(function (d) { closeModal(); toast('Signer updated. Their old link no longer works.'); draw(d.envelope); }).catch(function (er) { busy(b, false); clear(msg).appendChild(errBox(er.message)); }); } }, 'Save & Send New Link');
         openModal('Fix signer', h('div', null, h('div', { class: 'f' }, h('label', null, 'Name'), n), h('div', { class: 'f' }, h('label', null, 'Email'), em), msg, h('div', { class: 'actions' }, b)));
       }
-      var info = h('dl', { class: 'kv' }, h('dt', null, 'Envelope ID'), h('dd', { class: 'hash' }, e.id), h('dt', null, 'From'), h('dd', null, e.ownerName), h('dt', null, 'Signing order'), h('dd', null, e.orderMode === 'sequential' ? 'In order' : 'Everyone at once'),
+      var info = h('dl', { class: 'kv' }, h('dt', null, 'Envelope ID'), h('dd', { class: 'hash' }, e.id), h('dt', null, 'From'), h('dd', null, e.ownerName), h('dt', null, 'Signing order'), h('dd', null, e.orderMode === 'sequential' ? 'In Order' : 'Everyone at Once'),
         h('dt', null, 'Sent'), h('dd', null, fmt(e.sentAt)), e.completedAt ? [h('dt', null, 'Completed'), h('dd', null, fmt(e.completedAt))] : null, e.voidedAt ? [h('dt', null, 'Voided'), h('dd', null, fmt(e.voidedAt) + (e.voidReason ? ' · ' + e.voidReason : ''))] : null,
         h('dt', null, 'Pages'), h('dd', null, e.pages + ' · ' + e.fields + ' fields'), h('dt', null, 'Original SHA-256'), h('dd', { class: 'hash' }, e.originalHash), e.finalHash ? [h('dt', null, 'Signed SHA-256'), h('dd', { class: 'hash' }, e.finalHash)] : null);
       add($app, [h('a', { class: 'back', href: '#/' }, '‹ Envelopes'), h('div', { class: 'head' }, h('div', { style: { minWidth: 0 } }, h('span', { class: 'rule' }), h('h1', { style: { wordBreak: 'break-word' } }, e.name), h('p', { class: 'sub' }, badge(e.status), ' ', e.subject)), acts),
@@ -462,7 +462,7 @@
     function place(f) {
       var p = E.pages[f.page - 1]; if (!p || E.fields.indexOf(f) < 0) return;
       if (!f._el) {
-        f._el = h('div', { class: 'fld', tabindex: '0', 'data-type': f.type }, h('span', { class: 'lbl' }), h('button', { class: 'x', type: 'button', 'aria-label': 'Remove field', title: 'Remove field', onpointerdown: function (e) { e.stopPropagation(); }, onmousedown: function (e) { e.stopPropagation(); }, ontouchstart: function (e) { e.stopPropagation(); }, onclick: function (e) { e.preventDefault(); e.stopPropagation(); remove(f); } }, '×'), h('span', { class: 'rz' }));
+        f._el = h('div', { class: 'fld', tabindex: '0', 'data-type': f.type }, h('span', { class: 'lbl' }), h('button', { class: 'x', type: 'button', 'aria-label': 'Remove Field', title: 'Remove Field', onpointerdown: function (e) { e.stopPropagation(); }, onmousedown: function (e) { e.stopPropagation(); }, ontouchstart: function (e) { e.stopPropagation(); }, onclick: function (e) { e.preventDefault(); e.stopPropagation(); remove(f); } }, '×'), h('span', { class: 'rz' }));
         f._el.addEventListener('pointerdown', function (e) { if (e.target.closest('.x')) return; startMove(e, f, e.target.classList.contains('rz')); });
         f._el.addEventListener('keydown', function (e) { if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); remove(f); } });
       }
@@ -497,7 +497,7 @@
       if (f.type === 'text') { var lb = h('input', { type: 'text', value: f.label || '', maxlength: 60, placeholder: 'e.g. Phone number', oninput: function () { f.label = lb.value; place(f); changed(); } }); box.appendChild(h('div', { class: 'f' }, h('label', null, 'Label shown to signer'), lb)); }
       box.appendChild(h('div', { class: 'f' }, h('label', null, 'Signer must complete'), h('div', { class: 'seg reqseg' }, [[true, 'Required'], [false, 'Optional']].map(function (o) {
         return h('button', { type: 'button', class: isReq(f) === o[0] ? 'on' : '', 'aria-pressed': String(isReq(f) === o[0]), 'data-req': String(o[0]), onclick: function (e) { f.required = o[0]; Array.prototype.forEach.call(e.currentTarget.parentNode.children, function (b) { var on = b === e.currentTarget; b.className = on ? 'on' : ''; b.setAttribute('aria-pressed', String(on)); }); place(f); changed(); } }, o[1]); }))));
-      box.appendChild(h('button', { class: 'link danger', type: 'button', onclick: function () { remove(f); } }, 'Remove field'));
+      box.appendChild(h('button', { class: 'link danger', type: 'button', onclick: function () { remove(f); } }, 'Remove Field'));
       selEl.appendChild(box);
     }
     docEl.addEventListener('pointerdown', function (e) { if (!e.target.closest('.fld')) select(null); });
@@ -534,7 +534,7 @@
     var tabs = h('div', { class: 'seg' }), body = h('div'), mode = 'crm';
     var q = h('input', { type: 'search', placeholder: 'Search…', 'aria-label': 'Search contacts', oninput: function () { draw(); } });
     function setMode(m) { mode = m; Array.prototype.forEach.call(tabs.children, function (b) { b.className = b.dataset.m === m ? 'on' : ''; }); draw(); }
-    [['crm', 'CRM contacts'], ['txn', 'Transactions']].forEach(function (t) { tabs.appendChild(h('button', { type: 'button', 'data-m': t[0], class: t[0] === mode ? 'on' : '', onclick: function () { setMode(t[0]); } }, t[1])); });
+    [['crm', 'CRM Contacts'], ['txn', 'Transactions']].forEach(function (t) { tabs.appendChild(h('button', { type: 'button', 'data-m': t[0], class: t[0] === mode ? 'on' : '', onclick: function () { setMode(t[0]); } }, t[1])); });
     function choose(c) { if (!emailOk(c.email)) return toast('That contact has no email address.'); onPick({ name: c.name, email: c.email }); toast(c.name + ' added'); }
     function draw() {
       clear(body); if (!contactsCache) return body.appendChild(h('div', { class: 'loading' }, 'Loading contacts…'));
@@ -551,7 +551,7 @@
     function openTxn(t) {
       clear(body).appendChild(h('div', { class: 'loading' }, 'Loading contacts for ' + t.title + '…'));
       api('txnContacts', { id: t.id }).then(function (d) {
-        clear(body); body.appendChild(h('button', { class: 'link', type: 'button', onclick: draw }, '‹ All transactions'));
+        clear(body); body.appendChild(h('button', { class: 'link', type: 'button', onclick: draw }, '‹ All Transactions'));
         body.appendChild(d.contacts.length ? h('div', { class: 'picklist' }, d.contacts.map(function (c) { return h('button', { type: 'button', disabled: !c.email, onclick: function () { choose(c); } }, h('span', null, c.name, h('br'), h('small', null, c.email || 'No email')), h('small', null, c.label)); })) : h('p', { class: 'hint' }, 'This transaction has no contacts with an email yet.'));
       }).catch(function (e) { clear(body).appendChild(errBox(e.message)); });
     }
@@ -567,7 +567,7 @@
     var W = Object.assign({ step: 1, name: '', files: [], merged: null, mergedFrom: '', who: [], orderMode: 'parallel', fields: [], subject: '', message: '', description: '', category: 'general', shared: false, templateId: '', id: '', pdfChanged: false }, init || {});
     if (!W.who.length) W.who = T ? [{ key: 'role' + (rk++), label: 'Client', name: '', email: '', order: 1 }] : [];
     var ed = null;
-    function stepsBar() { return h('div', { class: 'steps' }, [T ? 'Template details' : 'Documents & signers', 'Place fields', T ? 'Save' : 'Review & send'].map(function (l, i) { return h('div', { class: 'step' + (W.step === i + 1 ? ' on' : W.step > i + 1 ? ' done' : '') }, h('i', null, W.step > i + 1 ? '✓' : i + 1), l); })); }
+    function stepsBar() { return h('div', { class: 'steps' }, [T ? 'Template Details' : 'Documents & Signers', 'Place Fields', T ? 'Save' : 'Review & Send'].map(function (l, i) { return h('div', { class: 'step' + (W.step === i + 1 ? ' on' : W.step > i + 1 ? ' done' : '') }, h('i', null, W.step > i + 1 ? '✓' : i + 1), l); })); }
     function draw() { $app.className = W.step === 2 ? 'wide' : ''; clear($app); [null, step1, step2, step3][W.step](); }
     function filesKey() { return W.files.map(function (f) { return f.name + f.bytes.length; }).join('|'); }
     /* step 1 */
@@ -588,7 +588,7 @@
       }
       function drawFiles() {
         clear(fileList); W.files.forEach(function (f, i) {
-          fileList.appendChild(h('li', null, h('span', null, (i + 1) + '. ' + f.name), W.files.length > 1 ? [h('button', { class: 'icon', type: 'button', 'aria-label': 'Move up', disabled: i === 0, onclick: function () { W.files.splice(i - 1, 0, W.files.splice(i, 1)[0]); W.pdfChanged = true; drawFiles(); } }, svg(I.arrowUp)), h('button', { class: 'icon', type: 'button', 'aria-label': 'Move down', disabled: i === W.files.length - 1, onclick: function () { W.files.splice(i + 1, 0, W.files.splice(i, 1)[0]); W.pdfChanged = true; drawFiles(); } }, svg(I.arrowDn))] : null,
+          fileList.appendChild(h('li', null, h('span', null, (i + 1) + '. ' + f.name), W.files.length > 1 ? [h('button', { class: 'icon', type: 'button', 'aria-label': 'Move Up', disabled: i === 0, onclick: function () { W.files.splice(i - 1, 0, W.files.splice(i, 1)[0]); W.pdfChanged = true; drawFiles(); } }, svg(I.arrowUp)), h('button', { class: 'icon', type: 'button', 'aria-label': 'Move Down', disabled: i === W.files.length - 1, onclick: function () { W.files.splice(i + 1, 0, W.files.splice(i, 1)[0]); W.pdfChanged = true; drawFiles(); } }, svg(I.arrowDn))] : null,
             h('button', { class: 'icon', type: 'button', 'aria-label': 'Remove ' + f.name, onclick: function () { W.files.splice(i, 1); W.pdfChanged = true; drawFiles(); } }, svg(I.x))));
         });
         if (W.files.length && W.fields.length && W.pdfChanged && W.mergedFrom) fileList.appendChild(h('li', { class: 'hint' }, 'You changed the files — check field positions on the next step.'));
@@ -610,22 +610,22 @@
         if (!W.who.length) whoList.appendChild(h('p', { class: 'hint' }, T ? 'Add at least one role.' : 'Add the people who need to sign.'));
       }
       function addWho(p) { W.who.push(Object.assign({ key: (T ? 'role' : 'r') + (rk++), label: '', name: '', email: '', order: W.who.length + 1 }, p || {})); drawWho(); S.dirty = true; }
-      var orderSeg = h('div', { class: 'seg' }, [['parallel', 'Everyone at once'], ['sequential', 'In order']].map(function (o) { return h('button', { type: 'button', class: W.orderMode === o[0] ? 'on' : '', onclick: function () { W.orderMode = o[0]; Array.prototype.forEach.call(orderSeg.children, function (b, j) { b.className = (j === 0) === (o[0] === 'parallel') ? 'on' : ''; }); drawWho(); } }, o[1]); }));
+      var orderSeg = h('div', { class: 'seg' }, [['parallel', 'Everyone at Once'], ['sequential', 'In Order']].map(function (o) { return h('button', { type: 'button', class: W.orderMode === o[0] ? 'on' : '', onclick: function () { W.orderMode = o[0]; Array.prototype.forEach.call(orderSeg.children, function (b, j) { b.className = (j === 0) === (o[0] === 'parallel') ? 'on' : ''; }); drawWho(); } }, o[1]); }));
       var nameIn = h('input', { type: 'text', value: W.name, maxlength: 150, placeholder: T ? 'e.g. Residential Listing Agreement' : 'e.g. Listing Agreement – 88 Canyon Crest', oninput: function () { W.name = nameIn.value; } });
       var extra = null;
       if (T) {
-        var cat = isAdmin() ? h('div', { class: 'f' }, h('label', null, 'Type'), h('div', { class: 'seg' }, [['general', 'General'], ['onboarding', 'Onboarding (new hires)']].map(function (o) { return h('button', { type: 'button', class: W.category === o[0] ? 'on' : '', onclick: function (e) { W.category = o[0]; Array.prototype.forEach.call(e.currentTarget.parentNode.children, function (b) { b.className = ''; }); e.currentTarget.className = 'on'; shareRow.classList.toggle('hidden', o[0] === 'onboarding'); } }, o[1]); })), h('small', null, 'Onboarding templates are shared with everyone and show up in the Onboarding packet.')) : null;
+        var cat = isAdmin() ? h('div', { class: 'f' }, h('label', null, 'Type'), h('div', { class: 'seg' }, [['general', 'General'], ['onboarding', 'Onboarding (New Hires)']].map(function (o) { return h('button', { type: 'button', class: W.category === o[0] ? 'on' : '', onclick: function (e) { W.category = o[0]; Array.prototype.forEach.call(e.currentTarget.parentNode.children, function (b) { b.className = ''; }); e.currentTarget.className = 'on'; shareRow.classList.toggle('hidden', o[0] === 'onboarding'); } }, o[1]); })), h('small', null, 'Onboarding templates are shared with everyone and show up in the Onboarding packet.')) : null;
         var shareRow = h('label', { class: 'check' + (W.category === 'onboarding' ? ' hidden' : '') }, h('input', { type: 'checkbox', checked: W.shared, onchange: function (e) { W.shared = e.target.checked; } }), 'Share with all ENESMA agents');
         extra = [h('div', { class: 'f' }, h('label', null, 'Description (optional)'), h('input', { type: 'text', value: W.description, maxlength: 300, oninput: function (e) { W.description = e.target.value; } })), cat, h('div', { class: 'f' }, shareRow)];
       }
-      add($app, [h('a', { class: 'back', href: T ? '#/templates' : '#/' }, T ? '‹ Templates' : '‹ Envelopes'), h('span', { class: 'rule' }), h('h1', null, T ? (W.id ? 'Edit template' : 'New template') : (W.templateId ? 'Send “' + W.tplName + '”' : 'New envelope')), stepsBar(), testBar(),
+      add($app, [h('a', { class: 'back', href: T ? '#/templates' : '#/' }, T ? '‹ Templates' : '‹ Envelopes'), h('span', { class: 'rule' }), h('h1', null, T ? (W.id ? 'Edit Template' : 'New Template') : (W.templateId ? 'Send “' + W.tplName + '”' : 'New Envelope')), stepsBar(), testBar(),
         h('div', { class: 'detail' },
           h('div', { class: 'card' }, h('div', { class: 'f' }, h('label', null, T ? 'Template name' : 'Envelope name'), nameIn), extra, h('h2', { style: { marginTop: '8px' } }, 'Documents'), W.templateId && !T ? h('p', { class: 'hint' }, 'From the template. You can add more PDFs after it.') : null, drop, fileList),
           h('div', { class: 'card' }, h('h2', null, T ? 'Roles' : 'Signers'), h('div', { class: 'f' }, h('label', null, 'Signing order'), orderSeg), whoList,
-            h('div', { class: 'actions', style: { marginTop: '10px' } }, h('button', { class: 'btn sm ghost', type: 'button', onclick: function () { addWho(T ? { label: 'Signer ' + (W.who.length + 1) } : null); } }, T ? 'Add role' : 'Add signer'),
-              !T ? h('button', { class: 'btn sm plain', type: 'button', onclick: function () { addWho({ name: S.user.name, email: S.user.email }); } }, 'Add me') : null,
-              !T ? h('button', { class: 'btn sm plain', type: 'button', onclick: function () { pickContact(function (c) { var blank = W.who.filter(function (w) { return !w.name && !w.email; })[0]; if (blank) { blank.name = c.name; blank.email = c.email; drawWho(); } else addWho(c); }); } }, 'From contacts') : null))),
-        msg, h('div', { class: 'actions' }, h('span', { class: 'sp' }), h('button', { class: 'btn red', type: 'button', onclick: function (e) { next(e.currentTarget); } }, 'Next: place fields'))]);
+            h('div', { class: 'actions', style: { marginTop: '10px' } }, h('button', { class: 'btn sm ghost', type: 'button', onclick: function () { addWho(T ? { label: 'Signer ' + (W.who.length + 1) } : null); } }, T ? 'Add Role' : 'Add Signer'),
+              !T ? h('button', { class: 'btn sm plain', type: 'button', onclick: function () { addWho({ name: S.user.name, email: S.user.email }); } }, 'Add Me') : null,
+              !T ? h('button', { class: 'btn sm plain', type: 'button', onclick: function () { pickContact(function (c) { var blank = W.who.filter(function (w) { return !w.name && !w.email; })[0]; if (blank) { blank.name = c.name; blank.email = c.email; drawWho(); } else addWho(c); }); } }, 'From Contacts') : null))),
+        msg, h('div', { class: 'actions' }, h('span', { class: 'sp' }), h('button', { class: 'btn red', type: 'button', onclick: function (e) { next(e.currentTarget); } }, 'Next: Place Fields'))]);
       drawFiles(); drawWho();
       async function next(btn) {
         clear(msg);
@@ -664,8 +664,8 @@
       var subj = h('input', { type: 'text', maxlength: 150, value: W.subject || ('Please sign: ' + (W.name || 'documents')), oninput: function () { W.subject = subj.value; } });
       var note = h('textarea', { maxlength: 2000, placeholder: 'Optional message to signers', oninput: function () { W.message = note.value; } }); note.value = W.message || '';
       var byWho = W.who.map(function (w, i) { var n = W.fields.filter(function (f) { return f.recipient === w.key; }).length; return h('div', { class: 'signer' }, h('div', { class: 'top' }, h('div', null, h('div', { class: 'who' }, (W.orderMode === 'sequential' ? (w.order || i + 1) + '. ' : '') + (T ? w.label : w.name)), h('div', { class: 'em' }, T ? (w.email ? 'Default: ' + (w.name ? w.name + ' · ' : '') + w.email : 'Filled in when sending') : w.email)), h('span', { class: 'badge' }, n + ' field' + (n === 1 ? '' : 's')))); });
-      btn = h('button', { class: 'btn red', type: 'button', onclick: submit }, T ? 'Save template' : 'Send for signature');
-      add($app, [h('a', { class: 'back', href: 'javascript:void 0', onclick: function () { W.step = 2; draw(); } }, '‹ Place fields'), h('span', { class: 'rule' }), h('h1', null, W.name || 'Untitled'), stepsBar(), testBar(),
+      btn = h('button', { class: 'btn red', type: 'button', onclick: submit }, T ? 'Save Template' : 'Send for Signature');
+      add($app, [h('a', { class: 'back', href: 'javascript:void 0', onclick: function () { W.step = 2; draw(); } }, '‹ Place Fields'), h('span', { class: 'rule' }), h('h1', null, W.name || 'Untitled'), stepsBar(), testBar(),
         h('div', { class: 'detail' }, h('div', { class: 'card' }, h('h2', null, T ? 'Default email' : 'Email to signers'), h('div', { class: 'f' }, h('label', null, 'Subject'), subj), h('div', { class: 'f' }, h('label', null, 'Message'), note),
           h('p', { class: 'hint' }, T ? 'Used when this template is sent. It can be changed each time.' : 'Each signer gets a private link — no account needed. When everyone has signed, all parties get the signed PDF and its Certificate of Completion (a separate PDF).')),
           h('div', { class: 'card' }, h('h2', null, T ? 'Roles' : 'Signers'), h('p', { class: 'hint', style: { marginTop: '-6px' } }, W.orderMode === 'sequential' ? 'In order — each person is emailed after the one before signs.' : 'Everyone is emailed at once.'), byWho, h('p', { class: 'hint' }, W.pages + ' page' + (W.pages === 1 ? '' : 's') + ' · ' + W.fields.length + ' fields'))),
@@ -723,13 +723,13 @@
           h('p', { class: 'nm' }, t.name), h('p', { class: 'ds' }, t.description || (t.roles.map(function (r) { return r.label; }).join(', '))),
           h('p', { class: 'hint', style: { margin: 0 } }, t.pages + ' page' + (t.pages === 1 ? '' : 's') + ' · ' + t.fieldCount + ' fields · ' + t.roles.length + ' role' + (t.roles.length === 1 ? '' : 's') + (t.ownerName ? ' · by ' + t.ownerName : '')),
           h('div', { class: 'acts' }, h('a', { class: 'btn sm red', href: '#/new?t=' + encodeURIComponent(t.id) }, 'Use'), t.canEdit ? h('a', { class: 'btn sm ghost', href: '#/template/' + encodeURIComponent(t.id) }, 'Edit') : null,
-            t.canEdit ? h('button', { class: 'btn sm plain', type: 'button', onclick: function () { confirmBox('Delete template?', '“' + t.name + '” will no longer be available. Envelopes already sent are not affected.', 'Delete', true).then(function (ok) { if (ok) api('deleteTemplate', { id: t.id }).then(function () { toast('Template deleted'); ROUTES.templates(); }).catch(function (e) { toast(e.message); }); }); } }, 'Delete') : null));
+            t.canEdit ? h('button', { class: 'btn sm plain', type: 'button', onclick: function () { confirmBox('Delete Template?', '“' + t.name + '” will no longer be available. Envelopes already sent are not affected.', 'Delete', true).then(function (ok) { if (ok) api('deleteTemplate', { id: t.id }).then(function () { toast('Template deleted'); ROUTES.templates(); }).catch(function (e) { toast(e.message); }); }); } }, 'Delete') : null));
       }
       var onb = ts.filter(function (t) { return t.category === 'onboarding'; }), gen = ts.filter(function (t) { return t.category !== 'onboarding'; });
       var bits = [h('div', { class: 'head' }, h('div', null, h('span', { class: 'rule' }), h('h1', null, 'Templates'), h('p', { class: 'sub' }, 'Reusable documents with roles and fields already placed.')),
-        h('div', { class: 'toolbar', style: { margin: 0 } }, isAdmin() ? h('a', { class: 'btn ghost', href: '#/template/new?cat=onboarding' }, 'New onboarding template') : null, h('a', { class: 'btn red', href: '#/template/new' }, 'New template'))),
-        h('h2', null, 'General'), gen.length ? h('div', { class: 'cards' }, gen.map(card)) : h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No templates yet'), 'Save documents you send often — listing agreements, disclosures — with fields already placed.'))];
-      if (isAdmin()) bits.push(h('h2', { style: { marginTop: '28px' } }, 'Onboarding'), onb.length ? h('div', { class: 'cards' }, onb.map(card)) : h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No onboarding templates yet'), 'Onboarding templates can be added here once the corporation DRE# packet is ready.')));
+        h('div', { class: 'toolbar', style: { margin: 0 } }, isAdmin() ? h('a', { class: 'btn ghost', href: '#/template/new?cat=onboarding' }, 'New Onboarding Template') : null, h('a', { class: 'btn red', href: '#/template/new' }, 'New Template'))),
+        h('h2', null, 'General'), gen.length ? h('div', { class: 'cards' }, gen.map(card)) : h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No Templates Yet'), 'Save documents you send often — listing agreements, disclosures — with fields already placed.'))];
+      if (isAdmin()) bits.push(h('h2', { style: { marginTop: '28px' } }, 'Onboarding'), onb.length ? h('div', { class: 'cards' }, onb.map(card)) : h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No Onboarding Templates Yet'), 'Onboarding templates can be added here once the corporation DRE# packet is ready.')));
       add($app, bits);
     }).catch(function (e) { fatal(e, ROUTES.templates); });
   };
@@ -859,7 +859,7 @@
       var split = h('input', { id: 'ob-split', type: 'text', inputmode: 'decimal', autocomplete: 'off', maxlength: '6', value: '90', 'aria-describedby': 'ob-split-hint' });
       var cap = h('input', { id: 'ob-cap', type: 'text', inputmode: 'decimal', autocomplete: 'off', maxlength: '12', placeholder: 'Optional' });
       var msg = h('div');
-      var btn = h('button', { id: 'ob-invite-btn', class: 'btn', type: 'submit' }, 'Invite agent');
+      var btn = h('button', { id: 'ob-invite-btn', class: 'btn', type: 'submit' }, 'Invite Agent');
       var form = h('form', { id: 'ob-form', novalidate: true, onsubmit: function (ev) { submitInvite(ev, { first: first, middle: middle, last: last, suffix: suffix, email: email, split: split, cap: cap, msg: msg, btn: btn }); } },
         h('div', { class: 'ob-grid' },
           h('div', { class: 'f' }, h('label', { for: 'ob-first' }, 'First name'), first),
@@ -871,7 +871,7 @@
           h('div', { class: 'f' }, h('label', { for: 'ob-cap' }, 'Cap'), cap, h('small', null, 'Optional annual dollar cap. Leave blank when there is none.'))),
         msg, h('div', { class: 'actions' }, btn));
       var list = !rows.length
-        ? h('div', { id: 'ob-list', class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No one invited yet'), 'Enter a first name, last name, and email above, then choose Invite agent.'))
+        ? h('div', { id: 'ob-list', class: 'list' }, h('div', { class: 'empty' }, h('b', null, 'No One Invited Yet'), 'Enter a first name, last name, and email above, then choose Invite Agent.'))
         : h('div', { id: 'ob-list', class: 'ob-wrap' }, h('table', { class: 'ob-table' }, h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', null, 'Email'), h('th', null, 'Split'), h('th', null, 'Status'), h('th', null, 'Invited'), h('th', null, 'Last update'))), h('tbody', null, rows.map(function (r) {
           var who = r.id ? h('a', { href: '#/envelope/' + encodeURIComponent(r.id) }, r.name || '—') : (r.name || '—');
           var splitTxt = r.splitPct === '' || r.splitPct == null ? '—' : String(r.splitPct) + '%';
@@ -879,8 +879,8 @@
           return h('tr', null, h('td', null, who), h('td', null, r.email || '—'), h('td', null, splitTxt), h('td', null, r.status || 'Invited'), h('td', null, fmt(r.invitedAt, false) || '—'), h('td', null, fmt(r.updatedAt, false) || '—'));
         }))));
       add($app, [h('span', { class: 'rule' }), h('h1', null, 'Onboarding'), h('p', { class: 'sub' }, 'Invite an agent, then track where each packet stands.'), testBar(), state.loadError ? errBox(state.loadError) : null,
-        h('div', { class: 'card ob-invite' }, h('h2', null, 'Invite an agent'), h('p', { class: 'hint', style: { marginTop: '0' } }, hintText()), form),
-        h('h2', { id: 'ob-list-title', style: { marginTop: '22px' } }, 'Invited agents'), list]);
+        h('div', { class: 'card ob-invite' }, h('h2', null, 'Invite an Agent'), h('p', { class: 'hint', style: { marginTop: '0' } }, hintText()), form),
+        h('h2', { id: 'ob-list-title', style: { marginTop: '22px' } }, 'Invited Agents'), list]);
     }
     async function postInvite(person) {
       if (state.noApi) { var skip = new Error('no-invite-api'); skip.code = 'NO_API'; throw skip; }
@@ -963,16 +963,16 @@
       clear(side); clear(listEl); clear(headAct); if (!D) return;
       var cnt = function (v) { var s = st.view; st.view = v; var n = D.documents.filter(inView).length; st.view = s; return n; };
       function sb(v, label) { return h('button', { type: 'button', class: st.view === v ? 'on' : '', onclick: function () { st.view = S.docView = v; draw(); } }, h('span', null, label), h('span', { class: 'n' }, cnt(v))); }
-      add(side, [sb('all', 'All documents'), sb('unfiled', 'Unfiled'), h('hr'), D.folders.map(function (f) { return sb(f.id, '📁 ' + f.name); }),
-        h('button', { type: 'button', onclick: newFolder }, h('span', null, '+ New folder')), h('hr'), sb('archived', 'Archived')]);
+      add(side, [sb('all', 'All Documents'), sb('unfiled', 'Unfiled'), h('hr'), D.folders.map(function (f) { return sb(f.id, '📁 ' + f.name); }),
+        h('button', { type: 'button', onclick: newFolder }, h('span', null, '+ New Folder')), h('hr'), sb('archived', 'Archived')]);
       var folder = D.folders.filter(function (f) { return f.id === st.view; })[0];
-      if (folder) add(headAct, [h('button', { class: 'btn sm plain', type: 'button', onclick: function () { promptBox('Rename folder', 'Folder name', folder.name).then(function (n) { if (n) api('saveFolder', { id: folder.id, name: n }).then(function () { load(); }).catch(function (e) { toast(e.message); }); }); } }, 'Rename folder'),
-        h('button', { class: 'btn sm plain', type: 'button', onclick: function () { confirmBox('Delete folder “' + folder.name + '”?', 'The folder is removed. The documents in it are NOT deleted — they move back to Unfiled.', 'Delete folder', true).then(function (ok) { if (ok) api('deleteFolder', { id: folder.id }).then(function (r) { toast('Folder deleted · ' + r.moved + ' document' + (r.moved === 1 ? '' : 's') + ' moved to Unfiled'); st.view = S.docView = 'unfiled'; load(); }).catch(function (e) { toast(e.message); }); }); } }, 'Delete folder')]);
+      if (folder) add(headAct, [h('button', { class: 'btn sm plain', type: 'button', onclick: function () { promptBox('Rename Folder', 'Folder Name', folder.name).then(function (n) { if (n) api('saveFolder', { id: folder.id, name: n }).then(function () { load(); }).catch(function (e) { toast(e.message); }); }); } }, 'Rename Folder'),
+        h('button', { class: 'btn sm plain', type: 'button', onclick: function () { confirmBox('Delete Folder “' + folder.name + '”?', 'The folder is removed. The documents in it are NOT deleted — they move back to Unfiled.', 'Delete Folder', true).then(function (ok) { if (ok) api('deleteFolder', { id: folder.id }).then(function (r) { toast('Folder deleted · ' + r.moved + ' document' + (r.moved === 1 ? '' : 's') + ' moved to Unfiled'); st.view = S.docView = 'unfiled'; load(); }).catch(function (e) { toast(e.message); }); }); } }, 'Delete Folder')]);
       var q = st.q.toLowerCase(), rows = D.documents.filter(inView).filter(function (d) { return !q || (d.name + ' ' + d.signers + ' ' + d.ownerName).toLowerCase().indexOf(q) >= 0; });
-      if (!rows.length) return listEl.appendChild(h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, D.documents.length ? 'Nothing here' : 'No signed documents yet'), D.documents.length ? (folder ? 'Move documents here from All documents.' : '') : 'Completed envelopes land here automatically.')));
+      if (!rows.length) return listEl.appendChild(h('div', { class: 'list' }, h('div', { class: 'empty' }, h('b', null, D.documents.length ? 'Nothing Here' : 'No Signed Documents Yet'), D.documents.length ? (folder ? 'Move documents here from All Documents.' : '') : 'Completed envelopes land here automatically.')));
       listEl.appendChild(h('div', { class: 'list' }, rows.map(function (d) {
         var mine = d.ownerId === S.user.id;
-        var mv = mine ? h('select', { 'aria-label': 'Move to folder', style: { width: 'auto', minHeight: '36px', padding: '4px 30px 4px 10px', fontSize: '14px' }, onchange: function (e) { api('moveDocument', { id: d.id, folderId: e.target.value }).then(function () { toast('Moved'); load(); }).catch(function (er) { toast(er.message); }); } },
+        var mv = mine ? h('select', { 'aria-label': 'Move to Folder', style: { width: 'auto', minHeight: '36px', padding: '4px 30px 4px 10px', fontSize: '14px' }, onchange: function (e) { api('moveDocument', { id: d.id, folderId: e.target.value }).then(function () { toast('Moved'); load(); }).catch(function (er) { toast(er.message); }); } },
           h('option', { value: '', selected: !d.folderId }, 'Unfiled'), D.folders.map(function (f) { return h('option', { value: f.id, selected: d.folderId === f.id }, f.name); })) : null;
         return h('div', { class: 'item' }, h('div', { style: { minWidth: 0 } }, h('div', { class: 't' }, d.name), h('div', { class: 'm' }, 'Signed by ' + (d.signers || '—') + (st.scope === 'all' ? ' · ' + d.ownerName : '')),
           h('div', { class: 'm' }, 'Completed ' + fmt(d.completedAt, false) + ' · auto-deletes ' + fmt(d.deleteAfter, false))),
@@ -981,9 +981,9 @@
             D.canDelete ? h('button', { class: 'btn sm plain', type: 'button', style: { color: '#9A0007' }, onclick: function () { confirmBox('Delete document?', '“' + d.name + '” and its signed PDF will be permanently deleted for everyone. This can’t be undone.', 'Delete permanently', true).then(function (ok) { if (ok) api('deleteDocument', { id: d.id }).then(function () { toast('Document deleted'); load(); }).catch(function (er) { toast(er.message); }); }); } }, 'Delete') : null));
       })));
     }
-    function newFolder() { promptBox('New folder', 'Folder name', '', 'Create').then(function (n) { if (n) api('saveFolder', { name: n }).then(function (r) { st.view = S.docView = r.folder.id; load(); }).catch(function (e) { toast(e.message); }); }); }
-    var search = h('input', { type: 'search', placeholder: 'Search documents…', 'aria-label': 'Search documents', oninput: function () { st.q = search.value; draw(); } });
-    var scope = isAdmin() ? h('div', { class: 'seg' }, [['mine', 'Mine'], ['all', 'All agents']].map(function (s) { return h('button', { type: 'button', class: st.scope === s[0] ? 'on' : '', onclick: function (e) { st.scope = S.docScope = s[0]; Array.prototype.forEach.call(e.currentTarget.parentNode.children, function (b) { b.className = ''; }); e.currentTarget.className = 'on'; load(); } }, s[1]); })) : null;
+    function newFolder() { promptBox('New Folder', 'Folder Name', '', 'Create').then(function (n) { if (n) api('saveFolder', { name: n }).then(function (r) { st.view = S.docView = r.folder.id; load(); }).catch(function (e) { toast(e.message); }); }); }
+    var search = h('input', { type: 'search', placeholder: 'Search documents…', 'aria-label': 'Search Documents', oninput: function () { st.q = search.value; draw(); } });
+    var scope = isAdmin() ? h('div', { class: 'seg' }, [['mine', 'Mine'], ['all', 'All Agents']].map(function (s) { return h('button', { type: 'button', class: st.scope === s[0] ? 'on' : '', onclick: function (e) { st.scope = S.docScope = s[0]; Array.prototype.forEach.call(e.currentTarget.parentNode.children, function (b) { b.className = ''; }); e.currentTarget.className = 'on'; load(); } }, s[1]); })) : null;
     add($app, [h('div', { class: 'head' }, h('div', null, h('span', { class: 'rule' }), h('h1', null, 'Documents'), h('p', { class: 'sub' }, 'Every completed packet, with its Certificate of Completion. Kept for 3 years, then deleted automatically.')), headAct),
       h('div', { class: 'toolbar' }, search, scope), h('div', { class: 'split' }, side, listEl)]);
     load();
@@ -1002,30 +1002,30 @@
     function route() { if (X.signer.status === 'signed' || X.completed) return doneView(); consentView(); }
     function hero(title, text, extra) { clear($app); $app.appendChild(h('div', { class: 'done-hero' }, h('div', { class: 'tick' }, svg(I.tick)), h('h1', null, title), h('p', { class: 'sub' }, text), extra || null)); }
     function doneView(justSigned, all) {
-      var dl = h('button', { class: 'btn red', type: 'button', onclick: function () { busy(dl, true, 'Preparing…'); api('signDownload', { token: token }).then(function (d) { busy(dl, false); downloadPdf(d.name + ' - Signed', d.pdf); }).catch(function (e) { busy(dl, false); toast(e.message); }); } }, 'Download signed PDF');
+      var dl = h('button', { class: 'btn red', type: 'button', onclick: function () { busy(dl, true, 'Preparing…'); api('signDownload', { token: token }).then(function (d) { busy(dl, false); downloadPdf(d.name + ' - Signed', d.pdf); }).catch(function (e) { busy(dl, false); toast(e.message); }); } }, 'Download Signed PDF');
       var dc = h('button', { class: 'btn ghost', type: 'button', onclick: function () { busy(dc, true, 'Preparing…'); api('signDownload', { token: token, certificate: true }).then(function (d) { busy(dc, false); downloadPdf(d.name + ' - Certificate', d.pdf); }).catch(function (e) { busy(dc, false); toast(e.message); }); } }, 'Certificate PDF');
       if (X.completed) return hero('All signed', '“' + docFirst(X.envelope.name) + '” is complete. Download the signed copy and its Certificate of Completion.', h('div', { class: 'acts-row' }, dl, dc));
       hero(justSigned ? 'Thank you, ' + X.signer.name.split(' ')[0] + '!' : 'You already signed', all ? 'Everyone has signed. You’ll get an email with the signed PDF and Certificate of Completion in a minute or two.' : 'Your signature is saved. When everyone has signed, you’ll get an email with the final signed PDF.');
     }
     function consentView() {
-      clear($app); var cb = h('input', { type: 'checkbox', id: 'cons' }), go2 = h('button', { class: 'btn red wide', type: 'button', disabled: true, onclick: docView }, 'Review & sign');
+      clear($app); var cb = h('input', { type: 'checkbox', id: 'cons' }), go2 = h('button', { class: 'btn red wide', type: 'button', disabled: true, onclick: docView }, 'Review & Sign');
       cb.addEventListener('change', function () { go2.disabled = !cb.checked; });
       $app.appendChild(h('div', { class: 'consent card' }, h('img', { src: 'assets/esign-logo-light.svg', alt: 'ENESMA E-Sign', style: { width: '180px', display: 'block', marginBottom: '16px' } }),
         h('h1', { class: 'dochead', style: { fontSize: '22px' } }, X.envelope.name), h('p', { class: 'sub' }, X.envelope.sender + ' (' + X.envelope.senderEmail + ') sent you documents to review and sign.'),
         X.envelope.message ? h('div', { class: 'ok', style: { whiteSpace: 'pre-wrap' } }, X.envelope.message) : null,
         h('p', { class: 'hint' }, 'Signing as ', h('b', null, X.signer.name + ' · ' + X.signer.email), '. ' + X.fields.filter(isReq).length + ' required field' + (X.fields.filter(isReq).length === 1 ? '' : 's') + ' to complete.'),
         h('label', { class: 'check', for: 'cons', style: { margin: '16px 0' } }, cb, h('span', null, 'I agree to use electronic records and signatures for these documents, and that my electronic signature is the legal equivalent of my handwritten signature (ESIGN Act / UETA). I can download a copy, and I may ask the sender for a paper copy.')),
-        go2, h('p', { style: { textAlign: 'center', marginTop: '14px' } }, h('button', { class: 'link', type: 'button', onclick: decline }, 'Decline to sign'))));
+        go2, h('p', { style: { textAlign: 'center', marginTop: '14px' } }, h('button', { class: 'link', type: 'button', onclick: decline }, 'Decline to Sign'))));
     }
     function decline() {
       var rs = h('textarea', { maxlength: 300, placeholder: 'Let the sender know why (optional)' }), msg = h('div');
-      var b = h('button', { class: 'btn red', type: 'button', onclick: function () { busy(b, true); api('signDecline', { token: token, reason: rs.value.trim() }).then(function () { closeModal(); clear($app); $app.appendChild(h('div', { class: 'done-hero' }, h('h1', null, 'You declined'), h('p', { class: 'sub' }, 'We let ' + X.envelope.sender + ' know. You can close this page.'))); }).catch(function (e) { busy(b, false); clear(msg).appendChild(errBox(e.message)); }); } }, 'Decline');
-      openModal('Decline to sign?', h('div', null, h('p', { class: 'sub' }, 'The envelope is cancelled for everyone and the sender is notified.'), h('div', { class: 'f' }, rs), msg, h('div', { class: 'actions' }, b, h('button', { class: 'btn plain', type: 'button', onclick: closeModal }, 'Cancel'))));
+      var b = h('button', { class: 'btn red', type: 'button', onclick: function () { busy(b, true); api('signDecline', { token: token, reason: rs.value.trim() }).then(function () { closeModal(); clear($app); $app.appendChild(h('div', { class: 'done-hero' }, h('h1', null, 'You Declined'), h('p', { class: 'sub' }, 'We let ' + X.envelope.sender + ' know. You can close this page.'))); }).catch(function (e) { busy(b, false); clear(msg).appendChild(errBox(e.message)); }); } }, 'Decline');
+      openModal('Decline to Sign?', h('div', null, h('p', { class: 'sub' }, 'The envelope is cancelled for everyone and the sender is notified.'), h('div', { class: 'f' }, rs), msg, h('div', { class: 'actions' }, b, h('button', { class: 'btn plain', type: 'button', onclick: closeModal }, 'Cancel'))));
     }
     var today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric', timeZone: 'America/Los_Angeles' });
     function docView() {
       clear($app); $app.className = 'wide';
-      var pagesEl = h('div', { class: 'pages' }), prog = h('span', { class: 'p' }), nextB = h('button', { class: 'btn', type: 'button', onclick: nextField }, 'Next field'), fin = h('button', { class: 'btn red', type: 'button', onclick: finish }, 'Finish');
+      var pagesEl = h('div', { class: 'pages' }), prog = h('span', { class: 'p' }), nextB = h('button', { class: 'btn', type: 'button', onclick: nextField }, 'Next Field'), fin = h('button', { class: 'btn red', type: 'button', onclick: finish }, 'Finish');
       add($app, [h('div', { class: 'sbar' }, h('div', { class: 't' }, h('b', { class: 'dochead' }, X.envelope.name), h('span', null, 'From ' + X.envelope.sender)), h('button', { class: 'link', type: 'button', onclick: decline }, 'Decline')),
         h('div', { class: 'sdoc' }, pagesEl), h('div', { class: 'sfoot' }, prog, nextB, fin)]);
       var els = [];

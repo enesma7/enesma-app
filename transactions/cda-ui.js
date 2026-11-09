@@ -338,7 +338,7 @@
       return linesOut;
     }
     if (!locked && !pack.offline) {
-      acts.innerHTML = '<button type="button" class="ub" id="cdaSave">Save draft</button><button type="button" class="btn" id="cdaSend">Send for E-Sign</button>';
+      acts.innerHTML = '<button type="button" class="ub" id="cdaSave">Save Draft</button><button type="button" class="btn" id="cdaSend">Send for E-Sign</button>';
       A.qs('#cdaSave', m).onclick = function () {
         var linesOut = payloadLines(); if (!linesOut) return;
         var b = this; b.disabled = true;
@@ -408,7 +408,7 @@
       var host = A.qs('#cdaSign', m);
       var owner = A.S.user && (A.S.user.owner || A.isAdmin());
       host.innerHTML = '<p class="sub">Out for signature' + (env ? ' · envelope ' + h(env) : '') + '.</p>' +
-        (owner ? '<button type="button" class="btn" id="cdaPull">' + (A.DEMO ? 'Demo: record signed PDF' : 'Check E-Sign and file the signed PDF') + '</button>' : '<p class="sub">When both have signed, the owner files the signed PDF on this checklist.</p>');
+        (owner ? '<button type="button" class="btn" id="cdaPull">' + (A.DEMO ? 'Demo: Record Signed PDF' : 'Check E-Sign and File the Signed PDF') + '</button>' : '<p class="sub">When both have signed, the owner files the signed PDF on this checklist.</p>');
       var pull = A.qs('#cdaPull', m);
       if (!pull) return;
       pull.onclick = function () {
@@ -449,9 +449,9 @@
     var chk = p.escrowCheck || {};
     var h = A.h;
     var prior = chk.date ? '<p class="' + (chk.match ? 'ok' : 'err') + '">Last confirmation ' + h(chk.date) + ' · check ' + h(chk.checkNumber || '') + ' · ' + money2(chk.amount) + (chk.match ? ' · match' : ' · mismatch ' + money2(chk.difference || 0)) + '.</p>' : '';
-    return '<div class="card gb cda-esc" id="cdaEsc"><h3>Broker commission check</h3><p class="sub">Confirm the commission check against the signed CDA total gross of <b>' + money2(expected) + '</b>. Brokerage commission and the admin fee are recorded only after you enter the date that check was deposited, and only for those approved amounts. Agent commission amounts are not dated from this deposit.</p>' + prior +
+    return '<div class="card gb cda-esc" id="cdaEsc"><h3>Broker Commission Check</h3><p class="sub">Confirm the commission check against the signed CDA total gross of <b>' + money2(expected) + '</b>. Brokerage commission and the admin fee are recorded only after you enter the date that check was deposited, and only for those approved amounts. Agent commission amounts are not dated from this deposit.</p>' + prior +
       '<div id="cdaEscErr"></div><div class="cda-who"><label>Date deposited<input type="date" id="escDate" value="' + h(chk.depositDate || '') + '"></label><label>Check #<input id="escNum" value="' + h(chk.checkNumber || '') + '" maxlength="40"></label><label>Amount<input id="escAmt" inputmode="decimal" value="' + h(chk.amount != null && chk.amount !== '' ? chk.amount : '') + '" placeholder="0.00"></label></div>' +
-      '<p id="escLive" class="sub"></p><button type="button" class="btn" id="escGo">Confirm deposit</button></div>';
+      '<p id="escLive" class="sub"></p><button type="button" class="btn" id="escGo">Confirm Deposit</button></div>';
   }
   function wireEscrow(root) {
     var A = app(), box = A.qs('#cdaEsc', root);
@@ -485,11 +485,11 @@
       var rows = (d && d.pending) || [];
       if (!rows.length) { host.innerHTML = '<p class="sub">No signed-CDA amounts are waiting for approval.</p>'; return; }
       var h = A.h;
-      host.innerHTML = '<h2 class="ebh2">Owner amount approval</h2><p class="sub">This is not checklist compliance review. Compliance review is the separate Approve or Reject step on the CDA checklist item. Approving here records the latest signed CDA amounts: each ENESMA agent amount on the actual escrow closing date, with no agent deposit date. If that closing date is missing, the agent amount stays unrecorded. Brokerage income stays off the books until the check deposit date is confirmed. TC fee, admin fee, outside referral, other, and credits are not here.</p>' +
+      host.innerHTML = '<h2 class="ebh2">Owner Amount Approval</h2><p class="sub">This is not checklist compliance review. Compliance review is the separate Approve or Reject step on the CDA checklist item. Approving here records the latest signed CDA amounts: each ENESMA agent amount on the actual escrow closing date, with no agent deposit date. If that closing date is missing, the agent amount stays unrecorded. Brokerage income stays off the books until the check deposit date is confirmed. TC fee, admin fee, outside referral, other, and credits are not here.</p>' +
         '<div class="ebtable"><table class="ebt" id="cdaPendTbl"><thead><tr><th></th><th>File</th><th>Op</th><th>Payee</th><th>Kind</th><th class="r">Amount</th></tr></thead><tbody>' +
         rows.map(function (r) {
           return '<tr data-id="' + h(r.id) + '"><td><input type="checkbox" class="cdaP" checked aria-label="Include"></td><td>' + h(r.title || r.txnId || '') + '</td><td>' + h(r.op || '') + '</td><td>' + h(r.payeeName || r.name || '—') + '</td><td>' + h(r.kind || r.importKey || '') + '</td><td class="r">' + money2(r.amount) + '</td></tr>';
-        }).join('') + '</tbody></table></div><div class="ebbar"><button type="button" class="btn" id="cdaAp">Approve selected</button><button type="button" class="ub" id="cdaRj">Reject selected</button></div>';
+        }).join('') + '</tbody></table></div><div class="ebbar"><button type="button" class="btn" id="cdaAp">Approve Selected</button><button type="button" class="ub" id="cdaRj">Reject Selected</button></div>';
       function ids() { return A.qsa('#cdaPendTbl tbody tr', host).filter(function (tr) { return A.qs('.cdaP', tr).checked; }).map(function (tr) { return tr.getAttribute('data-id'); }); }
       function decide(decision) {
         var list = ids(); if (!list.length) { A.toast('Select at least one row.', 1); return; }

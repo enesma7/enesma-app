@@ -94,7 +94,7 @@
             '<svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="sgr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EAD59E"/><stop offset="1" stop-color="#D5BE87"/></linearGradient></defs><g fill="none" stroke="url(#sgr)" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M16 16l5 5"/></g></svg>' +
           '</button>' +
           '<span class="user-chip">' + h(userName()) + '</span>' +
-          '<button class="signout" id="signOut" type="button">Sign out</button>' +
+          '<button class="signout" id="signOut" type="button">Sign Out</button>' +
         '</div>' +
       '</nav></header>';
   }
@@ -303,7 +303,7 @@
       '<p>You receive a bonus equal to <b>1% of the total gross commission income (GCI)</b> the referred agent generates. The bonus:</p>' +
       '<div class="refer-checks"><div class="r">' + check + '<div>Lasts one (1) year from the referred agent’s hire date, then expires automatically, regardless of your production level</div></div>' +
       '<div class="r">' + check + '<div>Is not paid on any transaction that closes after the referred agent has reached their annual cap</div></div></div>' +
-      '<h3>How to refer</h3>' +
+      '<h3>How to Refer</h3>' +
       '<p>Fill out the form below with your information and the agent’s. Enrique will reach out to them personally.</p>' +
       '<p class="refer-cta"><a class="refer-btn" href="https://app.enesmarealty.com/leadforms/refer.html" target="_blank" rel="noopener">Refer an Agent</a></p>' +
       '<p class="note">' + h(R.legal) + '</p></div></section>';
@@ -337,7 +337,7 @@
       '</div></section>';
   }
   function page404() {
-    return '<section class="section"><div class="wrap" style="text-align:center"><h2>Page not found</h2><div class="gold-rule"></div><p><a href="#/">Back to the Hub</a></p></div></section>';
+    return '<section class="section"><div class="wrap" style="text-align:center"><h2>Page Not Found</h2><div class="gold-rule"></div><p><a href="#/">Back to the Hub</a></p></div></section>';
   }
 
   function pageFor(p) {
@@ -408,7 +408,7 @@
       '<div class="f"><label for="lu">Email</label><input id="lu" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" required></div>' +
       '<div class="f"><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password" required></div>' +
       '<button class="btn wide" id="lb">Sign in</button>' +
-      '<p class="fine"><a href="#" id="lc">First time or forgot password?</a></p>' +
+      '<p class="fine"><a href="#" id="lc">First Time or Forgot Password?</a></p>' +
       '<p class="fine disclosure">Use the same email and password as Transaction Center. A code may be emailed when you sign in from a new device.</p></form>'
     );
     qs('#lc').onclick = function (e) { e.preventDefault(); renderForgot(qs('#lu').value.trim()); };
@@ -426,16 +426,16 @@
   function renderOtp(ch, msg, okMsg) {
     view = 'otp'; otpCh = ch;
     var hint = (ch && ch.emailHint) || 'your account email';
-    document.title = 'Enter code · AGENT HUB';
+    document.title = 'Enter Code · AGENT HUB';
     $app.innerHTML = loginShell(
-      '<h1>Enter your sign-in code</h1>' +
+      '<h1>Enter Your Sign-In Code</h1>' +
       '<p class="sub">We emailed a 6-digit code to <b>' + h(hint) + '</b>. It expires in about 10 minutes. Check spam if you don’t see it.</p>' +
       (msg ? '<div class="err">' + h(msg) + '</div>' : '') + (okMsg ? '<div class="ok">' + h(okMsg) + '</div>' : '') +
       '<form id="of">' +
       '<div class="f"><label for="oc">Code</label><input id="oc" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>' +
       '<label class="chk"><input id="ot" type="checkbox" checked> Trust this device for 30 days. We won’t ask for a code again on this browser until then.</label>' +
-      '<button class="btn wide" id="ob">Verify and sign in</button>' +
-      '<p class="fine"><a href="#" id="or">Send a new code</a> · <a href="#" id="obk">Back to sign in</a></p></form>'
+      '<button class="btn wide" id="ob">Verify and Sign in</button>' +
+      '<p class="fine"><a href="#" id="or">Send a New Code</a> · <a href="#" id="obk">Back to Sign in</a></p></form>'
     );
     qs('#obk').onclick = function (e) { e.preventDefault(); renderLogin(); };
     qs('#or').onclick = function (e) {
@@ -456,24 +456,24 @@
   function renderForgot(email, step, msg, okMsg, need) {
     view = 'forgot';
     var two = step === 2; need = need || [];
-    document.title = 'Reset password · AGENT HUB';
+    document.title = 'Reset Password · AGENT HUB';
     $app.innerHTML = loginShell(
-      '<h1>' + (two ? 'Enter your code' : 'Set up or reset your password') + '</h1>' +
+      '<h1>' + (two ? 'Enter Your Code' : 'Set Up or Reset Your Password') + '</h1>' +
       '<p class="sub">' + (two ? 'We emailed a 6-digit code to <b>' + h(email) + '</b>. It expires in 15 minutes. Check spam if you don’t see it.' : 'Enter the email address the office registered for you. We’ll email you a code.') + '</p>' +
       (msg ? '<div class="err">' + h(msg) + '</div>' : '') + (okMsg ? '<div class="ok">' + h(okMsg) + '</div>' : '') +
       '<form id="cf">' +
       (two
         ? '<input type="hidden" id="ce" value="' + h(email) + '">' +
           '<div class="f"><label for="cc">Code</label><input id="cc" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></div>' +
-          '<div class="f"><label for="c1">New password</label><input id="c1" type="password" autocomplete="new-password" minlength="10" required></div>' +
-          '<div class="f"><label for="c2">Repeat new password</label><input id="c2" type="password" autocomplete="new-password" required></div>' +
+          '<div class="f"><label for="c1">New Password</label><input id="c1" type="password" autocomplete="new-password" minlength="10" required></div>' +
+          '<div class="f"><label for="c2">Repeat New Password</label><input id="c2" type="password" autocomplete="new-password" required></div>' +
           '<p class="note">At least 10 characters with letters and numbers.</p>' +
-          (need.indexOf('firstName') >= 0 ? '<div class="f"><label for="cfn">First name</label><input id="cfn" type="text" autocomplete="given-name" maxlength="50" required></div>' : '') +
-          (need.indexOf('lastName') >= 0 ? '<div class="f"><label for="cln">Last name</label><input id="cln" type="text" autocomplete="family-name" maxlength="50" required></div>' : '') +
+          (need.indexOf('firstName') >= 0 ? '<div class="f"><label for="cfn">First Name</label><input id="cfn" type="text" autocomplete="given-name" maxlength="50" required></div>' : '') +
+          (need.indexOf('lastName') >= 0 ? '<div class="f"><label for="cln">Last Name</label><input id="cln" type="text" autocomplete="family-name" maxlength="50" required></div>' : '') +
           (need.indexOf('phone') >= 0 ? '<div class="f"><label for="cph">Phone</label><input id="cph" type="tel" autocomplete="tel" placeholder="000-000-0000" required></div>' : '')
         : '<div class="f"><label for="ce">Email</label><input id="ce" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" value="' + h(email || '') + '" required></div>') +
-      '<button class="btn wide" id="cb">' + (two ? 'Save password and sign in' : 'Email me a code') + '</button>' +
-      '<p class="fine">' + (two ? '<a href="#" id="cr">Send a new code</a> · ' : '') + '<a href="#" id="cbk">Back to sign in</a></p></form>'
+      '<button class="btn wide" id="cb">' + (two ? 'Save Password and Sign in' : 'Email Me a Code') + '</button>' +
+      '<p class="fine">' + (two ? '<a href="#" id="cr">Send a New Code</a> · ' : '') + '<a href="#" id="cbk">Back to Sign in</a></p></form>'
     );
     qs('#cbk').onclick = function (e) { e.preventDefault(); renderLogin(); };
     if (qs('#cr')) qs('#cr').onclick = function (e) { e.preventDefault(); renderForgot(email); };
