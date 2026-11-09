@@ -1186,7 +1186,7 @@ function drawTab() {
         '</div>' +
         itemPill(it.status, it.req) + '<div class="acts">' + cdaActs(it) +
         (v15 && isAdmin() && !it.cancel ? '<button class="rq' + (it.req ? ' on' : '') + '" data-item="' + h(it.id) + '" data-r="' + (it.req ? '1' : '') + '" aria-pressed="' + (it.req ? 'true' : 'false') + '" title="Switch between Required and Not Required for this file">' + (it.req ? 'Required' : 'Not Required') + '</button>' : '') +
-        (canEdit() ? '<label class="ub">' + (it.status === 'Rejected' ? 'Re-upload' : 'Upload') + '<input type="file" class="hidden up" data-item="' + h(it.id) + '" accept="' + UP_ACCEPT + '"></label>' : '') +
+        (canEdit() && !(window.TCCda && TCCda.isCdaItem(it)) ? '<label class="ub">' + (it.status === 'Rejected' ? 'Re-upload' : 'Upload') + '<input type="file" class="hidden up" data-item="' + h(it.id) + '" accept="' + UP_ACCEPT + '"></label>' : '') +
         (it.status === 'Rejected' && canEdit() ? '<button class="ub red resub" data-item="' + h(it.id) + '">Add note &amp; resubmit</button>' : '') +
         (v15 ? '<button class="nind' + (allNotes.length ? ' has' : '') + '" data-item="' + h(it.id) + '" title="' + (allNotes.length ? 'Read notes' : 'Add a note') + '" aria-label="Notes (' + allNotes.length + ')"><span class="ico" aria-hidden="true"></span>' + (allNotes.length ? allNotes.length : '+') + '</button>'
           : (t.readOnly ? '' : '<button class="link addn" data-item="' + h(it.id) + '">Note</button>')) + '</div></div>';
@@ -1206,13 +1206,14 @@ function drawTab() {
     qsa('.rq', c).forEach(function (b) { b.onclick = function () { b.disabled = true; var on = !b.getAttribute('data-r'); api('setItemRequired', { txnId: t.id, itemId: b.getAttribute('data-item'), required: on }).then(function () { toast(on ? 'Marked Required for this file.' : 'Marked Not Required for this file.'); refresh(); }).catch(function (e) { b.disabled = false; toast(e.message, 1); }); }; });
   } else if (S.tab === 'storage') {
     var items = d.items.filter(function (x) { return x.active; });
-    var opts = function (sel) { return '<option value="">Document Storage (unassigned)</option>' + items.map(function (x) { return '<option value="' + h(x.id) + '"' + (x.id === sel ? ' selected' : '') + '>' + h(x.title) + '</option>'; }).join(''); };
+    var assignable = items.filter(function (x) { return !(window.TCCda && TCCda.isCdaItem(x)); });
+    var opts = function (sel) { return '<option value="">Document Storage (unassigned)</option>' + assignable.map(function (x) { return '<option value="' + h(x.id) + '"' + (x.id === sel ? ' selected' : '') + '>' + h(x.title) + '</option>'; }).join(''); };
     var docs = d.documents.slice().sort(function (a, b) { return String(b.uploadedAt).localeCompare(String(a.uploadedAt)); });
     c.innerHTML = '<div class="top"><p class="sub" style="margin:0;max-width:640px">Every file uploaded to this transaction. Store files here, then assign each one to a checklist item, or split a PDF packet into items.</p>' + (canEdit() ? '<label class="btn">Upload to storage<input type="file" class="hidden" id="stUp" multiple accept="' + UP_ACCEPT + '"></label>' : '') + '</div>' +
       '<div class="gb tbl" style="margin-top:14px"><table><thead><tr><th>File</th><th>Checklist item</th><th>Status</th><th>Uploaded</th><th></th></tr></thead><tbody>' +
       (docs.length ? docs.map(function (x) {
         var it = items.filter(function (y) { return y.id === x.itemId; })[0];
-        var canAssign = canEdit() && !x.removed && (isAdmin() || !x.itemId || x.status === 'Pending');
+        var canAssign = canEdit() && !x.removed && !(it && window.TCCda && TCCda.isCdaItem(it)) && (isAdmin() || !x.itemId || x.status === 'Pending');
         return '<tr' + (x.removed ? ' style="opacity:.55"' : '') + '><td><button class="link dl" data-doc="' + h(x.id) + '">' + h(x.name) + '</button><br><small>' + h({ packet: 'Packet', split: 'Split' + (x.pageRange ? ' · pages ' + x.pageRange : ''), file: 'File' }[x.kind] || '') + (x.pages ? ' · ' + h(x.pages) + ' pages' : '') + ' · ' + Math.max(1, Math.round((x.size || 0) / 1024)) + ' KB</small>' + (x.removed ? '<div class="note rt">Removed by admin · kept in archive' + (x.removeReason ? ': ' + h(x.removeReason) : '') + '</div>' : '') + '</td>' +
           '<td>' + (canAssign ? '<select class="asg" data-doc="' + h(x.id) + '" aria-label="Checklist item">' + opts(x.itemId) + '</select>' : h(it ? it.title : 'Document Storage')) + '</td>' +
           '<td>' + (x.status === 'Stored' || !x.itemId ? '<span class="pill p-miss">Stored</span>' : itemPill(x.status)) + '</td><td><small>' + h(fmtTs(x.uploadedAt)) + '<br>' + h(x.uploadedByName || '') + '</small></td>' +
@@ -1534,7 +1535,7 @@ function promptModal(title, help, btn, fn, single, val) {
   };
 }
 function splitModal(existingDocId) {
-  var items = S.txn.items.filter(function (x) { return x.active; });
+  var items = S.txn.items.filter(function (x) { return x.active && !(window.TCCda && TCCda.isCdaItem(x)); });
   var opt = '<option value="">Not assigned (Documents)</option>' + items.map(function (x) { return '<option value="' + h(x.id) + '">' + h(x.title) + '</option>'; }).join('');
   var m = modal('<h2>Upload &amp; Split Packet</h2><p class="sub">Upload one signed PDF packet, then assign page ranges to checklist items. The full packet stays in Document Storage; nothing is deleted.</p><div id="se"></div>' +
     (existingDocId ? '' : '<label class="btn" id="spick">Choose PDF packet<input type="file" class="hidden" id="sfile" accept="' + UP_ACCEPT + '"></label>') + '<div id="sbody"></div>', true);
@@ -1558,7 +1559,7 @@ function splitModal(existingDocId) {
     var ranges = qsa('.rng', m).map(function (r) { var ins = qsa('input[type=number]', r); return { a: Number(ins[0].value), b: Number(ins[1].value), item: qs('select', r).value, mt: qs('.rmt', r) ? qs('.rmt', r).value.trim() : '' }; });
     if (!ranges.length) return showErr('Add at least one range.');
     for (var q = 0; q < ranges.length; q++) { var ri = items.filter(function (x) { return x.id === ranges[q].item; })[0]; if (needsMiscTitle(ri) && !ranges[q].mt && !ranges.some(function (o, j) { return j < q && o.item === ranges[q].item && o.mt; })) return showErr('Enter a title for the Misc document in range ' + (q + 1) + '.'); }
-    for (var k = 0; k < ranges.length; k++) { var r = ranges[k]; if (!(r.a >= 1 && r.b >= r.a && r.b <= state.pages)) return showErr('Check the page numbers in range ' + (k + 1) + ' (1–' + state.pages + ').'); }
+    for (var k = 0; k < ranges.length; k++) { var r = ranges[k]; if (!(r.a >= 1 && r.b >= r.a && r.b <= state.pages)) return showErr('Check the page numbers in range ' + (k + 1) + ' (1–' + state.pages + ').'); if (r.item && !items.some(function (x) { return x.id === r.item; })) return showErr('The signed CDA is filed from E-Sign. Do not assign a packet to that checklist item.'); }
     showErr(''); var btn = qs('#sgo', m); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Working…';
     var L, txnId = S.txn.txn.id, base = state.name.replace(/\.pdf$/i, '');
     loadPdfLib().then(function (lib) {
