@@ -503,6 +503,7 @@ A.upload = function (b, u) {
   var t = access(u, b.txnId); if (isFinal(t) && u.role !== 'admin') Fail('This file is ' + t.status + '.');
   if (!b.base64) Fail('Empty file.'); var size = Math.floor(b.base64.length * 3 / 4); if (size > 20 * 1024 * 1024) Fail('File is larger than 20 MB.');
   var i = itemIn(t, b.itemId);
+  if (i && (i.code === 'P_CDA_COMMISSION_DISBURSEMENT_' || i.code === 'CDA')) Fail('The signed CDA is filed from E-Sign. Upload it there instead of attaching a file to this checklist item.', 'CDA_UPLOAD');
   var d = addDoc(t, i, String(b.name || 'file').slice(0, 150), u.id, 'Pending', { mime: b.mime || 'application/octet-stream', size: size, b64: b.base64, kind: b.kind || 'file', sourceDocId: b.sourceDocId || '', pageRange: b.pageRange || '', pages: b.pages || '' });
   touch(t); audit(t.id, u.username, 'document_uploaded'); return { doc: docOut(d, u) };
 };
@@ -511,6 +512,7 @@ A.assignDocument = function (b, u) {
   var t = access(u, d.txnId); if (isFinal(t) && u.role !== 'admin') Fail('This file is ' + t.status + '.');
   if (u.role !== 'admin' && d.itemId && d.status !== 'Pending') Fail('Reviewed documents can only be moved by an admin.');
   var old = d.itemId ? DB.items.filter(function (x) { return x.id === d.itemId; })[0] : null, tg = itemIn(t, b.itemId);
+  if (tg && (tg.code === 'P_CDA_COMMISSION_DISBURSEMENT_' || tg.code === 'CDA')) Fail('The signed CDA is filed from E-Sign. Upload it there instead of attaching a file to this checklist item.', 'CDA_UPLOAD');
   Object.assign(d, { itemId: tg ? tg.id : '', status: tg ? 'Pending' : 'Stored', reviewNote: '', reviewedAt: '' });
   if (old) recompute(old); if (tg) recompute(tg); touch(t); audit(t.id, u.username, 'document_assigned'); return {};
 };

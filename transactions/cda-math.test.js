@@ -18,7 +18,7 @@ assert.ok(uiSrc.indexOf('M.adminFeeNote(l.note)') >= 0, 'admin fee mail-to uses 
 var html = fs.readFileSync(__dirname + '/index.html', 'utf8');
 assert.ok(html.indexOf('cda-math.js?v=9') >= 0);
 assert.ok(html.indexOf('cda-ui.js?v=15') >= 0);
-assert.ok(html.indexOf('app.js?v=48') >= 0);
+assert.ok(html.indexOf('app.js?v=49') >= 0);
 assert.ok(html.indexOf('app.css?v=48') >= 0);
 assert.ok(html.indexOf('cda-math.js?v=8') < 0);
 assert.ok(html.indexOf('cda-ui.js?v=13') < 0);
@@ -288,7 +288,22 @@ call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(funct
   }).then(function (dash) {
     var closed = (dash.transactions || []).filter(function (t) { return t.status === 'Closed' && /Mission Inn/.test(t.title || t.address || ''); })[0];
     assert.ok(closed, 'closed Mission Inn file');
-    return call({ action: 'cdaGet', token: token, txnId: closed.id }).then(function (pack) {
+    return call({ action: 'getTransaction', token: token, id: closed.id }).then(function (file) {
+      var cdaItem = file.items.filter(function (i) { return i.code === 'P_CDA_COMMISSION_DISBURSEMENT_' || i.code === 'CDA'; })[0];
+      assert.ok(cdaItem);
+      return mock.call({ action: 'upload', token: token, txnId: closed.id, itemId: cdaItem.id, name: 'manual.pdf', mime: 'application/pdf', base64: 'JVBERi0xLjEK' }).then(function (blocked) {
+        assert.strictEqual(blocked.ok, false);
+        assert.strictEqual(blocked.code, 'CDA_UPLOAD');
+        return call({ action: 'upload', token: token, txnId: closed.id, itemId: '', name: 'storage.pdf', mime: 'application/pdf', base64: 'JVBERi0xLjEK' });
+      }).then(function (stored) {
+        return mock.call({ action: 'assignDocument', token: token, docId: stored.doc.id, itemId: cdaItem.id });
+      }).then(function (moved) {
+        assert.strictEqual(moved.ok, false);
+        assert.strictEqual(moved.code, 'CDA_UPLOAD');
+      });
+    }).then(function () {
+      return call({ action: 'cdaGet', token: token, txnId: closed.id });
+    }).then(function (pack) {
       assert.strictEqual(pack.adminFee, 200);
       assert.ok(pack.header.totalGross > 0);
       var lines = pack.suggested;
