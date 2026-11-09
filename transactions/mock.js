@@ -251,9 +251,9 @@ function checklistTemplate_(type, side) {
 /** Intake field definitions (server-side validation; the frontend renders the same keys). */
 var INTAKE_REQUIRED = {
   listing: ['address', 'city', 'zip', 'listingDate', 'expirationDate', 'listPrice', 'sellers', 'listingCommission'],
-  purchase: ['address', 'city', 'zip', 'side', 'contractDate', 'estCloseDate', 'purchasePrice', 'buyers', 'sellers', 'escrowCompany', 'commission'],
+  purchase: ['address', 'city', 'zip', 'side', 'contractDate', 'estCloseDate', 'purchasePrice', 'emdAmount', 'buyers', 'sellers', 'otherAgentName', 'otherAgentBrokerage', 'escrowCompany', 'commission'],
   lease_listing: ['address', 'city', 'zip', 'listingDate', 'expirationDate', 'monthlyRent', 'landlords', 'listingCommission'],
-  lease: ['address', 'city', 'zip', 'side', 'leaseStart', 'monthlyRent', 'landlords', 'tenants', 'commission'],
+  lease: ['address', 'city', 'zip', 'side', 'leaseStart', 'monthlyRent', 'landlords', 'tenants', 'otherAgentName', 'otherAgentBrokerage', 'commission'],
   referral: ['clientName', 'referredTo', 'referralFee', 'location']
 };
 
@@ -385,7 +385,7 @@ function access(u, id) { var t = txn(id); if (!t || (u.role !== 'admin' && t.age
 function needAdmin(u) { if (u.role !== 'admin') Fail('Admins only.', 'FORBIDDEN'); }
 function touch(t) { t.updatedAt = now(); }
 var A = {};
-A.ping = function () { return { pong: true }; };
+A.ping = function () { return { pong: true, features: ['crm'] }; };
 A.login = function (b) {
   var e = String(b.email || b.username || '').trim().toLowerCase(); if (e === 'admin' || e === 'agent') e += '@demo.test';
   var u = DB.users.filter(function (x) { return x.username === e; })[0];
@@ -491,7 +491,7 @@ A.getTransaction = function (b, u) {
   var t = access(u, b.id), items = itemsOf(t.id).filter(function (i) { return i.active || u.role === 'admin'; });
   return {
     txn: { id: t.id, type: t.type, typeLabel: TYPE_LABELS[t.type], side: t.side, status: t.status, agentId: t.agentId, agentName: (user(t.agentId) || {}).name, address: t.address, city: t.city, zip: t.zip, intake: t.intake, parentId: t.parentId, childId: t.childId, convertedFrom: t.convertedFrom,
-      cancelRequest: t.cancelRequest, createdAt: t.createdAt, updatedAt: t.updatedAt, closedAt: t.closedAt, cancelledAt: t.cancelledAt, retentionUntil: t.retentionUntil, title: title(t), progress: progress(items), relistQuestion: relistQ(t) },
+      cancelRequest: t.cancelRequest, closeRequest: t.closeRequest || null, booksExcluded: t.booksExcluded === true || t.booksExcluded === '1', createdAt: t.createdAt, updatedAt: t.updatedAt, closedAt: t.closedAt, cancelledAt: t.cancelledAt, retentionUntil: t.retentionUntil, title: title(t), progress: progress(items), relistQuestion: relistQ(t), tcId: t.tcId || '', tcName: t.tcId ? ((user(t.tcId) || {}).name || '') : '' },
     items: items.map(function (i) { return { id: i.id, code: i.code, title: i.customTitle || i.title, baseTitle: i.title, customTitle: i.customTitle, forms: i.forms, phase: i.phase, req: i.req, misc: i.misc, cancel: i.cancel, active: i.active, status: i.status, reviewNote: i.reviewNote, reviewedAt: i.reviewedAt }; }),
     documents: DB.docs.filter(function (d) { return d.txnId === t.id && (!d.removed || u.role === 'admin'); }).map(function (d) { return docOut(d, u); }),
     notes: DB.notes.filter(function (n) { return n.txnId === t.id; }).map(function (n) { return { id: n.id, itemId: n.itemId, kind: n.kind, text: n.text, createdAt: n.createdAt, by: (user(n.userId) || {}).name }; }),
@@ -578,16 +578,36 @@ A.decideCancel = function (b, u) {
   }
   return { relistedId: newId };
 };
+function booksReady(t) {
+  if (!t || t.booksExcluded === true || t.booksExcluded === '1') return false;
+  if (t.status !== 'Closed') return false;
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(t.closedAt || '').slice(0, 10)) && /^\d{4}-\d{2}-\d{2}$/.test(String(t.retentionUntil || '').slice(0, 10));
+}
+function canSetStatus(u, t) { return !!(u && t && (u.role === 'admin' || t.agentId === u.id || (u.role === 'tc' && t.tcId === u.id))); }
+function applyClose(t, date, price) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) Fail('Enter the close of escrow date.');
+  if (t.type === 'purchase') { var fp = num(price || (t.intake && t.intake.purchasePrice)); if (!fp) Fail('Enter the final sales price.'); t.intake.finalPrice = String(fp); }
+  t.closedAt = date; t.retentionUntil = addYears(date, 7); t.status = 'Closed'; t.closeRequest = null;
+}
 A.setStatus = function (b, u) {
-  needAdmin(u); var t = txn(b.id); if (!t) Fail('Transaction not found.'); var s = String(b.status || '');
+  var t = txn(b.id); if (!t) Fail('Transaction not found.');
+  if (!canSetStatus(u, t)) Fail('You can’t change this file’s status.', 'FORBIDDEN');
+  var s = String(b.status || '');
   if (['Active', 'In Escrow', 'Closed', 'Expired Contract'].indexOf(s) < 0) Fail(s === 'Cancelled' ? 'Use the cancellation request so the signed cancellation is on file.' : 'Unknown status.');
-  if (s === 'Closed') {
+  if (s === 'Closed' && u.role !== 'admin') {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(b.closeDate || '')) Fail('Enter the close of escrow date.');
-    if (t.type === 'purchase') { var fp = num(b.finalPrice || t.intake.purchasePrice); if (!fp) Fail('Enter the final sales price.'); t.intake.finalPrice = String(fp); }
-    t.closedAt = b.closeDate; t.retentionUntil = addYears(b.closeDate, 7);
-  } else if (s === 'Expired Contract') t.retentionUntil = addYears(t.intake.expirationDate || now(), 7);
-  else { t.closedAt = ''; t.retentionUntil = ''; }
-  t.status = s; touch(t); audit(t.id, u.username, 'status_changed'); return {};
+    if (t.type === 'purchase' && !num(b.finalPrice || (t.intake && t.intake.purchasePrice))) Fail('Enter the final sales price.');
+    t.closeRequest = { state: 'pending', closeDate: b.closeDate, finalPrice: String(b.finalPrice || ''), requestedBy: u.id, requestedByName: u.name, requestedAt: now() };
+    touch(t); audit(t.id, u.username, 'close_requested'); return { pendingClose: true };
+  }
+  if (s === 'Closed') applyClose(t, b.closeDate, b.finalPrice);
+  else if (s === 'Expired Contract') { t.status = s; t.closedAt = ''; t.retentionUntil = addYears((t.intake && t.intake.expirationDate) || now(), 7); t.closeRequest = null; }
+  else { t.status = s; t.closedAt = ''; t.retentionUntil = ''; t.closeRequest = null; }
+  touch(t); audit(t.id, u.username, 'status_changed'); return { pendingClose: false };
+};
+A.approveClose = function (b, u) {
+  needAdmin(u); var t = txn(b.id); if (!t || !t.closeRequest || t.closeRequest.state !== 'pending') Fail('No close is waiting for approval.');
+  applyClose(t, t.closeRequest.closeDate, t.closeRequest.finalPrice); touch(t); audit(t.id, u.username, 'close_approved'); return {};
 };
 /* ---- 1.6.0 E-Books (demo): same shapes and the same owner-only rule as EBooks.gs ---- */
 var EBD = { cats: [], vendors: [], agents: {}, entries: [] };
@@ -624,7 +644,7 @@ function ebAgentsOut() { return DB.users.map(function (x) { var p = EBD.agents[x
 function ebVOut(v) { return { id: v.id, name: v.name, email: v.email, phone: v.phone, address: v.address, tinLast4: v.tin ? v.tin.slice(-4) : '', hasTin: !!v.tin, is1099: v.is1099, archived: v.archived }; }
 A.ebLoad = function (b, u) {
   ebGate(u); var keys = {}; ebLive().forEach(function (e) { if (e.importKey) keys[e.importKey] = 1; });
-  var txns = DB.txns.filter(function (t) { return t.status === 'Closed'; }).map(function (t) { var rec = (DB.cda || {})[t.id]; var executed = rec && rec.executed; return { id: t.id, title: ebTitle(t), type: t.type, side: t.side, closedAt: String(t.closedAt || '').slice(0, 10), agentId: t.agentId, agentName: (user(t.agentId) || {}).name || '', gross: executed ? (window.TCCda ? window.TCCda.grossOf(executed.header || {}) : ebGrossM(t)) : ebGrossM(t), importedIncome: !!keys['txn:' + t.id + ':income'] || !!keys['cda:' + t.id + ':brokerage'], importedPayout: !!keys['txn:' + t.id + ':payout:' + t.agentId] || !!keys['cda:' + t.id + ':agent:' + t.agentId], cdaStatus: executed ? 'executed' : (rec && rec.cda ? rec.cda.status : ''), cdaExecuted: !!executed }; });
+  var txns = DB.txns.filter(function (t) { return t.status === 'Closed'; }).map(function (t) { var rec = (DB.cda || {})[t.id]; var executed = rec && rec.executed; return { id: t.id, title: ebTitle(t), type: t.type, side: t.side, closedAt: String(t.closedAt || '').slice(0, 10), retentionUntil: String(t.retentionUntil || '').slice(0, 10), archived: booksReady(t), booksExcluded: t.booksExcluded === true || t.booksExcluded === '1', agentId: t.agentId, agentName: (user(t.agentId) || {}).name || '', gross: executed ? (window.TCCda ? window.TCCda.grossOf(executed.header || {}) : ebGrossM(t)) : ebGrossM(t), importedIncome: !!keys['txn:' + t.id + ':income'] || !!keys['cda:' + t.id + ':brokerage'], importedPayout: !!keys['txn:' + t.id + ':payout:' + t.agentId] || !!keys['cda:' + t.id + ':agent:' + t.agentId], cdaStatus: executed ? 'executed' : (rec && rec.cda ? rec.cda.status : ''), cdaExecuted: !!executed }; });
   return { categories: EBD.cats, vendors: EBD.vendors.map(ebVOut), agents: ebAgentsOut(), entries: ebLive().map(ebEOut), txns: txns, methods: ['Check', 'ACH/Transfer', 'Wire', 'Credit Card', 'Debit Card', 'Cash', 'Zelle', 'Escrow Disbursement', 'Other'], threshold: 600 };
 };
 A.ebSaveEntry = function (b, u) {
@@ -648,7 +668,7 @@ var MEBX = [
   { id: 'AX2', agentId: 'U2', date: new Date().getFullYear() + '-03-11', amount: 95, category: 'MLS/Dues', memo: 'Q1 MLS', receipt: null, deleted: false },
   { id: 'AX3', agentId: 'U3', date: new Date().getFullYear() + '-01-20', amount: 40, category: 'Phone', memo: 'Sample agent private', receipt: null, deleted: false }
 ];
-function mebGate(u) { if (!u || u.owner || !u.active || (u.role !== 'agent' && u.role !== 'admin')) Fail('My E-Books is for agents.', 'FORBIDDEN'); }
+function mebGate(u) { if (!u || !u.active || (u.role !== 'agent' && u.role !== 'admin')) Fail('My E-Books is for agents.', 'FORBIDDEN'); }
 function mebMine(u, id) { var e = MEBX.filter(function (x) { return x.id === id && !x.deleted && x.agentId === u.id; })[0]; if (!e) Fail('Expense not found.', 'NOT_FOUND'); return e; }
 function mebOut(e) { return { id: e.id, date: e.date, amount: e.amount, category: e.category, memo: e.memo, receipt: !!e.receipt, receiptName: e.receipt ? e.receipt.name : '' }; }
 A.mebLoad = function (b, u) {
@@ -744,6 +764,7 @@ DB.cda = {}; DB.cdaPending = [];
   if (!t) return;
   var title = ebTitle(t);
   DB.cdaPending.push({ id: 'CPsampleB', txnId: t.id, title: title, version: 1, op: 'add', importKey: 'cda:' + t.id + ':brokerage', type: 'income', amount: 640, payeeName: 'ENESMA Realty', payeeType: '', payeeId: '', kind: 'brokerage', status: 'pending', memo: 'Brokerage commission · CDA v1' });
+  DB.cdaPending.push({ id: 'CPsampleF', txnId: t.id, title: title, version: 1, op: 'add', importKey: 'cda:' + t.id + ':admin_fee', type: 'income', amount: 175, payeeName: 'ENESMA Realty', payeeType: '', payeeId: '', kind: 'admin_fee', status: 'pending', memo: 'Admin fee · CDA v1' });
   DB.cdaPending.push({ id: 'CPsampleA', txnId: t.id, title: title, version: 1, op: 'add', importKey: 'cda:' + t.id + ':agent:U2', type: 'expense', amount: 2560, payeeName: 'Alex Rivera', payeeType: 'agent', payeeId: 'U2', kind: 'primary', status: 'pending', memo: 'Agent commission · CDA v1' });
 })();
 function cdaAgents() {
@@ -785,6 +806,7 @@ A.cdaRevise = function (b, u) {
   return { cda: rec.cda };
 };
 function cdaQueue(t, lines) {
+  if (!t || t.booksExcluded === true || t.booksExcluded === '1') return 0;
   var want = window.TCCda.booksLines(lines), title = ebTitle(t), keys = {};
   want.forEach(function (l) {
     if (l.kind === 'brokerage') keys['cda:' + t.id + ':brokerage'] = { type: 'income', amount: l.amount, payeeType: '', payeeId: '', payeeName: l.name || 'ENESMA Realty', kind: 'brokerage', memo: 'ENESMA commission · CDA' };
@@ -846,8 +868,8 @@ function upsertCda(i, date, setDate) {
 function cdaBackfillAdmin() {
   var n = 0;
   Object.keys(DB.cda || {}).forEach(function (txnId) {
-    var rec = DB.cda[txnId], cur = rec && rec.executed;
-    if (!cur || cur.status !== 'executed') return;
+    var rec = DB.cda[txnId], cur = rec && rec.executed, file = txn(txnId);
+    if (!cur || cur.status !== 'executed' || (file && (file.booksExcluded === true || file.booksExcluded === '1'))) return;
     var amt = 0, name = 'ENESMA Realty';
     (cur.lines || []).forEach(function (l) {
       if (l.kind !== 'admin_fee') return;
@@ -867,12 +889,12 @@ function cdaBackfillAdmin() {
   });
   return n;
 }
-A.ebCdaPending = function (b, u) { ebGate(u); cdaBackfillAdmin(); return { pending: DB.cdaPending.filter(function (p) { return !p.status || p.status === 'pending'; }) }; };
+A.ebCdaPending = function (b, u) { ebGate(u); cdaBackfillAdmin(); return { pending: DB.cdaPending.filter(function (p) { return (!p.status || p.status === 'pending') && booksReady(txn(p.txnId)); }) }; };
 A.ebCdaDecide = function (b, u) {
   ebGate(u); var ids = b.ids || [], decision = b.decision === 'approve' || b.decision === 'reject' ? b.decision : Fail('Choose approve or reject.');
   var approved = 0, rejected = 0, awaiting = 0, missing = 0;
   ids.forEach(function (id) {
-    var i = DB.cdaPending.filter(function (p) { return p.id === id && (!p.status || p.status === 'pending'); })[0]; if (!i) return;
+    var i = DB.cdaPending.filter(function (p) { return p.id === id && (!p.status || p.status === 'pending'); })[0]; if (!i || !booksReady(txn(i.txnId))) return;
     if (decision === 'reject') { rejected++; i.status = 'rejected'; return; }
     if (i.op === 'remove') { upsertCda(i, '', false); approved++; return; }
     if (cdaIncomeRow(i)) {
@@ -904,6 +926,14 @@ A.ebConfirmEscrowCheck = function (b, u) {
     });
   }
   return { escrowCheck: rec.escrowCheck, incomePosted: incomePosted };
+};
+A.crmBoot = function (b, u) {
+  if (!u || (u.role !== 'admin' && u.role !== 'agent')) Fail('CRM is not available in this view.', 'FORBIDDEN');
+  var mine = u.id;
+  return { admin: u.role === 'admin', me: mine, lendersReady: false, lenders: [], statuses: ['New Lead', 'Active', 'Under Contract', 'Closed', 'Past Client', 'Inactive'], types: { buyer: 'Buyer', seller: 'Seller' }, agents: DB.users.filter(function (x) { return x.role === 'agent' && x.active; }).map(function (x) { return { id: x.id, name: x.name }; }), groups: [{ id: 'G1', name: 'Sphere', ownerName: u.name, count: 1 }], reminders: [], clients: [
+    { id: 'C1', firstName: 'Jordan', lastName: 'Hale', phone: '951-555-0142', email: 'jordan.hale.sample.client@example.test', address: '400 Sample St', type: 'buyer', source: 'Website', status: 'Active', tags: ['Sphere', 'Buyer lead', 'Follow up'], groups: ['G1'], txnIds: [], ownerId: mine, ownerName: u.name, nextDue: '' },
+    { id: 'C2', firstName: 'Riley', lastName: 'Chen', phone: '951-555-0190', email: 'riley.chen.longname.client@example.test', address: '18 Sample Ave', type: 'seller', source: 'Referral', status: 'New Lead', tags: ['VIP', 'Listing soon'], groups: [], txnIds: [], ownerId: mine, ownerName: u.name, nextDue: '' }
+  ] };
 };
 var OPEN = { ping: 1, login: 1, requestPasswordCode: 1, resetPasswordWithCode: 1 };
 window.TC_MOCK = {

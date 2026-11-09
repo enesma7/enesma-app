@@ -117,19 +117,20 @@ var F = {
     { h: 'Property' }].concat(PROPERTY).concat([
     { h: 'Contract' },
     { k: 'contractDate', l: 'Contract (acceptance) date', t: 'date', r: 1 }, { k: 'estCloseDate', l: 'Estimated close of escrow', t: 'date', r: 1 },
-    { k: 'purchasePrice', l: 'Purchase price', t: 'money', r: 1 }, { k: 'emdAmount', l: 'Earnest money deposit', t: 'money' },
+    { k: 'purchasePrice', l: 'Purchase price', t: 'money', r: 1 }, { k: 'emdAmount', l: 'Earnest money deposit', t: 'money', r: 1 },
     { k: 'commission', l: 'Our commission', r: 1, comm: 1 }, { k: 'financing', l: 'Financing', opts: ['Conventional', 'FHA', 'VA', 'Cash', 'Other'] },
     { h: 'Buyers' }, { k: 'buyers', l: 'Buyers', people: 1, r: 1 },
     { h: 'Sellers' }, { k: 'sellers', l: 'Sellers', people: 1, r: 1 },
     { h: 'Other Agent' },
-    { k: 'otherAgentName', l: 'Agent name', r: 1, oa: 1 }, { k: 'otherAgentBrokerage', l: 'Brokerage name', r: 1, oa: 1 }, { k: 'otherAgentDre', l: 'DRE # (optional)' },
+    { k: 'otherAgentName', l: 'Agent name', r: 1, oa: 1 }, { k: 'otherAgentBrokerage', l: 'Company', r: 1, oa: 1 }, { k: 'otherAgentDre', l: 'DRE # (optional)' },
     { k: 'otherAgentPhone', l: 'Phone (optional)', t: 'tel' }, { k: 'otherAgentEmail', l: 'Email (optional)', t: 'email' },
     { h: 'Escrow' },
-    { k: 'escrowCompany', l: 'Escrow company', r: 1 }, { k: 'escrowNumber', l: 'Escrow #' }, { k: 'escrowOfficer', l: 'Escrow officer · phone · email' },
+    { k: 'escrowCompany', l: 'Escrow company', r: 1 }, { k: 'escrowNumber', l: 'Escrow #' },
+    { k: 'escrowOfficerName', l: 'Escrow officer name' }, { k: 'escrowPhone', l: 'Escrow phone', t: 'tel' }, { k: 'escrowEmail', l: 'Escrow email', t: 'email' },
     { h: 'Title' },
-    { k: 'titleCompany', l: 'Title company' }, { k: 'titleOfficer', l: 'Title officer · phone · email', w: 2 },
+    { k: 'titleCompany', l: 'Title company' }, { k: 'titleOfficerName', l: 'Title officer name' }, { k: 'titlePhone', l: 'Title phone', t: 'tel' }, { k: 'titleEmail', l: 'Title email', t: 'email' },
     { h: 'Lender' },
-    { k: 'lender', l: 'Lender (company)' }, { k: 'loanOfficer', l: 'Loan officer · phone · email', w: 2 },
+    { k: 'lender', l: 'Lender (company)' }, { k: 'loanOfficerName', l: 'Loan officer name' }, { k: 'lenderPhone', l: 'Lender phone', t: 'tel' }, { k: 'lenderEmail', l: 'Lender email', t: 'email' },
     { h: 'Notes' }, { k: 'notes', l: 'Notes for the office', ta: 1, w: 3 }]),
   lease_listing: [
     { h: 'Property' }].concat(PROPERTY).concat([
@@ -148,7 +149,7 @@ var F = {
     { h: 'Landlords' }, { k: 'landlords', l: 'Landlords', people: 1, r: 1 },
     { h: 'Tenants' }, { k: 'tenants', l: 'Tenants', people: 1, r: 1 },
     { h: 'Other Agent' },
-    { k: 'otherAgentName', l: 'Agent name', r: 1, oa: 1 }, { k: 'otherAgentBrokerage', l: 'Brokerage name', r: 1, oa: 1 }, { k: 'otherAgentDre', l: 'DRE # (optional)' },
+    { k: 'otherAgentName', l: 'Agent name', r: 1, oa: 1 }, { k: 'otherAgentBrokerage', l: 'Company', r: 1, oa: 1 }, { k: 'otherAgentDre', l: 'DRE # (optional)' },
     { k: 'otherAgentPhone', l: 'Phone (optional)', t: 'tel' }, { k: 'otherAgentEmail', l: 'Email (optional)', t: 'email' },
     { h: 'Notes' }, { k: 'notes', l: 'Notes for the office', ta: 1, w: 3 }]),
   referral: [
@@ -238,7 +239,7 @@ function agentRole(t) {
 }
 function oaRelabel(root) {
   var c = root.querySelector('.f[data-k="side"] input:checked'), sd = c ? c.value : (root.getAttribute('data-side') || ''), lb = oaLabel(root.getAttribute('data-type') || '', sd);
-  qsa('.oah', root).forEach(function (x) { x.textContent = lb + (sd === 'both' ? ' (optional: you represent both sides)' : ''); });
+  qsa('.oah', root).forEach(function (x) { x.textContent = lb; });
   qsa('.f[data-k="otherAgentName"] > label', root).forEach(function (x) { var r = qs('.req', x); x.textContent = lb.replace(/ \/ .*/, '') + ' name'; if (r) { x.appendChild(document.createTextNode(' ')); x.appendChild(r); } });
 }
 function oaLegacy(ii) {
@@ -248,6 +249,23 @@ function oaLegacy(ii) {
     o.otherAgentName = parts[0] || ''; o.otherAgentBrokerage = parts[1] || '';
     parts.slice(2).forEach(function (x) { if (/@/.test(x)) o.otherAgentEmail = o.otherAgentEmail || x; else if (/\d{3}/.test(x)) o.otherAgentPhone = o.otherAgentPhone || x; });
   }
+  return o;
+}
+function splitParty(s) {
+  var name = '', phone = '', email = '';
+  String(s || '').split(/\s*[·|]\s*/).forEach(function (p) {
+    p = p.trim(); if (!p) return;
+    if (/@/.test(p)) { if (!email) email = p; }
+    else if (p.replace(/\D/g, '').length >= 7) { if (!phone) phone = p; }
+    else if (!name) name = p;
+  });
+  return { name: name, phone: phone, email: email };
+}
+function partyIntake(ii) {
+  var o = oaLegacy(ii);
+  if (!o.escrowOfficerName && o.escrowOfficer) { var e = splitParty(o.escrowOfficer); o.escrowOfficerName = e.name; if (!o.escrowPhone) o.escrowPhone = e.phone; if (!o.escrowEmail) o.escrowEmail = e.email; }
+  if (!o.titleOfficerName && o.titleOfficer) { var t = splitParty(o.titleOfficer); o.titleOfficerName = t.name; if (!o.titlePhone) o.titlePhone = t.phone; if (!o.titleEmail) o.titleEmail = t.email; }
+  if (!o.loanOfficerName && o.loanOfficer) { var l = splitParty(o.loanOfficer); o.loanOfficerName = l.name; if (!o.lenderPhone) o.lenderPhone = l.phone; if (!o.lenderEmail) o.lenderEmail = l.email; }
   return o;
 }
 function readForm(root) {
@@ -264,7 +282,6 @@ function readForm(root) {
     else { var inp = qs('input,select,textarea', el); v = inp ? inp.value.trim() : ''; }
     out[k] = v;
     var bad = el.getAttribute('data-r') && (Array.isArray(v) ? !v.length : !v);
-    if (bad && el.getAttribute('data-oa') && oaBoth(root)) bad = false;
     el.classList.toggle('bad', !!bad); if (bad) missing.push(qs('label', el).textContent.replace(/\s*\*.*$/, '').replace(/ · name.*$/, ''));
   });
   if (out.listingDate && out.expirationDate && out.expirationDate <= out.listingDate) missing.push('Expiration must be after the listing contract date');
@@ -287,8 +304,7 @@ function shell(active, inner) {
   if (isAdmin()) nav += '<a href="#/review" class="' + (active === 'review' ? 'on' : '') + '">Review' + (S.badges.review ? '<span class="cnt">' + S.badges.review + '</span>' : '') + '</a><a href="#/users" class="' + (active === 'users' ? 'on' : '') + '">Users</a><a href="#/archive" class="' + (active === 'archive' ? 'on' : '') + '">Archive</a>';
   // CRM sits last, set apart from the transaction tabs (gold tab, divider before it).
   if (canCrm()) nav += '<a href="#/crm" class="crmtab' + (active === 'crm' ? ' on' : '') + '"' + (active === 'crm' ? ' aria-current="page"' : '') + '>CRM</a>';
-  if (canEbooks()) nav += '<a href="#/ebooks" class="crmtab ebtab' + (active === 'ebooks' ? ' on' : '') + '"' + (active === 'ebooks' ? ' aria-current="page"' : '') + '>E-Books</a>';   // owner only, right of CRM, same gold tab
-  if (canMyEbooks()) nav += '<a href="#/mybooks" class="crmtab ebtab' + (active === 'mybooks' ? ' on' : '') + '"' + (active === 'mybooks' ? ' aria-current="page"' : '') + '>My E-Books</a>';   // agents: their own private book
+  if (canEbooks() || canMyEbooks()) nav += '<a href="#/ebooks" class="crmtab ebtab' + (active === 'ebooks' || active === 'mybooks' ? ' on' : '') + '"' + (active === 'ebooks' || active === 'mybooks' ? ' aria-current="page"' : '') + '>E-Books</a>';
   var tog = isDual() ? '<div class="rtog seg" role="group" aria-label="View as">' + [['agent', 'My Files'], ['tc', 'TC View']].map(function (x) { return '<button type="button" data-role="' + x[0] + '" class="' + (activeRole() === x[0] ? 'on' : '') + '" aria-pressed="' + (activeRole() === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>' : '';
   return (DEMO ? '<div class="demo"><b>DEMO PREVIEW</b> · sample data only, nothing is saved · <a href="#" id="exitDemo" style="color:#FBFBFB">exit demo</a></div>' : '') +
     '<header id="hdr"><button class="nbtn" id="nbtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><span></span><span></span><span></span></button>' +
@@ -339,8 +355,7 @@ function expectedPage() {
   if (hs === '/new') return 'new';
   if (hs === '/account') return '';
   if (/^\/crm(\/|$)/.test(hs) && canCrm()) return 'crm';
-  if (/^\/ebooks(\/|$)/.test(hs) && canEbooks()) return 'ebooks';
-  if (/^\/mybooks\/?$/.test(hs) && canMyEbooks()) return 'mybooks';
+  if ((/^\/ebooks(\/|$)/.test(hs) || /^\/mybooks\/?$/.test(hs)) && (canEbooks() || canMyEbooks())) return 'ebooks';
   if (/^\/(review|users|archive)$/.test(hs) && isAdmin()) return hs.slice(1);
   if (/^\/review\/[A-Za-z0-9_-]+$/.test(hs) && isAdmin() && S.batchReview) return 'review';
   return 'dash';
@@ -358,8 +373,20 @@ function mebYears(d) {
   return Object.keys(y).sort().reverse();
 }
 function mebView() {
-  loading('mybooks');
-  api('mebLoad', {}).then(function (d) { MEB.data = d; if (!MEB.year) MEB.year = String(new Date().getFullYear()); mebRender(); }).catch(function (e) { failView('mybooks', e); });
+  loading('ebooks');
+  api('mebLoad', {}).then(function (d) { MEB.data = d; if (!MEB.year) MEB.year = String(new Date().getFullYear()); mebRender(); }, function (e) {
+    if (!(S.user && S.user.owner)) return failView('ebooks', e);
+    var ready = EB.data ? Promise.resolve(EB.data) : api('ebLoad').then(function (d) { EB.data = d; return d; });
+    ready.then(function (d) {
+      var me = S.user.id;
+      MEB.data = { categories: ['Auto/Mileage', 'Marketing', 'MLS/Dues', 'Licensing & Education', 'Phone', 'Meals', 'Supplies', 'Gifts', 'Other'], expenses: [], commission: (d.txns || []).filter(function (t) { return t.agentId === me; }).map(function (t) {
+        var row = (d.entries || []).filter(function (x) { return x.payeeType === 'agent' && x.payeeId === me && x.txnId === t.id; })[0];
+        return { txnId: t.id, title: t.title, closedAt: t.closedAt, year: String(t.closedAt || '').slice(0, 4), amount: row ? row.amount : null, basis: row ? 'paid' : 'pending' };
+      }) };
+      if (!MEB.year) MEB.year = String(new Date().getFullYear());
+      mebRender();
+    }).catch(function (err) { failView('ebooks', err); });
+  });
 }
 function mebAfter(msg) { return api('mebLoad', {}).then(function (d) { MEB.data = d; if (msg) toast(msg); page.keepScroll = true; mebRender(); }); }
 function mebRender() {
@@ -368,7 +395,7 @@ function mebRender() {
   var tin = com.reduce(function (s, c) { return s + (c.amount || 0); }, 0), tout = ex.reduce(function (s, e) { return s + e.amount; }, 0), pend = com.filter(function (c) { return c.amount === null; }).length;
   var byCat = d.categories.map(function (c) { return { label: c, a: ex.filter(function (e) { return e.category === c; }).reduce(function (s, e) { return s + e.amount; }, 0), neg: true }; }).filter(function (r) { return r.a; });
   var basis = { paid: 'Paid by brokerage', split: 'Estimated from your split', pending: 'Not set yet', cda: 'Signed CDA', cda_pending: 'Signed CDA · waiting for owner approval' };
-  var html = '<div class="ebooks"><div class="ebhead"><h1>My E-Books</h1><span class="ebown">Private · only you</span></div>' +
+  var html = '<div class="ebooks"><div class="ebhead"><h1>E-Books</h1>' + ebSwitch('agent') + '</div>' +
     '<div class="ebbar"><label class="ebyr">Year <select id="mY">' + mebYears(d).map(function (y) { return '<option' + (y === Y ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select></label>' +
     '<button class="btn red" id="mAdd">+ Expense</button><span class="hspace"></span><button class="ub" id="mCsv">Export CSV</button><button class="ub" id="mPrint">Print</button></div>' +
     '<div class="ebsum"><div><small>Commission income</small><b>' + ebM(tin) + '</b></div><div><small>Expenses</small><b>' + ebM(tout) + '</b></div><div class="' + (tin - tout < 0 ? 'neg' : '') + '"><small>Net</small><b>' + ebM(tin - tout) + '</b></div><div><small>Closed files</small><b>' + com.length + '</b></div></div>' +
@@ -382,7 +409,8 @@ function mebRender() {
         '<td class="acts">' + (e.receipt ? '<button class="ub sm mRc">Receipt</button>' : '') + '<button class="ub sm mEd">Edit</button><button class="ub sm mDl" aria-label="Delete">×</button></td></tr>';
     }).join('') + '</tbody></table></div>' : '<div class="empty">No expenses in ' + h(Y) + ' yet. Add one with + Expense.</div>') +
     '<h2 class="ebh2">Tax summary ' + h(Y) + '</h2>' + mebSummaryTable(tin, tout, byCat) + (byCat.length ? '<div class="ebchart">' + ebBars(byCat) + '</div>' : '') + '</div>';
-  page('mybooks', html, function () {
+  page('ebooks', html, function () {
+    wireBooksSwitch();
     qs('#mY').onchange = function () { MEB.year = this.value; mebRender(); };
     qs('#mAdd').onclick = function () { mebModal(null); };
     qs('#mCsv').onclick = function () {
@@ -447,8 +475,18 @@ function mebReceipt(e) {
 
 /* ---------------- E-Books (1.6.0): owner-only bookkeeping. The server refuses every eb* call from anyone but the owner. ---------------- */
 function canEbooks() { return !!S.user && !!S.user.owner && isAdmin() && (S.ebooks || DEMO); }
-var EB = { data: null, tab: 'ledger', f: { from: '', to: '', type: '', cat: '', q: '' }, rep: 'pl', rf: '', rt: '', year: '' };
-var EB_TABS = [['ledger', 'Ledger'], ['import', 'Import from TC'], ['payees', 'Payees'], ['categories', 'Categories'], ['1099', '1099-NEC'], ['reports', 'Reports']];
+var EB = { data: null, tab: 'ledger', mode: '', f: { from: '', to: '', type: '', cat: '', q: '' }, rep: 'pl', rf: '', rt: '', year: '' };
+var EB_TABS = [['ledger', 'Ledger'], ['payees', 'Payees'], ['categories', 'Categories'], ['1099', '1099-NEC'], ['reports', 'Reports']];
+function booksMode() { return (S.user && S.user.owner && EB.mode !== 'agent') ? 'owner' : 'agent'; }
+function ebSwitch(mode) {
+  var ownerOk = !!(S.user && S.user.owner);
+  return '<div class="ebsw" role="group" aria-label="Whose books"><button type="button" id="ebOwn"' + (ownerOk ? '' : ' disabled') + ' class="' + (mode === 'owner' ? 'on' : '') + '" aria-pressed="' + (mode === 'owner') + '">Owner</button><button type="button" id="ebAgt" class="' + (mode === 'agent' ? 'on' : '') + '" aria-pressed="' + (mode === 'agent') + '">Agent</button></div>';
+}
+function wireBooksSwitch() {
+  var o = qs('#ebOwn'), a = qs('#ebAgt');
+  if (o && !o.disabled) o.onclick = function () { EB.mode = 'owner'; EB.data = null; if (location.hash.indexOf('#/ebooks') !== 0) location.hash = '#/ebooks'; else ebView(EB.tab || 'ledger'); };
+  if (a) a.onclick = function () { EB.mode = 'agent'; MEB.data = null; if (location.hash.indexOf('#/ebooks') !== 0) location.hash = '#/ebooks'; else mebView(); };
+}
 function ebM(n) { n = Number(n) || 0; return (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function ebCat(id) { return (EB.data.categories.filter(function (c) { return c.id === id; })[0] || { name: '(deleted category)', type: '' }); }
 function ebTxn(id) { return EB.data.txns.filter(function (t) { return t.id === id; })[0]; }
@@ -491,6 +529,7 @@ function ebBars(rows, opt) {   // rows: [{label, a, b?}] -> simple responsive SV
 function ebInRange(e, from, to) { return (!from || e.date >= from) && (!to || e.date <= to); }
 
 function ebView(tab) {
+  if (booksMode() === 'agent') return mebView();
   EB.tab = EB_TABS.some(function (t) { return t[0] === tab; }) ? tab : 'ledger';
   if (!EB.data) { loading('ebooks'); return ebReload().then(function () { ebRender(); }).catch(function (e) { failView('ebooks', e); }); }
   ebRender();
@@ -503,10 +542,10 @@ function ebReload() {
 }
 function ebAfter(msg) { return ebReload().then(function () { if (msg) toast(msg); page.keepScroll = true; ebRender(); }); }
 function ebRender() {
-  var pendN = (EB.cdaPending || []).length;
+  var pendN = ebPendingBatches().length;
   var tabs = '<div class="ebtabs" role="tablist">' + EB_TABS.map(function (t) { return '<a role="tab" href="#/ebooks/' + t[0] + '" class="' + (EB.tab === t[0] ? 'on' : '') + '" aria-selected="' + (EB.tab === t[0]) + '">' + t[1] + (t[0] === 'ledger' && pendN ? ' <span class="ebflag" aria-label="' + pendN + ' waiting for approval">' + pendN + '</span>' : '') + '</a>'; }).join('') + '</div>';
-  var body = ({ ledger: ebLedger, import: ebImportView, payees: ebPayees, categories: ebCats, '1099': eb1099View, reports: ebReports })[EB.tab]();
-  page('ebooks', '<div class="ebooks"><div class="ebhead"><h1>E-Books</h1><span class="ebown">Owner only</span></div>' + tabs + '<div id="ebbody">' + body.html + '</div></div>', body.wire);
+  var body = ({ ledger: ebLedger, payees: ebPayees, categories: ebCats, '1099': eb1099View, reports: ebReports })[EB.tab]();
+  page('ebooks', '<div class="ebooks"><div class="ebhead"><h1>E-Books</h1>' + ebSwitch('owner') + '</div>' + tabs + '<div id="ebbody">' + body.html + '</div></div>', function () { wireBooksSwitch(); if (body.wire) body.wire(); });
 }
 
 /* ---- Ledger ---- */
@@ -531,25 +570,40 @@ function ebPendingCat(r) {
 function ebPendingVisible() {
   var f = EB.f, q = (f.q || '').toLowerCase();
   return (EB.cdaPending || []).filter(function (r) {
+    var t = ebTxn(r.txnId);
+    if (!t || !t.archived || t.booksExcluded) return false;
     if (r.type !== 'income' && r.type !== 'expense') return false;
     if (f.cat) return false;
     if (f.type && r.type !== f.type) return false;
-    if (q && (String(r.payeeName || '') + ' ' + String(r.title || '') + ' ' + String(r.kind || r.kinds || '') + ' ' + r.amount).toLowerCase().indexOf(q) < 0) return false;
+    if (q && (String(r.payeeName || '') + ' ' + String(r.title || '') + ' ' + String(t.title || '') + ' ' + String(r.kind || r.kinds || '') + ' ' + r.amount).toLowerCase().indexOf(q) < 0) return false;
     return true;
   });
+}
+function ebPendingBatches() {
+  var by = {}, order = [];
+  ebPendingVisible().forEach(function (r) {
+    var id = r.txnId || r.id;
+    if (!by[id]) { var t = ebTxn(r.txnId); by[id] = { txnId: r.txnId, title: r.title || (t && t.title) || '', version: r.version, rows: [] }; order.push(id); }
+    by[id].rows.push(r);
+    if (r.title) by[id].title = r.title;
+    if (r.version) by[id].version = r.version;
+  });
+  return order.map(function (id) { return by[id]; });
 }
 function ebLedger() {
   var f = EB.f, rows = ebFiltered(), tin = 0, tout = 0, waiting = ebPendingVisible();
   rows.forEach(function (e) { if (e.type === 'income') tin += e.amount; else tout += e.amount; });
+  var batches = ebPendingBatches();
   var html = '<div class="ebbar"><button class="btn" id="ebAddIn">+ Income</button><button class="btn red" id="ebAddEx">+ Expense</button><span class="hspace"></span><button class="ub" id="ebCsvL">Export CSV</button><button class="ub" id="ebPrintL">Print</button></div>' +
     '<div class="ebfilt"><label>From<input type="date" id="fFrom" value="' + h(f.from) + '"></label><label>To<input type="date" id="fTo" value="' + h(f.to) + '"></label>' +
     '<label>Type<select id="fType"><option value="">All</option><option value="income"' + (f.type === 'income' ? ' selected' : '') + '>Income</option><option value="expense"' + (f.type === 'expense' ? ' selected' : '') + '>Expense</option></select></label>' +
     '<label>Category<select id="fCat"><option value="">All</option>' + ebCatOptions(f.type, f.cat, true) + '</select></label>' +
     '<label class="grow">Search<input type="search" id="fQ" value="' + h(f.q) + '" placeholder="Payee, memo, address…"></label></div>' +
     '<div class="ebsum"><div><small>Income</small><b>' + ebM(tin) + '</b></div><div><small>Expenses</small><b>' + ebM(tout) + '</b></div><div class="' + (tin - tout < 0 ? 'neg' : '') + '"><small>Net</small><b>' + ebM(tin - tout) + '</b></div><div><small>Entries</small><b>' + rows.length + '</b></div></div>';
-  if (waiting.length) html += '<p class="sub">Signed CDA amounts below are waiting for owner amount approval. They are not included in the totals, reports, or 1099. Checklist compliance review is separate.</p><div class="ebtable"><table class="ebt"><thead><tr><th>Status</th><th>Category</th><th>Payee</th><th>Source</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + waiting.map(function (r) {
-    var label = ebPendingCat(r);
-    return '<tr class="ebpendrow" data-cda="' + h(r.id) + '"><td data-l="Status"><span class="ebflag">Pending</span></td><td data-l="Category"><span class="ebtype ' + r.type + '">' + (r.type === 'income' ? 'In' : 'Out') + '</span>' + label + '</td><td data-l="Payee">' + h(r.payeeName || '—') + (r.payeeType === 'agent' ? ' <small class="muted">agent</small>' : '') + '</td><td data-l="Source" class="src">Signed CDA' + (r.title ? ' · ' + h(r.title) : '') + (r.version ? ' · v' + h(r.version) : '') + '</td><td data-l="Amount" class="r amt ' + r.type + '">' + (r.type === 'expense' ? '−' : '') + ebM(r.amount) + '</td><td class="acts"><button type="button" class="ebred" aria-label="Review pending CDA amount ' + h(r.payeeName || label) + ' ' + ebM(r.amount) + (r.title ? ' for ' + h(r.title) : '') + '"><span aria-hidden="true">!</span> Review</button></td></tr>';
+  if (batches.length) html += '<p class="sub">Each closed, archived file is one batch. Open it to review the agent commission going out and the broker commission and admin fee coming in. These amounts are not included in the totals, reports, or 1099. Checklist compliance review is separate.</p><div class="ebtable"><table class="ebt"><thead><tr><th>Status</th><th>Category</th><th>Transaction</th><th>Source</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + batches.map(function (b) {
+    var inn = 0, out = 0; b.rows.forEach(function (r) { if (r.type === 'income') inn += Number(r.amount) || 0; else out += Number(r.amount) || 0; });
+    var t = ebTxn(b.txnId), title = b.title || (t && t.title) || 'Transaction';
+    return '<tr class="ebpendrow" data-cda="' + h(b.txnId) + '"><td data-l="Status"><span class="ebflag">Pending</span></td><td data-l="Category">Signed CDA</td><td data-l="Transaction">' + h(title) + '</td><td data-l="Source" class="src">Version ' + h(b.version || '') + ' · ' + b.rows.length + ' lines</td><td data-l="Amount" class="r">In ' + ebM(inn) + '<br>Out ' + ebM(out) + '</td><td class="acts"><button type="button" class="ebred" aria-label="Review pending CDA amount for ' + h(title) + '"><span aria-hidden="true">!</span> Review</button></td></tr>';
   }).join('') + '</tbody></table></div>';
   html += rows.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Date</th><th>Category</th><th>Payee</th><th class="hm">Method</th><th class="hm">Memo / Transaction</th><th class="r">Amount</th><th></th></tr></thead><tbody>' + rows.map(function (e) {
     var t = ebTxn(e.txnId), c = ebCat(e.categoryId);
@@ -557,7 +611,7 @@ function ebLedger() {
       '<td data-l="Method" class="hm">' + h(e.method || '') + '</td><td data-l="Memo" class="hm">' + h(e.memo || '') + (t ? '<br><a href="#/t/' + h(t.id) + '" class="muted">' + h(t.title) + '</a>' : '') + (e.source === 'import' ? ' <small class="ebimp">imported</small>' : '') + '</td>' +
       '<td data-l="Amount" class="r amt ' + e.type + '">' + (e.type === 'expense' ? '−' : '') + ebM(e.amount) + '</td>' +
       '<td class="acts">' + (e.receiptId ? '<button class="ub sm ebRc" title="View receipt" aria-label="View receipt">📎</button>' : '') + '<button class="ub sm ebEd">Edit</button><button class="ub sm ebDel" aria-label="Delete entry">×</button></td></tr>';
-  }).join('') + '</tbody></table></div>' : '<div class="empty">' + (EB.data.entries.length ? 'No entries match these filters.' : 'No entries yet. Add income or an expense, or import closed transactions.') + '</div>';
+  }).join('') + '</tbody></table></div>' : '<div class="empty">' + (EB.data.entries.length ? 'No entries match these filters.' : 'No entries yet. Add income or an expense. Signed CDA amounts appear here after the file is closed and archived.') + '</div>';
   return { html: html, wire: function () {
     var set = function (k, v) { EB.f[k] = v; if (k === 'type') EB.f.cat = ''; page.keepScroll = true; ebRender(); };
     qs('#fFrom').onchange = function () { set('from', this.value); }; qs('#fTo').onchange = function () { set('to', this.value); };
@@ -576,25 +630,25 @@ function ebLedger() {
     qsa('tr[data-cda] .ebred').forEach(function (b) {
       b.onclick = function () {
         var id = b.closest('tr').getAttribute('data-cda');
-        var row = (EB.cdaPending || []).filter(function (r) { return r.id === id; })[0];
-        if (row) ebCdaReview(row, this);
+        var batch = ebPendingBatches().filter(function (x) { return x.txnId === id; })[0];
+        if (batch) ebCdaBatch(batch, this);
       };
     });
   } };
 }
-function ebCdaReview(r, opener) {
-  var t = ebTxn(r.txnId), income = r.type === 'income';
+function ebCdaBatch(batch, opener) {
+  var t = ebTxn(batch.txnId);
   var close = t && /^\d{4}-\d{2}-\d{2}$/.test(String(t.closedAt || '').slice(0, 10)) ? String(t.closedAt).slice(0, 10) : '';
-  var gate = income
-    ? 'Approving this amount does not add it to income. It is recorded only after the commission check deposit date is confirmed on the transaction and the check matches the signed CDA total gross. The agent is not asked for a deposit date.'
-    : (close ? 'Confirming records this agent commission on the actual escrow closing date ' + fmtDate(close) + '. It is not in the totals until you confirm.' : 'This file has no actual escrow closing date yet. Confirming will not record the amount, and it will not use today or the estimated close.');
+  var lines = batch.rows.map(function (r) {
+    var income = r.type === 'income';
+    return '<div><dt>' + (income ? 'Income · ' + ebPendingCat(r) : 'Expense · Agent commission') + '</dt><dd>' + h(r.payeeName || '—') + ' · <b>' + ebM(r.amount) + '</b></dd></div>';
+  }).join('');
+  var gate = 'Approving this amount does not add it to income. Broker commission and the admin fee are recorded only after the commission check deposit date is confirmed and the check matches the signed CDA total gross. Agent commission is recorded on the actual escrow closing date' + (close ? ' ' + fmtDate(close) : '') + '. The agent is not asked for a deposit date.';
   opener = opener || document.activeElement;
-  var m = modal('<h2>Review CDA amount</h2><p class="sub">This is owner amount approval. It does not approve the checklist item. Compliance review stays separate.</p><div id="cdaRv"></div><dl class="ebkv">' +
-    '<div><dt>Transaction</dt><dd>' + (t ? '<a href="#/t/' + h(t.id) + '">' + h(t.title) + '</a>' : h(r.title || r.txnId || '—')) + '</dd></div>' +
-    '<div><dt>Signed CDA</dt><dd>' + (r.version ? 'Version ' + h(r.version) : 'Latest signed version') + (r.op === 'update' ? ' · replaces the posted amount' : r.op === 'remove' ? ' · removes the posted amount' : '') + '</dd></div>' +
-    '<div><dt>Where it belongs</dt><dd>' + (income ? 'Income · ' + ebPendingCat(r) : 'Expenses · Agent Commission Payouts') + '</dd></div>' +
-    '<div><dt>Payee</dt><dd>' + h(r.payeeName || '—') + (r.payeeType === 'agent' ? ' · agent' : income ? ' · brokerage' : '') + '</dd></div>' +
-    '<div><dt>Amount</dt><dd><b>' + ebM(r.amount) + '</b></dd></div></dl><p>' + h(gate) + '</p><div class="actions"><button type="button" class="ub" id="cdaNo">Not now</button><button type="button" class="ub" id="cdaRj">Reject</button><button type="button" class="ebred" id="cdaYes">Approve this amount</button></div>', true);
+  var m = modal('<h2>Review CDA batch</h2><p class="sub">One closed file. This is owner amount approval. It does not approve the checklist item. Compliance review stays separate.</p><div id="cdaRv"></div><dl class="ebkv">' +
+    '<div><dt>Transaction</dt><dd>' + (t ? '<a href="#/t/' + h(t.id) + '">' + h(t.title) + '</a>' : h(batch.title || '—')) + '</dd></div>' +
+    '<div><dt>Signed CDA</dt><dd>' + (batch.version ? 'Version ' + h(batch.version) : 'Latest signed version') + '</dd></div>' +
+    lines + '</dl><p>' + h(gate) + '</p><div class="actions"><button type="button" class="ub" id="cdaNo">Not now</button><button type="button" class="ub" id="cdaRj">Reject</button><button type="button" class="ebred" id="cdaYes">Approve this batch</button></div>', true);
   function restore() { if (opener && opener.focus) setTimeout(function () { opener.focus(); }, 0); }
   function dismiss() { m.close(); restore(); }
   qs('.close', m).onclick = dismiss;
@@ -603,7 +657,7 @@ function ebCdaReview(r, opener) {
   qs('#cdaNo', m).onclick = dismiss;
   qs('#cdaNo', m).focus();
   function decide(decision) {
-    api('ebCdaDecide', { ids: [r.id], decision: decision }).then(function (res) {
+    api('ebCdaDecide', { ids: batch.rows.map(function (r) { return r.id; }), decision: decision }).then(function (res) {
       res = res || {};
       m.close();
       var parts = [];
@@ -680,47 +734,13 @@ function ebOpenReceipt(e) {
   }).catch(function (x) { m.close(); toast(x.message, 1); });
 }
 
-/* ---- Import from TC ---- */
-function ebImportView() {
-  var ag = {}; EB.data.agents.forEach(function (a) { ag[a.id] = a; });
-  var list = EB.data.txns;
-  var html = '<p class="sub">Signed CDA amounts waiting for approval are on the Ledger, with a red Review button. They are not posted from this page. This list is only for closed files that do not have a signed CDA yet. Gross is estimated from the file’s commission terms and the payout from the agent’s split. Do not also import an estimate for a file that already has a signed CDA.</p>';
-  if (!list.length) return { html: html + '<div class="empty">No closed transactions yet.</div>', wire: function () {} };
-  html += '<div class="ebbar"><label class="chk"><input type="checkbox" id="imAll"> Select all not yet imported</label><span class="hspace"></span><button class="btn" id="imGo" disabled>Import selected</button></div>' +
-    '<div class="ebtable"><table class="ebt ebim"><thead><tr><th></th><th>Transaction</th><th>Closed</th><th>Agent</th><th class="r">Gross commission</th><th class="r">Agent payout</th></tr></thead><tbody>' + list.map(function (t) {
-      var a = ag[t.agentId] || {}, cdaDone = !!(t.cdaExecuted || t.cdaStatus === 'executed'), done = !!(t.importedIncome && t.importedPayout) || cdaDone, sp = a.splitPct === '' || a.splitPct === undefined ? '' : Number(a.splitPct);
-      var pay = sp === '' ? '' : (Math.round(t.gross * sp) / 100).toFixed(2);
-      return '<tr data-id="' + h(t.id) + '" class="' + (done ? 'done' : '') + '"><td><input type="checkbox" class="imC" aria-label="Import ' + h(t.title) + '"' + (done ? ' disabled' : '') + '></td><td data-l="Transaction"><a href="#/t/' + h(t.id) + '">' + h(t.title) + '</a></td><td data-l="Closed">' + h(fmtDate(t.closedAt)) + '</td><td data-l="Agent">' + h(t.agentName || '—') + (sp !== '' ? ' <small class="muted">' + sp + '%</small>' : '') + '</td>' +
-        '<td data-l="Gross" class="r">' + (cdaDone ? '<span class="ebimp">signed CDA</span>' : (t.importedIncome ? '<span class="ebimp">imported</span>' : '<input class="imG" inputmode="decimal" value="' + (t.gross ? t.gross.toFixed(2) : '') + '" placeholder="0.00" aria-label="Gross commission">')) + '</td>' +
-        '<td data-l="Payout" class="r">' + (cdaDone ? '<span class="ebimp">signed CDA</span>' : (t.importedPayout ? '<span class="ebimp">imported</span>' : (t.agentId ? '<input class="imP" inputmode="decimal" value="' + pay + '" placeholder="' + (sp === '' ? 'set split or type' : '0.00') + '" aria-label="Agent payout">' : '—'))) + '</td></tr>';
-    }).join('') + '</tbody></table></div>';
-  return { html: html, wire: function () {
-    var go = qs('#imGo'), sync = function () { var n = qsa('.imC:checked').length; go.disabled = !n; go.textContent = n ? 'Import ' + n + ' selected' : 'Import selected'; };
-    qsa('.imC').forEach(function (c) { c.onchange = sync; });
-    qs('#imAll').onchange = function () { var v = this.checked; qsa('.imC:not([disabled])').forEach(function (c) { c.checked = v; }); sync(); };
-    go.onclick = function () {
-      var items = [], bad = '';
-      qsa('.ebim tr[data-id]').forEach(function (tr) {
-        if (!qs('.imC', tr).checked) return;
-        var it = { txnId: tr.getAttribute('data-id') }, g = qs('.imG', tr), p = qs('.imP', tr);
-        if (g && g.value.trim()) it.gross = g.value; if (p && p.value.trim()) it.payout = p.value;
-        if (it.gross === undefined && it.payout === undefined) bad = 'Enter a gross commission or payout for each checked transaction.';
-        items.push(it);
-      });
-      if (bad) return toast(bad, 1);
-      go.disabled = true;
-      api('ebImport', { items: items }).then(function (d) { return ebAfter('Imported ' + d.added + ' entr' + (d.added === 1 ? 'y' : 'ies') + (d.skipped ? ' · ' + d.skipped + ' already imported, skipped' : '') + '.'); }).catch(function (x) { go.disabled = false; toast(x.message, 1); });
-    };
-  } };
-}
-
 /* ---- Payees ---- */
 function ebTinCell(p) { return p.hasTin ? '•••-••-' + h(p.tinLast4) : '<span class="ebwarn">Missing</span>'; }
 function ebPayees() {
   var html = '<h2 class="ebh2">Agents <small class="muted">from Transaction Center users</small></h2><div class="ebtable"><table class="ebt"><thead><tr><th>Agent</th><th class="hm">Email</th><th>Default split</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' +
     EB.data.agents.map(function (a) {
-    var owed = (EB.cdaPending || []).filter(function (p) { return p.type === 'expense' && p.payeeType === 'agent' && p.payeeId === a.id; });
-    return '<tr data-a="' + h(a.id) + '"><td data-l="Agent">' + h(a.name) + (a.active ? '' : ' <small class="muted">inactive</small>') + (owed.length ? ' <span class="ebflag">Pending</span>' : '') + '</td><td data-l="Email" class="hm">' + h(a.email) + '</td><td data-l="Split">' + (a.splitPct === '' ? '—' : h(a.splitPct) + '%') + (a.capAmount === '' || a.capAmount == null ? '' : '<br><small class="muted">cap ' + ebM(a.capAmount) + '</small>') + '</td><td data-l="TIN">' + ebTinCell(a) + '</td><td data-l="Address" class="hm">' + h(a.address || '—') + '</td><td class="acts">' + (owed.length ? '<button type="button" class="ebred ebAgPend" data-cda="' + h(owed[0].id) + '" aria-label="Review pending CDA commission for ' + h(a.name) + ' ' + ebM(owed[0].amount) + '"><span aria-hidden="true">!</span> Review</button>' : '') + '<button class="ub sm ebAg">Edit</button></td></tr>';
+    var owed = ebPendingVisible().filter(function (p) { return p.type === 'expense' && p.payeeType === 'agent' && p.payeeId === a.id; });
+    return '<tr data-a="' + h(a.id) + '"><td data-l="Agent">' + h(a.name) + (a.active ? '' : ' <small class="muted">inactive</small>') + (owed.length ? ' <span class="ebflag">Pending</span>' : '') + '</td><td data-l="Email" class="hm">' + h(a.email) + '</td><td data-l="Split">' + (a.splitPct === '' ? '—' : h(a.splitPct) + '%') + (a.capAmount === '' || a.capAmount == null ? '' : '<br><small class="muted">cap ' + ebM(a.capAmount) + '</small>') + '</td><td data-l="TIN">' + ebTinCell(a) + '</td><td data-l="Address" class="hm">' + h(a.address || '—') + '</td><td class="acts">' + (owed.length ? '<button type="button" class="ebred ebAgPend" data-txn="' + h(owed[0].txnId) + '" aria-label="Review pending CDA amount for ' + h(a.name) + '"><span aria-hidden="true">!</span> Review</button>' : '') + '<button class="ub sm ebAg">Edit</button></td></tr>';
   }).join('') + '</tbody></table></div>' +
     '<h2 class="ebh2">Vendors <button class="btn sm" id="vAdd">+ Vendor</button></h2>' +
     (EB.data.vendors.length ? '<div class="ebtable"><table class="ebt"><thead><tr><th>Vendor</th><th class="hm">Email / phone</th><th>1099</th><th>TIN</th><th class="hm">Address</th><th></th></tr></thead><tbody>' + EB.data.vendors.map(function (v) {
@@ -728,7 +748,7 @@ function ebPayees() {
     }).join('') + '</tbody></table></div>' : '<div class="empty">No vendors yet.</div>');
   return { html: html, wire: function () {
     qs('#vAdd').onclick = function () { ebPayeeModal('vendor', null); };
-    qsa('.ebAgPend').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); var row = (EB.cdaPending || []).filter(function (p) { return p.id === b.getAttribute('data-cda'); })[0]; if (row) ebCdaReview(row, b); }; });
+    qsa('.ebAgPend').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); var batch = ebPendingBatches().filter(function (x) { return x.txnId === b.getAttribute('data-txn'); })[0]; if (batch) ebCdaBatch(batch, b); }; });
     qsa('tr[data-a]').forEach(function (tr) { qs('.ebAg', tr).onclick = function () { ebPayeeModal('agent', EB.data.agents.filter(function (a) { return a.id === tr.getAttribute('data-a'); })[0]); }; });
     qsa('tr[data-v]').forEach(function (tr) { qs('.ebVe', tr).onclick = function () { ebPayeeModal('vendor', EB.data.vendors.filter(function (v) { return v.id === tr.getAttribute('data-v'); })[0]); }; });
   } };
@@ -1053,7 +1073,10 @@ function newView(type) {
 }
 
 /* ---------------- transaction view ---------------- */
-function itemPill(s) { return '<span class="pill ' + ({ Approved: 'p-ok', Rejected: 'p-rej', Pending: 'p-pend', Missing: 'p-miss' }[s] || 'p-miss') + '">' + (s === 'Rejected' ? '<span class="rt">Rejected</span>' : ({ Pending: 'Uploaded – Pending Review' }[s] || h(s))) + '</span>'; }
+function itemPill(s, req) {
+  if (req === false && (!s || s === 'Missing')) return '<span class="pill p-opt">Not Required</span>';
+  return '<span class="pill ' + ({ Approved: 'p-ok', Rejected: 'p-rej', Pending: 'p-pend', Missing: 'p-miss' }[s] || 'p-miss') + '">' + (s === 'Rejected' ? '<span class="rt">Rejected</span>' : ({ Pending: 'Uploaded – Pending Review' }[s] || h(s))) + '</span>';
+}
 var PHASE_LABEL = { listing: 'Listing', purchase: 'Purchase', purchase_buyer: 'Purchase', purchase_seller: 'Purchase', lease_listing: 'Lease Listing', lease: 'Lease', lease_landlord: 'Lease', lease_tenant: 'Lease', referral: 'Referral' };
 function phaseLabel(p) { p = String(p || ''); return PHASE_LABEL[p] || p.replace(/_(buyer|seller|landlord|tenant|both)$/, '').split('_').map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join(' '); }
 function txnView(id, keep) {
@@ -1116,10 +1139,12 @@ function drawTxn() {
   if (canEdit()) acts += '<button class="btn" id="aSplit">Upload &amp; Split Packet</button>';
   if (open && !t.readOnly && (t.type === 'listing' || t.type === 'lease_listing') && !crPending) acts += '<button class="ub" id="aConv">' + (t.type === 'listing' ? 'Accepted Contract' : 'Convert to Lease') + '</button>';
   if (open && !crPending && !t.readOnly) acts += '<button class="ub red" id="aCancel">Request cancellation</button>';
-  if (isAdmin()) acts += '<button class="ub" id="aStatus">Set status</button>';
+  if (isAdmin() || canEdit()) acts += '<button class="ub" id="aStatus">Set status</button>';
   var banner = '';
-  if (crPending) banner = '<div class="err"><b>Cancellation requested</b> by ' + h(cr.requestedByName) + ' on ' + h(fmtTs(cr.requestedAt)) + (cr.reason ? ' · “' + h(cr.reason) + '”' : '') + (cr.relist === true ? ' · Going back on the market (a new listing is created on approval)' : cr.relist === false ? ' · Not going back on the market' : '') + '. Waiting for admin approval.' + (isAdmin() ? ' <a href="#/review">Decide in Review</a>' : '') + '</div>';
-  else if (cr && cr.state === 'denied') banner = '<div class="ok">Cancellation request was denied' + (cr.note ? ': “' + h(cr.note) + '”' : '') + '.</div>';
+  var closeAsk = t.closeRequest && t.closeRequest.state === 'pending';
+  if (closeAsk) banner += '<div class="err"><b>Close requested</b> by ' + h(t.closeRequest.requestedByName || 'the file') + ' for ' + h(fmtDate(t.closeRequest.closeDate)) + '. The file stays open until an admin approves it and archives it as closed. E-Books does not see these amounts yet.' + (isAdmin() ? ' <button type="button" class="btn sm" id="aCloseOk">Approve and archive</button>' : '') + '</div>';
+  if (crPending) banner += '<div class="err"><b>Cancellation requested</b> by ' + h(cr.requestedByName) + ' on ' + h(fmtTs(cr.requestedAt)) + (cr.reason ? ' · “' + h(cr.reason) + '”' : '') + (cr.relist === true ? ' · Going back on the market (a new listing is created on approval)' : cr.relist === false ? ' · Not going back on the market' : '') + '. Waiting for admin approval.' + (isAdmin() ? ' <a href="#/review">Decide in Review</a>' : '') + '</div>';
+  else if (cr && cr.state === 'denied') banner += '<div class="ok">Cancellation request was denied' + (cr.note ? ': “' + h(cr.note) + '”' : '') + '.</div>';
   if (t.readOnly) banner += '<div class="ok">Team view · ' + h(t.agentName) + '’s file. You can read the checklist, notes and documents; only ' + h(t.agentName) + ', their TC or an admin can change it.</div>';
   if (t.childId) banner += '<div class="ok">Relisted as a new file: <a href="#/t/' + h(t.childId) + '">open the new listing</a>.</div>';
   if (t.parentId) banner += '<div class="ok">Relisted from a cancelled file: <a href="#/t/' + h(t.parentId) + '">open the previous file</a>.</div>';
@@ -1134,6 +1159,7 @@ function drawTxn() {
     if (qs('#aConv')) qs('#aConv').onclick = convertModal;
     if (qs('#aCancel')) qs('#aCancel').onclick = cancelModal;
     if (qs('#aStatus')) qs('#aStatus').onclick = statusModal;
+    if (qs('#aCloseOk')) qs('#aCloseOk').onclick = function () { var b = this; b.disabled = true; api('approveClose', { id: t.id }).then(function () { toast('Closed and archived.'); refresh(); }).catch(function (e) { b.disabled = false; toast(e.message, 1); }); };
     drawTab();
   });
 }
@@ -1158,7 +1184,7 @@ function drawTab() {
         (it.status === 'Rejected' && it.reviewNote ? '<div class="note rt">Admin note: ' + h(it.reviewNote) + '</div>' : '') +
         (v15 ? '' : notes.map(function (n) { return '<div class="note">' + h(n.by) + ': ' + h(n.text) + '</div>'; }).join('')) +
         '</div>' +
-        itemPill(it.status) + '<div class="acts">' + cdaActs(it) +
+        itemPill(it.status, it.req) + '<div class="acts">' + cdaActs(it) +
         (v15 && isAdmin() && !it.cancel ? '<button class="rq' + (it.req ? ' on' : '') + '" data-item="' + h(it.id) + '" data-r="' + (it.req ? '1' : '') + '" aria-pressed="' + (it.req ? 'true' : 'false') + '" title="Switch between Required and Not Required for this file">' + (it.req ? 'Required' : 'Not Required') + '</button>' : '') +
         (canEdit() ? '<label class="ub">' + (it.status === 'Rejected' ? 'Re-upload' : 'Upload') + '<input type="file" class="hidden up" data-item="' + h(it.id) + '" accept="' + UP_ACCEPT + '"></label>' : '') +
         (it.status === 'Rejected' && canEdit() ? '<button class="ub red resub" data-item="' + h(it.id) + '">Add note &amp; resubmit</button>' : '') +
@@ -1198,13 +1224,13 @@ function drawTab() {
     qsa('.rm', c).forEach(function (b) { b.onclick = function () { if (S.v150) return delDocModal(b.getAttribute('data-doc')); promptModal('Remove document (admin)', 'The file leaves the checklist but stays in the Drive archive, flagged for Enrique. Nothing is deleted. Give a reason.', 'Remove', function (txt) { return api('removeDocument', { docId: b.getAttribute('data-doc'), reason: txt }); }); }; });
     qsa('.rst', c).forEach(function (b) { b.onclick = function () { api('restoreDocument', { docId: b.getAttribute('data-doc') }).then(function () { toast('Restored.'); refresh(); }).catch(function (e) { toast(e.message, 1); }); }; });
   } else if (S.tab === 'details') {
-    var ii = oaLegacy(t.intake), defs = F[t.type], secOpen = false, secTitle = '';
+    var ii = partyIntake(t.intake), defs = F[t.type], secOpen = false, secTitle = '';
     c.innerHTML = '<div class="card gb dsec"><div class="kv">' + defs.map(function (f) {
       if (f.h) { var hh = (secOpen ? '</div>' : '') + '<h3 class="dh">' + h(f.h === 'Other Agent' ? oaLabel(t.type, t.side) : f.h) + '</h3><div class="kv">'; secOpen = true; return hh; }
       var v = ii[f.k];
       if (f.k === 'state' && !v && ii.address) v = 'CA';
       var fl = f.k === 'otherAgentName' ? oaLabel(t.type, t.side).replace(/ \/ .*/, '') + ' name' : f.l;
-      if (f.oa && !v && t.side !== 'both') return '<div><span>' + h(fl) + '</span><b class="miss">Missing · required</b></div>';
+      if (f.oa && !v) return '<div><span>' + h(fl) + '</span><b class="miss">Missing · required</b></div>';
       if (f.people) v = (v || []).map(function (pp) { return [pp.name, pp.phone, pp.email].filter(Boolean).join(' · '); }).join('\n');
       else if (f.radio) v = (f.radio.filter(function (o) { return o[0] === (f.k === 'side' ? t.side : v); })[0] || [])[1];
       else if (f.t === 'date') v = fmtDate(v); else if (f.t === 'money' && v) v = money(v); else if (f.comm) v = fmtComm(v, ii[f.k + 'Type']);
@@ -1214,9 +1240,9 @@ function drawTab() {
       (canEdit() ? '<div class="actions">' + (S.tcApi && t.canAssignTc ? '<button class="ub" id="editTc">' + (t.tcName ? 'Change TC' : 'Add TC') + '</button>' : '') + '<button class="ub" id="editI">Edit intake</button></div>' : '') + '</div>';
     if (qs('#editTc')) qs('#editTc').onclick = tcModal;
     if (qs('#editI')) qs('#editI').onclick = function () {
-      c.innerHTML = '<form id="ef" novalidate><div id="ee"></div>' + formHtml(t.type, ii, 'e', { side: 1 }) + '<div class="actions"><button type="button" class="ub" id="ecan">Cancel</button><button class="btn">Save intake</button></div></form>';
+      c.innerHTML = '<form id="ef" novalidate><div id="ee"></div>' + formHtml(t.type, partyIntake(t.intake), 'e', { side: 1 }) + '<div class="actions"><button type="button" class="ub" id="ecan">Cancel</button><button class="btn">Save intake</button></div></form>';
       var f = qs('#ef'); f.setAttribute('data-side', t.side || ''); f.setAttribute('data-type', t.type); wireForm(f); qs('#ecan').onclick = drawTab;
-      qsa('.f[data-oa]', f).forEach(function (el) { var x = qs('input', el); if (!x.value && t.side !== 'both') el.classList.add('bad'); });
+      qsa('.f[data-oa]', f).forEach(function (el) { var x = qs('input', el); if (x && !x.value) el.classList.add('bad'); });
       f.onsubmit = function (e) { e.preventDefault(); var r = readForm(f); if (r.missing.length) { qs('#ee').innerHTML = '<div class="err">Please complete: ' + h(r.missing.join(', ')) + '</div>'; return; }
         api('updateIntake', { id: t.id, intake: r.intake }).then(function () { toast('Saved.'); refresh(); }).catch(function (err) { qs('#ee').innerHTML = '<div class="err">' + h(err.message) + '</div>'; }); };
     };
@@ -1608,8 +1634,8 @@ function cancelModal() {
   };
 }
 function statusModal() {
-  var t = S.txn.txn;
-  var m = modal('<h2>Set status</h2><p class="sub">Cancellations go through “Request cancellation” so the signed document is on file.</p><div id="ze"></div><div class="radios" id="zs">' +
+  var t = S.txn.txn, i = (t.intake || {});
+  var m = modal('<h2>Set status</h2><p class="sub">Cancellations go through “Request cancellation” so the signed document is on file.' + (isAdmin() ? '' : ' Choosing Closed sends the date to an admin. The file is archived only after that approval.') + '</p><div id="ze"></div><div class="radios" id="zs">' +
     ['Active', 'In Escrow', 'Closed', 'Expired Contract'].map(function (s) { return '<label class="' + (t.status === s ? 'on' : '') + '"><input type="radio" name="zs" value="' + s + '"' + (t.status === s ? ' checked' : '') + '> ' + s + '</label>'; }).join('') + '</div>' +
     '<div class="fgrid hidden" id="zc" style="margin-top:16px"><div class="f"><label for="zd">Actual escrow closing date</label><input type="date" id="zd" value="' + h(t.closedAt ? String(t.closedAt).slice(0, 10) : '') + '"><p class="sub">Type the date escrow actually closed. An estimated close is not filled in. An existing closing date stays as it was saved. Nothing is saved until you press Save status.</p></div>' + (t.type === 'purchase' ? '<div class="f"><label>Final sales price</label><input type="text" inputmode="decimal" id="zp" value="' + h(i.finalPrice || i.purchasePrice || '') + '"></div>' : '') + '</div>' +
     '<div class="actions"><button class="btn" id="zb">Save status</button></div>');
@@ -1617,7 +1643,8 @@ function statusModal() {
   qsa('#zs input', m).forEach(function (r) { r.onchange = sync; }); sync();
   qs('#zb', m).onclick = function () {
     var c = qs('#zs input:checked', m); if (!c) return;
-    api('setStatus', { id: t.id, status: c.value, closeDate: qs('#zd', m).value, finalPrice: qs('#zp', m) ? qs('#zp', m).value : '' }).then(function () { m.close(); toast('Status updated.'); refresh(); })
+    if (c.value === 'Closed' && !/^\d{4}-\d{2}-\d{2}$/.test(qs('#zd', m).value)) { qs('#ze', m).innerHTML = '<div class="err">Enter the actual escrow closing date.</div>'; return; }
+    api('setStatus', { id: t.id, status: c.value, closeDate: qs('#zd', m).value, finalPrice: qs('#zp', m) ? qs('#zp', m).value : '' }).then(function (d) { m.close(); toast(d && d.pendingClose ? 'Close sent for admin approval. The file is not archived yet.' : 'Status updated.'); refresh(); })
       .catch(function (e) { qs('#ze', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
   };
 }
@@ -1978,7 +2005,7 @@ function crmHome() {
         qs('#cRows').innerHTML = (list.length ? '<div class="tbl"><table class="ctbl"><thead><tr><th>Name</th><th>Status</th><th>Type</th><th>Phone</th><th>Email</th>' + (d.admin ? '<th>Agent</th>' : '') + (LO ? '<th>Lender</th>' : '') + '<th>Tags</th><th>Next follow-up</th></tr></thead><tbody>' +
           shown.map(function (c) {
             return '<tr><td class="cnm"><a href="#/crm/c/' + h(c.id) + '"><b>' + h(cName(c)) + '</b></a></td><td data-l="Status">' + crmStatusPill(c.status) + '</td><td data-l="Type">' + h(d.types[c.type] || c.type) + '</td>' +
-              '<td data-l="Phone">' + h(c.phone) + '</td><td data-l="Email">' + h(c.email) + '</td>' + (d.admin ? '<td data-l="Agent">' + h(c.ownerName) + '</td>' : '') +
+              '<td data-l="Phone">' + h(c.phone) + '</td><td data-l="Email" class="cem">' + h(c.email) + '</td>' + (d.admin ? '<td data-l="Agent">' + h(c.ownerName) + '</td>' : '') +
               (LO ? '<td data-l="Lender">' + (c.lenderId ? lenderLabel(c.lenderName, c.lenderCompany) : '') + '</td>' : '') +
               '<td data-l="Tags">' + (c.tags || []).map(function (t) { return '<span class="ctag">' + h(t) + '</span>'; }).join('') + '</td><td data-l="Follow-up">' + (c.nextDue ? '<span class="' + (new Date(c.nextDue).getTime() < Date.now() ? 'rt' : '') + '">' + h(fmtTs(c.nextDue)) + '</span>' : '') + '</td></tr>';
           }).join('') + '</tbody></table></div>' : '<div class="uempty">' + (d.clients.length ? 'No clients match these filters.' : 'No clients yet. Use <b>+ Add client</b> or <b>Import</b>.') + '</div>') +
@@ -2492,9 +2519,8 @@ function route() {
   if (hs === '/account') return passwordView(false);
   var me = hs.match(/^\/ebooks(?:\/([a-z0-9]+))?\/?$/);
   if (!me) EB.data = null;   // fresh numbers every time the owner opens E-Books
-  if (me && canEbooks()) return ebView(me[1] || 'ledger');
-  if (me) { location.hash = '#/'; return; }   // not the owner: no E-Books
-  if (/^\/mybooks\/?$/.test(hs)) { if (canMyEbooks()) return mebView(); location.hash = '#/'; return; }
+  if ((me || /^\/mybooks\/?$/.test(hs)) && (canEbooks() || canMyEbooks())) { if (!canEbooks()) EB.mode = 'agent'; return ebView(me && me[1] || 'ledger'); }
+  if (me || /^\/mybooks\/?$/.test(hs)) { location.hash = '#/'; return; }
   var mc = hs.match(/^\/crm\/c\/([A-Za-z0-9_-]+)$/);
   if (mc && canCrm()) return clientView(mc[1]);
   if (/^\/crm\/?$/.test(hs) && canCrm()) { CRM_UI.remPick = ''; return crmHome(); }

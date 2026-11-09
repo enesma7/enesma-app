@@ -83,6 +83,7 @@ a.tile{display:flex;flex-direction:column;padding:20px 22px;text-decoration:none
 .tile .grow{flex:1}
 .bar{height:8px;background:rgba(0,0,7,.1);border-radius:8px;margin:14px 0 6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--gold);border-radius:8px}
 .pill{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+.pill.p-opt{background:#fff;color:var(--soft);border:1px solid rgba(0,0,7,.22);font-weight:600}
 .p-ok{background:var(--gold);color:var(--k)}.p-rej{background:var(--red);color:var(--w)}
 .p-pend{border:1.5px solid transparent;background:linear-gradient(var(--w),var(--w)) padding-box,var(--gold) border-box}
 .p-miss{border:1.5px solid rgba(0,0,7,.45);color:var(--k)}
@@ -273,7 +274,8 @@ h1.taddr{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100
 .ctbl td{overflow-wrap:anywhere}
 .ctbl td.cnm a{text-decoration:none}.ctbl td.cnm a:hover b{background:var(--gold) left bottom/100% 2px no-repeat}
 .ctbl .pill{white-space:normal}
-.ctag,.kv div span.ctag{display:inline-block;text-transform:none;letter-spacing:0;color:var(--k);margin:0 4px 4px 0;padding:2px 9px;border-radius:12px;font-size:12px;font-weight:600;border:1.5px solid transparent;background:linear-gradient(var(--w),var(--w)) padding-box,var(--gold) border-box;max-width:100%;overflow-wrap:anywhere}
+.ctag,.kv div span.ctag{display:inline-block;text-transform:none;letter-spacing:0;color:var(--k);margin:0 4px 4px 0;padding:1px 7px;border-radius:12px;font-size:11px;font-weight:600;border:1.5px solid transparent;background:linear-gradient(var(--w),var(--w)) padding-box,var(--gold) border-box;max-width:100%;overflow-wrap:anywhere}
+@media(min-width:761px){.ctbl{font-size:13px}.ctbl td.cem{font-size:12px;overflow-wrap:anywhere;word-break:break-word}}
 .cfoot{padding:10px 16px;font-size:13px;color:var(--soft)}
 .cback{display:inline-block;margin-bottom:10px;text-decoration:none}
 .top .pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
@@ -429,6 +431,11 @@ h1.taddr{margin-bottom:2px}
 .ebooks{max-width:1240px;margin:0 auto}
 .ebhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.ebhead h1{margin:0}
 .ebown{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--gold);color:var(--k)}
+.ebsw{display:inline-flex;border-radius:999px;padding:3px;border:2px solid transparent;background:linear-gradient(#fff,#fff) padding-box,var(--gold) border-box}
+.ebsw button{border:0;background:transparent;min-height:40px;min-width:72px;padding:6px 14px;border-radius:999px;font-weight:700;cursor:pointer;color:var(--k)}
+.ebsw button.on{background:var(--gold)}
+.ebsw button:disabled{opacity:.35;cursor:not-allowed}
+.ebsw button:focus-visible{outline:2px solid #000007;outline-offset:2px}
 .ebtabs{display:flex;gap:6px;overflow-x:auto;margin:14px 0 16px;padding-bottom:4px;-webkit-overflow-scrolling:touch}
 .ebtabs a{flex:0 0 auto;padding:9px 14px;border-radius:8px;text-decoration:none;color:var(--k);font-weight:600;font-size:14px;border:2px solid transparent;background:linear-gradient(var(--w),var(--w)) padding-box,var(--gold) border-box;min-height:40px;display:inline-flex;align-items:center}
 .ebtabs a.on{background:var(--gold)}
