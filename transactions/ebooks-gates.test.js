@@ -72,19 +72,30 @@ call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(funct
           assert.strictEqual(cdaKeys(mid.entries || [], open.id).length, 0);
           return call({ action: 'ebCdaPending', token: token });
         }).then(function (queued) {
-          var earlyIds = queued.pending.filter(function (p) { return p.txnId === open.id; }).map(function (p) { return p.id; });
-          assert.ok(earlyIds.length >= 2);
-          assert.ok(queued.pending.some(function (p) { return p.txnId === open.id && p.kind === 'admin_fee'; }));
-          assert.ok(!queued.pending.some(function (p) { return p.txnId === open.id && /tc_fee|referral_outside|other|credit/.test(p.kind || ''); }));
-          return call({ action: 'ebCdaDecide', token: token, ids: earlyIds, decision: 'approve', date: '1999-01-01' });
+          assert.strictEqual(queued.pending.filter(function (p) { return p.txnId === open.id; }).length, 0);
+          return call({ action: 'login', email: 'agent@demo.test', password: 'demo' });
+        }).then(function (agent) {
+          return call({ action: 'setStatus', token: agent.token, id: open.id, status: 'Closed', closeDate: '2026-12-31', finalPrice: '615000' });
+        }).then(function (held) {
+          assert.strictEqual(held.pendingClose, true);
+          return call({ action: 'ebCdaPending', token: token });
+        }).then(function (stillHidden) {
+          assert.strictEqual(stillHidden.pending.filter(function (p) { return p.txnId === open.id; }).length, 0);
+          return call({ action: 'setStatus', token: token, id: open.id, status: 'Closed', closeDate: '2026-12-31', finalPrice: '615000' });
+        }).then(function () {
+          return call({ action: 'ebCdaPending', token: token });
+        }).then(function (ready) {
+          var incomeIds = ready.pending.filter(function (p) { return p.txnId === open.id && p.type === 'income'; }).map(function (p) { return p.id; });
+          assert.ok(incomeIds.length >= 2);
+          assert.ok(ready.pending.some(function (p) { return p.txnId === open.id && p.kind === 'admin_fee'; }));
+          assert.ok(!ready.pending.some(function (p) { return p.txnId === open.id && /tc_fee|referral_outside|other|credit/.test(String(p.kind || '') + String(p.kinds || '')); }));
+          return call({ action: 'ebCdaDecide', token: token, ids: incomeIds, decision: 'approve' });
         }).then(function (early) {
-          assert.ok(early.missingCloseDate >= 1);
           assert.strictEqual(early.approved, 0);
-          assert.ok(early.awaitingDeposit >= 1);
+          assert.ok(early.awaitingDeposit >= 2);
           return call({ action: 'ebLoad', token: token });
         }).then(function (stillOpen) {
           assert.strictEqual(cdaKeys(stillOpen.entries || [], open.id).length, 0);
-          return call({ action: 'setStatus', token: token, id: open.id, status: 'Closed', closeDate: '2026-12-31', finalPrice: '615000' });
         }).then(function () {
           return call({ action: 'ebLoad', token: token });
         }).then(function (afterClose) {

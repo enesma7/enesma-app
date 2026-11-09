@@ -43,6 +43,11 @@ call({ action: 'login', email: 'admin@demo.test', password: 'demo' }).then(funct
     return call({ action: 'cdaOnSigned', token: token, txnId: txnId, envelopeId: 'env-fee', base64: 'JVBERi0xLjEK', name: 'CDA-signed.pdf' });
   }).then(function () {
     return call({ action: 'ebCdaPending', token: token });
+  }).then(function (hidden) {
+    assert.strictEqual(hidden.pending.filter(function (p) { return p.txnId === txnId; }).length, 0);
+    return call({ action: 'setStatus', token: token, id: txnId, status: 'Closed', closeDate: '2026-12-31', finalPrice: '615000' });
+  }).then(function () {
+    return call({ action: 'ebCdaPending', token: token });
   }).then(function (q) {
     var mine = q.pending.filter(function (p) { return p.txnId === txnId; });
     var fee = one(mine, 'admin_fee');
