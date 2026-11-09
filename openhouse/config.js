@@ -5,6 +5,6 @@
    (see backend/DEPLOY.md). Empty means open houses stay in this browser and phone QR sign-in is not shared. */
 window.OH_CONFIG = {
   TC_API_URL: 'https://script.google.com/macros/s/AKfycbzYtmzYv74D0yi0sVy-_JaLDYlNLSU795sqhREsqbGYYU1BEDR5KDAB7Du9Mm0Gp4ba/exec',
-  API_URL: '',
+  API_URL: 'https://script.google.com/macros/s/AKfycbwUT-f32V1-neY2t1s5fAHRwiCIII4yqAdGU182ZTmVH6klzQKQL9NCAPUfVUaA3KP-Sw/exec',
   APP_NAME: 'Open House Dashboard'
 };
