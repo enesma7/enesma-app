@@ -4,6 +4,7 @@ Transaction Center calls these actions on `TC_CONFIG.API_URL`. Apps Script 1.7.1
 
 | action | who | body | returns |
 |---|---|---|---|
+| cdaLookupAgent | session + file access | txnId, userId | `{ agent: { id, name, splitPct, capAmount } }` plus address/mailTo only if that agent is the file owner or already a CDA payee |
 | cdaGet | agent/TC/admin with txn access (read) | txnId | {cda, executed, versions[], header(locked), suggested[], adminFee, agents[{id,name,splitPct,capAmount}], escrowCheck, lineKinds, eBooksKinds} |
 | cdaSaveDraft | same | txnId, lines[] | {cda} (409 if latest is sent/executed → use cdaRevise) |
 | cdaMarkSent | same | txnId, envelopeId, allowMismatch? | {cda status:'sent'} |
@@ -29,7 +30,9 @@ Only brokerage + primary/co_list/co_buyer/referral_inhouse reach E-Books.
 **Frontend flow:** checklist item P_CDA_COMMISSION_DISBURSEMENT_ → "CDA" button → popup (cdaGet, prefill suggested) → Save (cdaSaveDraft) → Send for E-Sign sends immediately. There is no signer form. The envelope uses the agent email on the file or user profile and the owner email on file, agent first and broker second (`orderMode: "sequential"`). If either email is missing, the popup shows one error and does not send. Then cdaMarkSent. On completion the owner session calls cdaOnSigned with the final PDF. "Revise CDA" → cdaRevise(reason) → edit → resend.
 My E-Books commission `basis`: cda | paid | cda_pending | split | pending.
 
-HMAC sig: base64url(no pad) HMAC-SHA256(CDA_HOOK_SECRET, `${txnId}|${envelopeId}|${ts}`).
+HMAC (v1.8.0): web-safe base64 HMAC-SHA256(CDA_HOOK_SECRET, `${txnId}|${envelopeId}|${ts}|${sha256hex(pdfBytes)}`). Reused (envelopeId, ts) pairs are rejected. Older signatures that omit the PDF hash are no longer accepted.
+
+Legacy note (replaced): base64url(no pad) HMAC-SHA256(CDA_HOOK_SECRET, `${txnId}|${envelopeId}|${ts}`).
 
 ## Frontend notes (this repo)
 
@@ -46,3 +49,8 @@ HMAC sig: base64url(no pad) HMAC-SHA256(CDA_HOOK_SECRET, `${txnId}|${envelopeId}
 - Onboarding invite (E-Sign) and Transaction Center **Add user** send `splitPct`, `capAmount`, and `capNote` on `createUser`. The invite form defaults Split % to **90**. Cap stays blank. Payees → Edit agent saves cap through `ebSaveAgentProfile`. User → Edit saves through `setAgentSplit`.
 - `ebConfirmEscrowCheck` asks for the date the broker commission check was deposited (`depositDate`). The amount is still compared with the signed CDA total gross. A match posts the approved brokerage commission and the approved admin fee as two income rows, both dated on that deposit date. A mismatch stores the comparison and does not post income. Confirming again updates those same income rows’ dates and does not add a second row.
 - Demo mode (`?demo=1`) implements the same actions in `mock.js`. It does not call live E-Sign; Send records a demo envelope and the owner can post a demo signed PDF through `cdaOnSigned`.
+
+
+## Agent roster (1.8.0)
+
+`cdaGet.agents` is `{ id, name }` only. Split, cap, and mailing address for the file’s agent and existing CDA payees are in `agentDetails` / `fileAgent`. Use `cdaLookupAgent` when the user picks another payee: it returns split/cap, and address only if that person is already on this file’s CDA.
