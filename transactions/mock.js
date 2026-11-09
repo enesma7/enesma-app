@@ -952,13 +952,59 @@ A.ebConfirmEscrowCheck = function (b, u) {
   }
   return { escrowCheck: rec.escrowCheck, incomePosted: incomePosted };
 };
+function crmGate(u) { if (!u || !u.active || (u.role !== 'admin' && u.role !== 'agent')) Fail('CRM is not available in this view.', 'FORBIDDEN'); }
+if (!DB.crmClients) {
+  DB.crmClients = [
+    { id: 'C1', ownerId: 'U1', firstName: 'Jordan', lastName: 'Hale', phone: '951-555-0142', email: 'jordan.hale.sample.client@example.test', address: '400 Sample St', type: 'buyer', source: 'Website', status: 'Active', tags: ['Sphere', 'Buyer lead', 'Follow up'], groups: ['G1'], txnIds: [], deleted: false },
+    { id: 'C2', ownerId: 'U2', firstName: 'Riley', lastName: 'Chen', phone: '951-555-0190', email: 'riley.chen.longname.client@example.test', address: '18 Sample Ave', type: 'seller', source: 'Referral', status: 'New Lead', tags: ['VIP', 'Listing soon'], groups: [], txnIds: [], deleted: false }
+  ];
+  DB.crmNotes = [
+    { id: 'CN1', clientId: 'C1', userId: 'U1', text: 'Called Jordan about the sample listing. Left a message.', createdAt: daysAgo(2), deleted: false },
+    { id: 'CN2', clientId: 'C2', userId: 'U2', text: 'Riley asked for a follow-up next week. Synthetic note only.', createdAt: daysAgo(1), deleted: false },
+    { id: 'CN3', clientId: 'C2', userId: 'U1', text: 'Admin checked in on this sample client. Do not treat as a live record.', createdAt: daysAgo(0), deleted: false }
+  ];
+  DB.crmAudit = [];
+}
+function crmSee(u, c) { return !!(c && !c.deleted && (u.role === 'admin' || c.ownerId === u.id)); }
+function crmClientOut(c) { var o = user(c.ownerId) || {}; return { id: c.id, ownerId: c.ownerId, ownerName: o.name || '', firstName: c.firstName, lastName: c.lastName, phone: c.phone, email: c.email, address: c.address, type: c.type, source: c.source, status: c.status, tags: c.tags, groups: c.groups, txnIds: c.txnIds, createdAt: c.createdAt || daysAgo(3), updatedAt: c.updatedAt || daysAgo(1), nextDue: '' }; }
+function crmNoteOut(n, u) {
+  var who = user(n.userId) || {};
+  var can = u.role === 'admin' || n.userId === u.id;
+  return { id: n.id, clientId: n.clientId, userId: n.userId, text: n.text, createdAt: n.createdAt, by: who.name || '', canDelete: can };
+}
 A.crmBoot = function (b, u) {
-  if (!u || (u.role !== 'admin' && u.role !== 'agent')) Fail('CRM is not available in this view.', 'FORBIDDEN');
-  var mine = u.id;
-  return { admin: u.role === 'admin', me: mine, lendersReady: false, lenders: [], statuses: ['New Lead', 'Active', 'Under Contract', 'Closed', 'Past Client', 'Inactive'], types: { buyer: 'Buyer', seller: 'Seller' }, agents: DB.users.filter(function (x) { return x.role === 'agent' && x.active; }).map(function (x) { return { id: x.id, name: x.name }; }), groups: [{ id: 'G1', name: 'Sphere', ownerName: u.name, count: 1 }], reminders: [], clients: [
-    { id: 'C1', firstName: 'Jordan', lastName: 'Hale', phone: '951-555-0142', email: 'jordan.hale.sample.client@example.test', address: '400 Sample St', type: 'buyer', source: 'Website', status: 'Active', tags: ['Sphere', 'Buyer lead', 'Follow up'], groups: ['G1'], txnIds: [], ownerId: mine, ownerName: u.name, nextDue: '' },
-    { id: 'C2', firstName: 'Riley', lastName: 'Chen', phone: '951-555-0190', email: 'riley.chen.longname.client@example.test', address: '18 Sample Ave', type: 'seller', source: 'Referral', status: 'New Lead', tags: ['VIP', 'Listing soon'], groups: [], txnIds: [], ownerId: mine, ownerName: u.name, nextDue: '' }
-  ] };
+  crmGate(u);
+  var clients = DB.crmClients.filter(function (c) { return crmSee(u, c); }).map(crmClientOut);
+  return { admin: u.role === 'admin', me: u.id, lendersReady: false, lenders: [], statuses: ['New Lead', 'Active', 'Under Contract', 'Closed', 'Past Client', 'Inactive'], types: { buyer: 'Buyer', seller: 'Seller' }, agents: DB.users.filter(function (x) { return x.role === 'agent' && x.active; }).map(function (x) { return { id: x.id, name: x.name }; }), groups: [{ id: 'G1', name: 'Sphere', ownerName: 'Enrique Esparza', count: 1 }], reminders: [], clients: clients };
+};
+A.crmGetClient = function (b, u) {
+  crmGate(u);
+  var c = DB.crmClients.filter(function (x) { return x.id === b.id; })[0];
+  if (!crmSee(u, c)) Fail('Client not found.', 'NOT_FOUND');
+  var notes = DB.crmNotes.filter(function (n) { return n.clientId === c.id && !n.deleted; }).sort(function (a, d) { return String(d.createdAt).localeCompare(String(a.createdAt)); }).map(function (n) { return crmNoteOut(n, u); });
+  return { client: crmClientOut(c), notes: notes, txns: [], reminders: [], lender: null };
+};
+A.crmAddNote = function (b, u) {
+  crmGate(u);
+  var c = DB.crmClients.filter(function (x) { return x.id === b.clientId; })[0];
+  if (!crmSee(u, c)) Fail('Client not found.', 'NOT_FOUND');
+  var text = String(b.text || '').trim();
+  if (!text) Fail('Write a note first.');
+  var n = { id: nid('CN'), clientId: c.id, userId: u.id, text: text.slice(0, 5000), createdAt: now(), deleted: false };
+  DB.crmNotes.push(n);
+  return { note: crmNoteOut(n, u) };
+};
+A.crmDeleteNote = function (b, u) {
+  crmGate(u);
+  var id = String(b.id || b.noteId || '');
+  var n = DB.crmNotes.filter(function (x) { return x.id === id && !x.deleted; })[0];
+  if (!n) Fail('Note not found.', 'NOT_FOUND');
+  var c = DB.crmClients.filter(function (x) { return x.id === n.clientId; })[0];
+  if (!crmSee(u, c)) Fail('Note not found.', 'NOT_FOUND');
+  if (u.role !== 'admin' && n.userId !== u.id) Fail('You can only delete notes you wrote.', 'FORBIDDEN');
+  n.deleted = true; n.deletedBy = u.id; n.deletedAt = now();
+  DB.crmAudit.push({ action: 'crm_note_deleted', noteId: n.id, clientId: n.clientId, userId: u.id, at: n.deletedAt, text: String(n.text).slice(0, 200) });
+  return {};
 };
 var OPEN = { ping: 1, login: 1, requestPasswordCode: 1, resetPasswordWithCode: 1 };
 window.TC_MOCK = {
