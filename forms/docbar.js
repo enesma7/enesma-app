@@ -80,7 +80,7 @@ function showCopyBox(url) {
     box.id = "docCopy";
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-label", "Copy link");
-    box.innerHTML = '<p>Copy this link</p><input type="url" readonly aria-label="Document link"><div class="row"><button type="button" id="docCopyBtn">Copy</button><button type="button" class="ghost" id="docCopyClose">Close</button></div>';
+    box.innerHTML = '<p>Copy this link</p><input type="url" readonly aria-label="Document Link"><div class="row"><button type="button" id="docCopyBtn">Copy</button><button type="button" class="ghost" id="docCopyClose">Close</button></div>';
     document.body.appendChild(box);
     box.querySelector("#docCopyClose").addEventListener("click", () => box.remove());
     box.querySelector("#docCopyBtn").addEventListener("click", async () => {

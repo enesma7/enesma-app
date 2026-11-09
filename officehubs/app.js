@@ -79,7 +79,7 @@ function viewHome() {
         '<div class="host"><img src="' + h(L.host.logo) + '" alt="' + h(L.host.name) + '" width="88" height="36"><span>Located at ' + h(L.host.name) + '</span></div>' +
         '<div class="chips">' + Object.keys(groups).map(function (g) { return '<span class="chip">' + h(g === groups[g][0] ? g : g + ': ' + groups[g].join(', ')) + '</span>'; }).join('') + '</div>' +
         accessNote() +
-        '<a class="btn" href="#/' + h(L.slug) + '">' + (open_() ? 'View calendars &amp; book' : 'View spaces &amp; calendars') + '</a></article>';
+        '<a class="btn" href="#/' + h(L.slug) + '">' + (open_() ? 'View Calendars &amp; Book' : 'View Spaces &amp; Calendars') + '</a></article>';
     }).join('') + '</div>';
 }
 
@@ -95,14 +95,14 @@ function viewLocation(L) {
   var today = laToday();
   var groups = [];
   L.spaces.forEach(function (s) { var g = groups.filter(function (x) { return x.n === s.group; })[0]; if (!g) groups.push(g = { n: s.group, s: [] }); g.s.push(s); });
-  $app.innerHTML = '<a class="back" href="#/">&larr; All locations</a>' +
+  $app.innerHTML = '<a class="back" href="#/">&larr; All Locations</a>' +
     '<div class="lochead"><div><i class="rule"></i><h1>' + h(L.name) + '</h1><p class="sub" style="margin:0"><a href="' + h(L.maps) + '" target="_blank" rel="noopener">' + h(L.address) + '</a></p>' +
     '<div class="host" style="margin-top:10px"><img src="' + h(L.host.logo) + '" alt="' + h(L.host.name) + '" width="88" height="36"><span>Located at ' + h(L.host.name) + '</span></div></div>' +
     '</div>' + soonBanner() +
     '<div class="grid"><section class="card"><h2>Availability</h2><div class="tabs" role="tablist">' + L.spaces.map(function (s) {
       return '<button class="tab' + (s.id === S.tab ? ' on' : '') + '" role="tab" data-tab="' + s.id + '">' + h(s.label) + (s.group !== s.label ? '<small>' + h(s.group) + '</small>' : '<small>&nbsp;</small>') + '</button>';
     }).join('') + '</div><div class="cal" id="cal"></div><p class="small" style="margin:10px 0 0">Booked times show as busy. Times are Pacific Time.</p></section>' +
-    '<section class="card" id="book"><h2>Reserve a space</h2>' +
+    '<section class="card" id="book"><h2>Reserve a Space</h2>' +
     '<form id="f" novalidate autocomplete="on">' +
     '<div class="f"><label for="name">Full name</label><input id="name" name="name" autocomplete="name" maxlength="80" required' + dis + '></div>' +
     '<div class="f"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="120" required' + dis + '></div>' +
@@ -115,7 +115,7 @@ function viewLocation(L) {
     '<div class="busy" id="busy"></div>' +
     '<div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>' +
     '<div id="msg"></div>' +
-    '<button class="btn" type="submit" id="go" style="width:100%"' + dis + '>' + (open_() ? 'Reserve' : 'Booking opens soon') + '</button>' +
+    '<button class="btn" type="submit" id="go" style="width:100%"' + dis + '>' + (open_() ? 'Reserve' : 'Booking Opens Soon') + '</button>' +
     '<div style="margin-top:14px">' + accessNote() + '</div></form></section></div>';
   renderCal();
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
@@ -170,16 +170,16 @@ function submit(e) {
   S.sending = true; var go = qs('#go'); go.disabled = true; go.textContent = 'Reserving…';
   api('book', d).then(function (r) {
     var sp = spaceById(d.space), L = LOCATIONS[0];
-    $app.innerHTML = '<section class="card done" style="max-width:640px;margin:0 auto"><div class="tick">' + TICK + '</div><h1>You’re booked</h1>' +
+    $app.innerHTML = '<section class="card done" style="max-width:640px;margin:0 auto"><div class="tick">' + TICK + '</div><h1>You’re Booked</h1>' +
       '<p class="sub" style="margin:0">A confirmation was sent to <b>' + h(d.email) + '</b>.</p>' +
       '<dl><dt>Reservation</dt><dd>' + h(r.id) + '</dd><dt>Space</dt><dd>' + h(spaceName(sp)) + '</dd><dt>When</dt><dd>' + h(longDate(d.date) + ', ' + human(d.start) + ' to ' + human(d.end)) + ' PT</dd><dt>Address</dt><dd>' + h(L.address) + '</dd></dl>' +
-      accessNote() + '<p style="margin:18px 0 0"><a class="btn ghost" href="#/' + L.slug + '" id="again">Make another reservation</a></p></section>';
+      accessNote() + '<p style="margin:18px 0 0"><a class="btn ghost" href="#/' + L.slug + '" id="again">Make Another Reservation</a></p></section>';
     qs('#again').onclick = function (ev) { ev.preventDefault(); route(true); };
     window.scrollTo(0, 0);
   }).catch(function (err) {
     showErr(err.message || 'Something went wrong. Please try again.');
     if (err.code === 'CONFLICT') loadBusy();
-  }).then(function () { S.sending = false; var g = qs('#go'); if (g) { g.disabled = !open_(); g.textContent = open_() ? 'Reserve' : 'Booking opens soon'; } });
+  }).then(function () { S.sending = false; var g = qs('#go'); if (g) { g.disabled = !open_(); g.textContent = open_() ? 'Reserve' : 'Booking Opens Soon'; } });
 }
 
 function route(force) {

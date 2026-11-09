@@ -9,7 +9,7 @@
   function choices(name, legend, list) {
     return '<fieldset class="choices"><legend>' + esc(legend) + ' <span class="req">*</span></legend>' +
       list.map(function (o) {
-        return '<button type="button" class="choice" data-name="' + name + '" data-v="' + esc(o.k) + '" aria-pressed="false">' + esc(o.label) + '</button>';
+        return '<button type="button" class="choice" data-name="' + name + '" data-v="' + esc(o.k) + '" aria-pressed="false">' + esc(o.ui || o.label) + '</button>';
       }).join('') + '</fieldset>';
   }
   function html(house) {
@@ -17,7 +17,7 @@
     house = house || {};
     var mark = '<span class="oh-title oh-sm oh-on-light sheet-mark" role="img" aria-label="Open House Dashboard"><span class="oh-t1" aria-hidden="true"><span class="w">Open</span><span class="w">House</span></span><span class="oh-t2" aria-hidden="true">Dashboard</span></span>';
     return '<article class="sheet"><div class="sheet-top">' + mark + '<p class="eyebrow">ENESMA Realty</p>' +
-      '<h1 class="addr">' + esc(house.addressLine || 'Open house') + '</h1>' +
+      '<h1 class="addr">' + esc(house.addressLine || 'Open House') + '</h1>' +
       (function () {
         var bits = String(house.whenLabel || '').split(' · ').filter(Boolean);
         return bits.map(function (part, i) {
@@ -28,17 +28,17 @@
       (house.host ? '<p class="host">Hosted by ' + esc(house.host) + '</p>' : '') +
       '</div><div id="sheetBody"><form id="sheetForm" autocomplete="off" novalidate>' +
       '<div id="sheetErr"></div><div class="fgrid">' +
-      '<div class="f"><label for="sfF">First name <span class="req">*</span></label><input id="sfF" name="oh-first" maxlength="50" autocomplete="off" autocapitalize="words" required></div>' +
-      '<div class="f"><label for="sfL">Last name <span class="req">*</span></label><input id="sfL" name="oh-last" maxlength="50" autocomplete="off" autocapitalize="words" required></div>' +
+      '<div class="f"><label for="sfF">First Name <span class="req">*</span></label><input id="sfF" name="oh-first" maxlength="50" autocomplete="off" autocapitalize="words" required></div>' +
+      '<div class="f"><label for="sfL">Last Name <span class="req">*</span></label><input id="sfL" name="oh-last" maxlength="50" autocomplete="off" autocapitalize="words" required></div>' +
       '<div class="f"><label for="sfP">Phone <span class="req">*</span></label><input id="sfP" name="oh-phone" type="tel" inputmode="tel" maxlength="12" placeholder="000-000-0000" autocomplete="off" required></div>' +
       '<div class="f"><label for="sfE">Email</label><input id="sfE" name="oh-email" type="email" maxlength="120" autocapitalize="none" spellcheck="false" autocomplete="off"></div>' +
       '</div>' +
-      choices('intent', 'I am here to', L.INTENT) +
-      choices('hasAgent', 'I already have an agent', [{ k: 'no', label: 'No' }, { k: 'yes', label: 'Yes' }]) +
-      '<div class="f other" id="otherWrap" hidden><label for="sfA">Your agent’s name</label><input id="sfA" maxlength="80" autocomplete="off"></div>' +
-      choices('preApproved', 'Are you pre-approved?', L.PRE) +
+      choices('intent', 'I Am Here to', L.INTENT) +
+      choices('hasAgent', 'I Already Have an Agent', [{ k: 'no', label: 'No' }, { k: 'yes', label: 'Yes' }]) +
+      '<div class="f other" id="otherWrap" hidden><label for="sfA">Your Agent’s Name</label><input id="sfA" maxlength="80" autocomplete="off"></div>' +
+      choices('preApproved', 'Are You Pre-Approved?', L.PRE) +
       choices('timeframe', 'Timeframe', L.TIME) +
-      '<div class="f note"><label for="sfN">Anything else? <span class="opt">Optional</span></label><textarea id="sfN" maxlength="2000" autocomplete="off"></textarea></div>' +
+      '<div class="f note"><label for="sfN">Anything Else? <span class="opt">Optional</span></label><textarea id="sfN" maxlength="2000" autocomplete="off"></textarea></div>' +
       '<button class="btn xl" id="sfB" type="submit">Sign in</button></form></div>' +
       '<pre class="disc">' + esc(L.DISCLOSURE) + '</pre></article>';
   }

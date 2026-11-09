@@ -13,7 +13,7 @@ var css = fs.readFileSync(__dirname + '/app.css', 'utf8');
 assert.ok(app.indexOf("api('ebCdaPending')") >= 0);
 assert.ok(app.indexOf('function ebPendingVisible') >= 0);
 assert.ok(app.indexOf('class="ebred"') >= 0);
-assert.ok(app.indexOf('Review pending CDA amount') >= 0);
+assert.ok(app.indexOf('Review Pending CDA Amount') >= 0);
 assert.ok(app.indexOf('>Pending</span>') >= 0);
 assert.ok(app.indexOf("e.key === 'Escape'") >= 0);
 assert.ok(app.indexOf('does not add it to income') >= 0);

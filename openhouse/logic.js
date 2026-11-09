@@ -30,21 +30,21 @@
   var INTENT = [
     { k: 'buyer', label: 'Buyer' },
     { k: 'seller', label: 'Seller' },
-    { k: 'both', label: 'Buyer and seller' },
-    { k: 'looking', label: 'Just looking' }
+    { k: 'both', label: 'Buyer and seller', ui: 'Buyer and Seller' },
+    { k: 'looking', label: 'Just looking', ui: 'Just Looking' }
   ];
   var PRE = [
     { k: 'yes', label: 'Yes', tag: 'Pre-approved' },
     { k: 'no', label: 'No', tag: 'Not Pre-approved' },
-    { k: 'cash', label: 'Paying cash', tag: 'Cash' },
-    { k: 'unsure', label: 'Not sure', tag: 'Pre-approval not sure' }
+    { k: 'cash', label: 'Paying cash', tag: 'Cash', ui: 'Paying Cash' },
+    { k: 'unsure', label: 'Not sure', tag: 'Pre-approval not sure', ui: 'Not Sure' }
   ];
   var TIME = [
-    { k: 'now', label: 'Ready now', tag: 'Ready now' },
+    { k: 'now', label: 'Ready now', tag: 'Ready now', ui: 'Ready Now' },
     { k: '30', label: '1–3 months', tag: '1–3 months' },
     { k: '90', label: '3–6 months', tag: '3–6 months' },
     { k: '180', label: '6+ months', tag: '6+ months' },
-    { k: 'browsing', label: 'Just browsing', tag: 'Just browsing' }
+    { k: 'browsing', label: 'Just browsing', tag: 'Just browsing', ui: 'Just Browsing' }
   ];
   var VIA = { agent: 'Entered by the agent', kiosk: 'iPad kiosk', phone: 'Visitor phone' };
 
@@ -63,6 +63,12 @@
   function labelOf(list, k) {
     var i;
     for (i = 0; i < list.length; i++) if (list[i].k === k) return list[i].label;
+    return '';
+  }
+  /* Button and pill text. `label` stays the CRM note/tag wording. */
+  function displayOf(list, k) {
+    var i;
+    for (i = 0; i < list.length; i++) if (list[i].k === k) return list[i].ui || list[i].label;
     return '';
   }
   function tagOf(list, k) {
@@ -298,6 +304,7 @@
     DEMO_ADDRESSES: DEMO_ADDRESSES,
     PUBLIC_KEYS: PUBLIC_KEYS,
     labelOf: labelOf,
+    displayOf: displayOf,
     phoneDigits: phoneDigits,
     maskPhone: maskPhone,
     formatPhone: formatPhone,
