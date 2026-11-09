@@ -769,20 +769,43 @@ DB.cda = {}; DB.cdaPending = [];
   DB.cdaPending.push({ id: 'CPsampleF', txnId: t.id, title: title, version: 1, op: 'add', importKey: 'cda:' + t.id + ':admin_fee', type: 'income', amount: 175, payeeName: 'ENESMA Realty', payeeType: '', payeeId: '', kind: 'admin_fee', status: 'pending', memo: 'Admin fee · CDA v1' });
   DB.cdaPending.push({ id: 'CPsampleA', txnId: t.id, title: title, version: 1, op: 'add', importKey: 'cda:' + t.id + ':agent:U2', type: 'expense', amount: 2560, payeeName: 'Alex Rivera', payeeType: 'agent', payeeId: 'U2', kind: 'primary', status: 'pending', memo: 'Agent commission · CDA v1' });
 })();
-function cdaAgents() {
-  return DB.users.filter(function (x) { return x.active && (x.role === 'agent' || x.role === 'admin'); }).map(function (x) {
-    var p = EBD.agents[x.id] || {};
-    return { id: x.id, name: x.name, email: x.email || '', splitPct: p.splitPct === undefined || p.splitPct === '' ? '' : p.splitPct, capAmount: p.capAmount === undefined || p.capAmount === '' ? '' : p.capAmount, address: p.address || '', w9Address: p.address || '' };
-  });
+function cdaAgentBrief() {
+  return DB.users.filter(function (x) { return x.active && (x.role === 'agent' || x.role === 'admin'); }).map(function (x) { return { id: x.id, name: x.name }; });
 }
+function cdaAgentDetails(id) {
+  var x = user(id); if (!x || !x.active) return null;
+  var p = EBD.agents[x.id] || {}, addr = p.address || '';
+  return { id: x.id, name: x.name, splitPct: p.splitPct === undefined || p.splitPct === '' ? '' : p.splitPct, capAmount: p.capAmount === undefined || p.capAmount === '' ? '' : p.capAmount, address: addr, mailTo: addr, w9Address: addr };
+}
+function cdaPayeeIds(t, rec) {
+  var ids = {};
+  if (t.agentId) ids[t.agentId] = 1;
+  var lines = (rec && rec.cda && rec.cda.lines) || [];
+  lines.forEach(function (l) { if (l && l.agentId) ids[l.agentId] = 1; });
+  return Object.keys(ids);
+}
+function cdaAgents() { return cdaAgentBrief(); }
 function cdaPack(t) {
   var M = window.TCCda, header = M.headerFromTxn(Object.assign({}, t, { agentName: (user(t.agentId) || {}).name || '' }));
-  var ag = cdaAgents().filter(function (a) { return a.id === t.agentId; })[0];
   var rec = DB.cda[t.id] || {};
-  return { cda: rec.cda || null, executed: rec.executed || null, versions: rec.versions || [], header: header, suggested: M.fallbackSuggest(header, ag, M.ADMIN_FEE).lines, adminFee: M.ADMIN_FEE, agents: cdaAgents(), escrowCheck: rec.escrowCheck || null, lineKinds: M.KINDS, eBooksKinds: M.EBOOKS_KINDS };
+  var details = {}, fileAgent = null;
+  cdaPayeeIds(t, rec).forEach(function (id) { var d = cdaAgentDetails(id); if (d) { details[id] = d; if (id === t.agentId) fileAgent = d; } });
+  var ag = fileAgent || cdaAgentDetails(t.agentId);
+  return { cda: rec.cda || null, executed: rec.executed || null, versions: rec.versions || [], header: header, suggested: M.fallbackSuggest(header, ag, M.ADMIN_FEE).lines, adminFee: M.ADMIN_FEE, agents: cdaAgentBrief(), agentDetails: details, fileAgent: fileAgent, escrowCheck: rec.escrowCheck || null, lineKinds: M.KINDS, eBooksKinds: M.EBOOKS_KINDS };
 }
 function cdaTxn(b, u) { return access(u, b.txnId); }
 A.cdaGet = function (b, u) { return cdaPack(cdaTxn(b, u)); };
+A.cdaLookupAgent = function (b, u) {
+  var t = cdaTxn(b, u);
+  var id = String(b.userId || b.agentId || '');
+  var d = cdaAgentDetails(id);
+  if (!d) Fail('Agent not found.', 'NOT_FOUND');
+  var allowed = {};
+  cdaPayeeIds(t, DB.cda[t.id] || {}).forEach(function (x) { allowed[x] = 1; });
+  var out = { id: d.id, name: d.name, splitPct: d.splitPct, capAmount: d.capAmount };
+  if (allowed[d.id]) { out.address = d.address; out.mailTo = d.mailTo; out.w9Address = d.w9Address; }
+  return { agent: out };
+};
 A.cdaSaveDraft = function (b, u) {
   var t = cdaTxn(b, u), rec = DB.cda[t.id] = DB.cda[t.id] || { versions: [] };
   if (rec.cda && (rec.cda.status === 'sent' || rec.cda.status === 'executed')) Fail('This CDA is out for signature or already signed. Choose Revise CDA first.', 'CONFLICT');

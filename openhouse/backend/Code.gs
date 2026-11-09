@@ -4,14 +4,14 @@
  * Deploy steps are in DEPLOY.md. This file is not deployed by the git pull.
  *
  * Agents sign in with the existing Transaction Center token. Visitors submit with a per-sheet
- * key and receive only the property line, never the guest list. CRM writes use that agent's
- * token against the existing Transaction Center web app (crmSaveClient / crmAddNote).
+ * key and receive only the property line, never the guest list. CRM writes use the agent's
+ * current request token (or a short-lived CacheService copy), never a token stored in the sheet.
  */
-var OH_VERSION = '1.0.0';
+var OH_VERSION = '1.1.0';
 var DEFAULT_TC = 'https://script.google.com/macros/s/AKfycbzYtmzYv74D0yi0sVy-_JaLDYlNLSU795sqhREsqbGYYU1BEDR5KDAB7Du9Mm0Gp4ba/exec';
 var HOUSE_HEADERS = ['id', 'agentId', 'agentName', 'address', 'unit', 'city', 'state', 'zip', 'date', 'startTime', 'endTime', 'status', 'publicKey', 'createdAt', 'updatedAt'];
 var GUEST_HEADERS = ['id', 'houseId', 'agentId', 'firstName', 'lastName', 'phone', 'email', 'intent', 'hasAgent', 'otherAgent', 'preApproved', 'timeframe', 'note', 'via', 'createdAt', 'crmClientId', 'crmStatus', 'crmError'];
-var AUTH_HEADERS = ['agentId', 'tcToken', 'updatedAt'];
+var AUTH_HEADERS = ['agentId', 'tcToken', 'updatedAt'];   // tcToken column is blanked; do not write tokens here
 
 function setupOpenHouse() {
   var props = PropertiesService.getScriptProperties();
@@ -49,9 +49,11 @@ function handle_(body) {
   }
   if (action === 'publicSubmit') return publicSubmit_(body);
 
+  var token = String(body.token || '');
   var user = requireAgent_(body);
-  if (action === 'listHouses') return { houses: listHouses_(user.id) };
-  if (action === 'getHouse') return getHouse_(user, body.id);
+  rememberToken_(user.id, token);
+  if (action === 'listHouses') { flushPendingCrm_(user, token); return { houses: listHouses_(user.id) }; }
+  if (action === 'getHouse') { flushPendingCrm_(user, token); return getHouse_(user, body.id); }
   if (action === 'kioskSheet') {
     var kh = ownHouse_(user, body.id);
     return { id: kh.id, status: kh.status, addressLine: addressLine_(kh), whenLabel: whenLabel_(kh), host: kh.agentName || '' };
@@ -59,7 +61,7 @@ function handle_(body) {
   if (action === 'saveHouse') return { house: saveHouse_(user, body) };
   if (action === 'setHouseStatus') return { house: setStatus_(user, body) };
   if (action === 'deleteHouse') { deleteHouse_(user, body.id); return {}; }
-  if (action === 'addGuest') return { guest: addGuest_(user, body) };
+  if (action === 'addGuest') return { guest: addGuest_(user, body, token) };
   if (action === 'markCrm') return { guest: markCrm_(user, body) };
   fail_('Unknown action.');
 }
@@ -94,7 +96,7 @@ function publicSubmit_(body) {
       append_('Guests', GUEST_HEADERS, guest);
       house.updatedAt = guest.createdAt;
       update_('Houses', HOUSE_HEADERS, house.id, house);
-      try { pushCrm_(house.agentId, guest, house); } catch (crmErr) { markGuest_(guest.id, guest.crmClientId, 'pending', crmErr.message); }
+      try { var visTok = cachedToken_(house.agentId); if (visTok) pushCrm_(visTok, guest, house); } catch (crmErr) { markGuest_(guest.id, guest.crmClientId || '', 'pending', crmErr.message); }
     }
     return { received: true };
   } finally {
@@ -117,26 +119,15 @@ function requireAgent_(body) {
     user = { id: String(u.id), name: personName_(u), email: String(u.email || ''), role: String(u.role || '') };
     try { cache.put(key, JSON.stringify(user), 60); } catch (e2) { /* cache is optional */ }
   }
-  saveAuth_(user.id, token);
   return user;
 }
-function saveAuth_(agentId, token) {
-  var rows = readAll_('Auth', AUTH_HEADERS);
-  var now = new Date().toISOString();
-  var i;
-  for (i = 0; i < rows.length; i++) if (rows[i].agentId === agentId) {
-    rows[i].tcToken = token;
-    rows[i].updatedAt = now;
-    update_('Auth', AUTH_HEADERS, agentId, rows[i]);
-    return;
-  }
-  append_('Auth', AUTH_HEADERS, { agentId: agentId, tcToken: token, updatedAt: now });
+function rememberToken_(agentId, token) {
+  if (!agentId || !token) return;
+  try { CacheService.getScriptCache().put('oht:' + agentId, String(token), 21600); } catch (e) {}
 }
-function tokenFor_(agentId) {
-  var rows = readAll_('Auth', AUTH_HEADERS);
-  var i;
-  for (i = 0; i < rows.length; i++) if (rows[i].agentId === agentId && rows[i].tcToken) return rows[i].tcToken;
-  return '';
+function cachedToken_(agentId) {
+  if (!agentId) return '';
+  try { return CacheService.getScriptCache().get('oht:' + agentId) || ''; } catch (e) { return ''; }
 }
 
 function listHouses_(agentId) {
@@ -186,7 +177,7 @@ function deleteHouse_(user, id) {
   if (guestsOf_(house.id).length) fail_('This open house already has guests. End it instead of deleting it.');
   deleteId_('Houses', house.id);
 }
-function addGuest_(user, body) {
+function addGuest_(user, body, token) {
   var house = ownHouse_(user, body.houseId);
   if (house.status !== 'open') fail_('This open house sign-in is closed.', 'CLOSED');
   var err = validateGuest_(body.guest || {});
@@ -203,7 +194,7 @@ function addGuest_(user, body) {
   append_('Guests', GUEST_HEADERS, guest);
   house.updatedAt = guest.createdAt;
   update_('Houses', HOUSE_HEADERS, house.id, house);
-  try { pushCrm_(user.id, guest, house); } catch (crmErr) { markGuest_(guest.id, guest.crmClientId, 'pending', crmErr.message); }
+  try { pushCrm_(token || cachedToken_(user.id), guest, house); } catch (crmErr) { markGuest_(guest.id, guest.crmClientId || '', 'pending', crmErr.message); }
   return guestOut_(findGuest_(guest.id));
 }
 function markCrm_(user, body) {
@@ -214,8 +205,19 @@ function markCrm_(user, body) {
   return guestOut_(findGuest_(guest.id));
 }
 
-function pushCrm_(agentId, guest, house) {
-  var token = tokenFor_(agentId);
+function flushPendingCrm_(user, token) {
+  if (!user || !token) return;
+  var houses = readAll_('Houses', HOUSE_HEADERS).filter(function (h) { return h.agentId === user.id; });
+  var i, j, guests;
+  for (i = 0; i < houses.length; i++) {
+    guests = guestsOf_(houses[i].id);
+    for (j = 0; j < guests.length; j++) {
+      if (guests[j].crmStatus === 'synced') continue;
+      try { pushCrm_(token, guests[j], houses[i]); } catch (e) { markGuest_(guests[j].id, guests[j].crmClientId || '', 'pending', e.message); }
+    }
+  }
+}
+function pushCrm_(token, guest, house) {
   if (!token) fail_('Sign in again so this guest can be sent to the CRM.', 'AUTH');
   var boot = tcCall_(token, 'crmBoot', {});
   var plan = crmPlan_(guest, house, boot || {});
@@ -542,3 +544,19 @@ function tokenKey_(token) {
 function nid_(prefix) { return prefix + Utilities.getUuid().replace(/-/g, '').slice(0, 12); }
 function json_(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function fail_(message, code) { var err = new Error(message); err.code = code || 'ERR'; throw err; }
+
+
+/** One-time go-live: blank any leftover raw Transaction Center tokens from the Auth sheet. Safe to re-run. */
+function migrateClearAuthTokens() {
+  var rows = readAll_('Auth', AUTH_HEADERS);
+  var n = 0, i;
+  for (i = 0; i < rows.length; i++) {
+    if (rows[i].tcToken) {
+      rows[i].tcToken = '';
+      update_('Auth', AUTH_HEADERS, rows[i].agentId, rows[i]);
+      n++;
+    }
+  }
+  Logger.log('Cleared tcToken from ' + n + ' Open House Auth row(s).');
+  return n;
+}

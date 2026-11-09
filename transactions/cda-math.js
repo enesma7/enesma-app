@@ -86,7 +86,7 @@
   }
   function agentAddress(agent) {
     if (!agent) return '';
-    return String(agent.address || agent.w9Address || agent.mailingAddress || '').replace(/\s+/g, ' ').trim();
+    return String(agent.address || agent.w9Address || agent.mailTo || agent.mailingAddress || '').replace(/\s+/g, ' ').trim();
   }
   /* Suggest sometimes stores the fee explanation in admin_fee.note. That text is not a mailing
      address. Mail to is the ENESMA Realty office unless a real address is already stored. */

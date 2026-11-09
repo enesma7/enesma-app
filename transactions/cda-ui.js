@@ -1,4 +1,4 @@
-/* CDA popup, E-Sign handoff, owner signed-PDF post, and escrow check. Talks to TC 1.7.1. */
+/* CDA popup, E-Sign handoff, owner signed-PDF post, and escrow check. Talks to TC 1.8.0. */
 (function () {
   'use strict';
   var M = window.TCCda;
@@ -28,7 +28,27 @@
   }
 
   function agentById(pack, id) {
-    return ((pack && pack.agents) || []).filter(function (a) { return a.id === id; })[0] || null;
+    if (!pack || !id) return null;
+    var brief = ((pack.agents || []).filter(function (a) { return a.id === id; })[0]) || null;
+    var det = (pack.agentDetails && pack.agentDetails[id]) || (pack.fileAgent && pack.fileAgent.id === id ? pack.fileAgent : null);
+    if (det && brief) return Object.assign({}, brief, det);
+    return det || brief;
+  }
+  function rememberAgent(pack, agent) {
+    if (!pack || !agent || !agent.id) return;
+    pack.agentDetails = pack.agentDetails || {};
+    pack.agentDetails[agent.id] = Object.assign({}, pack.agentDetails[agent.id] || {}, agent);
+  }
+  function ensureAgentDetails(pack, id) {
+    var have = agentById(pack, id);
+    if (!id) return Promise.resolve(null);
+    if (have && (have.splitPct != null && have.splitPct !== '' || have.mailTo || have.address || have.w9Address)) return Promise.resolve(have);
+    var A = app(), txnId = pack && pack.header && pack.header.txnId;
+    if (!txnId || !A.api) return Promise.resolve(have);
+    return A.api('cdaLookupAgent', { txnId: txnId, userId: id }).then(function (d) {
+      if (d && d.agent) rememberAgent(pack, d.agent);
+      return agentById(pack, id) || have;
+    }).catch(function () { return have; });
   }
 
   function lineRow(l, i, pack, locked) {
@@ -41,7 +61,7 @@
     else if (kind === 'primary') nameCell = '<input data-f="name" value="' + h(l.name || (pack.header && pack.header.agentName) || '') + '" readonly tabindex="-1" aria-label="' + h(label) + '">';
     else if (M.AGENT_KINDS[kind]) {
       nameCell = '<select data-f="agentId" aria-label="' + h(label) + '"><option value="">Choose an ENESMA agent</option>' + agents.map(function (a) {
-        return '<option value="' + h(a.id) + '"' + (a.id === l.agentId ? ' selected' : '') + '>' + h(a.name) + (a.splitPct === '' || a.splitPct == null ? '' : ' · ' + h(a.splitPct) + '%') + '</option>';
+        return '<option value="' + h(a.id) + '"' + (a.id === l.agentId ? ' selected' : '') + '>' + h(a.name) + '</option>';
       }).join('') + '</select>';
     } else nameCell = '<input data-f="name" value="' + h(l.name || '') + '" maxlength="120" placeholder="Payee name" aria-label="' + h(label) + ' payee"' + (locked ? ' readonly' : '') + '>';
     var books = M.EBOOKS_KINDS.indexOf(kind) >= 0;
@@ -250,7 +270,7 @@
     box._agentId = header.agentId || '';
     box._linesBox = A.qs('#cdaLines', m);
 
-    var splitPct = M.splitOf(agentById(pack, header.agentId)).split;
+    var splitPct = M.splitOf(agentById(pack, header.agentId) || pack.fileAgent).split;
     var adminFee = pack.adminFee != null && pack.adminFee !== '' ? pack.adminFee : M.ADMIN_FEE;
     function amountInput(kind) { var row = A.qs('.cda-line[data-kind="' + kind + '"]', box); return row ? row.querySelector('[data-f="amount"]') : null; }
     function balancePrimary() {
@@ -271,9 +291,10 @@
       if (!row) return;
       if (e.target.getAttribute('data-f') === 'agentId') {
         var note = row.querySelector('[data-f="note"]');
-        var who = agentById(pack, e.target.value);
-        var mail = M.agentAddress(who);
-        if (note && !note.value.trim() && mail) note.value = mail;
+        ensureAgentDetails(pack, e.target.value).then(function (who) {
+          var mail = M.agentAddress(who);
+          if (note && !note.value.trim() && mail) note.value = mail;
+        });
       }
       if (e.target.getAttribute('data-f') === 'amount' && row.getAttribute('data-kind') !== 'primary') balancePrimary();
       else paintTotals(box, header);
