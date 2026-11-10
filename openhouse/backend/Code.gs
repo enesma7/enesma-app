@@ -7,7 +7,7 @@
  * key and receive only the property line, never the guest list. CRM writes use the agent's
  * current request token (or a short-lived CacheService copy), never a token stored in the sheet.
  */
-var OH_VERSION = '1.1.0';
+var OH_VERSION = '1.1.1';
 var DEFAULT_TC = 'https://script.google.com/macros/s/AKfycbzYtmzYv74D0yi0sVy-_JaLDYlNLSU795sqhREsqbGYYU1BEDR5KDAB7Du9Mm0Gp4ba/exec';
 var HOUSE_HEADERS = ['id', 'agentId', 'agentName', 'address', 'unit', 'city', 'state', 'zip', 'date', 'startTime', 'endTime', 'status', 'publicKey', 'createdAt', 'updatedAt'];
 var GUEST_HEADERS = ['id', 'houseId', 'agentId', 'firstName', 'lastName', 'phone', 'email', 'intent', 'hasAgent', 'otherAgent', 'preApproved', 'timeframe', 'note', 'via', 'createdAt', 'crmClientId', 'crmStatus', 'crmError'];
@@ -445,7 +445,8 @@ function postJson_(url, body) {
     var headers = res.getHeaders();
     var loc = headers.Location || headers.location;
     if (!loc) fail_('Transaction Center redirect had no location.');
-    res = UrlFetchApp.fetch(loc, { method: 'post', contentType: 'text/plain;charset=utf-8', payload: payload, muteHttpExceptions: true, followRedirects: true });
+    /* The echo URL already holds this POST. A second POST drops the body. Follow with GET. */
+    res = UrlFetchApp.fetch(loc, { method: 'get', muteHttpExceptions: true, followRedirects: true });
   }
   try { return JSON.parse(res.getContentText() || ''); }
   catch (e) { fail_('Transaction Center did not return JSON.'); }

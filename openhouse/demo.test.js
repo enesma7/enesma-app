@@ -73,6 +73,24 @@ test('the public page source does not request guest history', function () {
   assert.equal(sign.includes('publicSubmit'), true);
 });
 
+test('dashboard copy uses the wordmark, Upcoming, and Guests in CRM', function () {
+  const sheet = fs.readFileSync(path.join(__dirname, 'sheet.js'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  const gs = fs.readFileSync(path.join(__dirname, 'backend', 'Code.gs'), 'utf8');
+  assert.equal(sheet.includes('>ENESMA Realty<'), false);
+  assert.equal(sheet.includes('I Am Here to'), false);
+  assert.equal(sheet.includes('logo-black.png?v=1'), true);
+  assert.equal(sheet.includes('I Am:'), true);
+  assert.equal(sheet.includes('>Sign In<'), true);
+  assert.equal(app.includes('Open Houses YTD'), true);
+  assert.equal(app.includes('>Upcoming<'), true);
+  assert.equal(app.includes('Guests in CRM'), true);
+  assert.equal(app.includes('Open Now'), false);
+  assert.equal(app.includes('head: false'), true);
+  assert.match(gs, /OH_VERSION = '1\.1\.1'/);
+  assert.match(gs, /method:\s*'get'/);
+});
+
 test('the Apps Script file keeps the same CRM tags and a submit-only public response', function () {
   const gs = fs.readFileSync(path.join(__dirname, 'backend', 'Code.gs'), 'utf8');
   ['Open House', 'Has Agent', 'No Agent', 'Pre-approved', 'Not Pre-approved', 'Ready now', '1–3 months'].forEach(function (tag) {

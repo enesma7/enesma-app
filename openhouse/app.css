@@ -50,7 +50,7 @@ main{max-width:var(--max);margin:0 auto;padding:28px max(22px,env(safe-area-inse
 .stat{padding:16px 18px}
 .stat b{display:block;font-size:32px;line-height:1}
 .stat span,.meta,.count,.host,.when,.url{color:var(--soft)}
-.stat span{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.stat span{display:block;margin-top:4px;font-size:13px;font-weight:700;letter-spacing:.01em;text-transform:none}
 .houses,.guestlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 .hcard{display:flex;flex-direction:column;gap:6px;padding:18px 18px 16px;text-decoration:none;min-height:180px}
 .hcard h2{font-size:22px;line-height:1.2}
@@ -81,6 +81,11 @@ input:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px soli
 .sec{margin:28px 0 12px}
 .countline{color:var(--soft);font-weight:600}
 .crumb{margin:0 0 8px;color:var(--soft)}
+.house-head{text-align:center;margin:0 0 4px}
+.house-head .pills{justify-content:center;margin-bottom:10px}
+.house-head h1{font-size:clamp(26px,4vw,40px);line-height:1.15;margin:0}
+.house-head .when{margin:4px 0}
+.house-actions{justify-content:center}
 .empty{padding:28px 22px}
 .empty h2{margin-bottom:6px}
 .err,.ok{padding:12px 14px;border-radius:8px;margin:0 0 14px}
@@ -98,7 +103,7 @@ details summary{cursor:pointer;margin-top:10px;font-size:13px;font-weight:700}
 .sheet:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;border-radius:8px 8px 0 0;background:var(--gold)}
 .sheet-top{text-align:center}
 .sheet-mark{margin:4px auto 12px}
-.eyebrow{margin:0 0 8px;font-family:Michroma,Helvetica,sans-serif;font-size:11px;letter-spacing:.42em;color:#B7A36A}
+.wordmark{display:block;width:min(240px,78%);height:auto;margin:2px auto 14px}
 .sheet h1.addr{font-size:clamp(26px,4vw,40px);line-height:1.15;margin:0}
 .sheet .when,.sheet .host{margin:4px 0}
 .choices{border:0;margin:16px 0 0;padding:0;width:100%;min-inline-size:0}
