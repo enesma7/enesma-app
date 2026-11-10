@@ -287,6 +287,7 @@ h1.taddr{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100
 .cgrid .card{min-width:0}
 .rform{display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr) auto;gap:10px;align-items:end;margin-bottom:10px}
 .ntext{white-space:pre-wrap;overflow-wrap:anywhere}
+.crmnd{font-size:12px;margin-left:8px;min-height:32px;padding:4px 2px}
 .clinkp{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto;padding:2px}
 .clinkp label{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border:1px solid rgba(0,0,7,.25);border-radius:10px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:14px;color:var(--k);font-weight:600}
 .clinkp label.on{border:2px solid transparent;background:linear-gradient(var(--w),var(--w)) padding-box,var(--gold) border-box;padding:8px 11px}

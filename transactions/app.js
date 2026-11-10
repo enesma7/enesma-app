@@ -2047,7 +2047,11 @@ function clientView(id) {
       '<div class="cgrid"><div class="card gb"><h3>Follow-Ups</h3><form id="rf" class="rform" novalidate><div class="f"><label for="rd">Date &amp; time</label><input type="datetime-local" id="rd" required></div><div class="f rnote"><label for="rn">Note</label><input type="text" id="rn" maxlength="300" placeholder="Call about…"></div><button class="btn" id="rb">Add Follow-Up</button></form><div id="re"></div>' +
       '<div id="rl">' + (g.reminders.length ? g.reminders.map(function (r) { return remRow(r, c, false); }).join('') : '<div class="uempty">No follow-ups yet.</div>') + '</div></div>' +
       '<div class="card gb"><h3>Notes</h3><form id="nf" novalidate><textarea id="nt" maxlength="5000" placeholder="Add a note…" aria-label="New Note"></textarea><div class="actions"><button class="btn" id="nb">Add Note</button></div></form><div id="ne"></div>' +
-      '<div class="feed">' + (g.notes.length ? g.notes.map(function (n) { return '<div class="ev"><small>' + h(fmtTs(n.createdAt)) + (n.by ? ' · ' + h(n.by) : '') + '</small><div class="ntext">' + h(n.text) + '</div></div>'; }).join('') : '<div class="uempty">No notes yet.</div>') + '</div></div></div>';
+      '<div class="feed" id="cnotes">' + (g.notes.length ? g.notes.map(function (n) {
+        var mine = n.userId && S.user && n.userId === S.user.id;
+        var allow = n.canDelete === true || (n.canDelete !== false && n.id && (isAdmin() || mine));
+        return '<div class="ev" data-nid="' + h(n.id || '') + '"><small>' + h(fmtTs(n.createdAt)) + (n.by ? ' · ' + h(n.by) : '') + (allow ? ' <button type="button" class="link crmnd" data-nid="' + h(n.id) + '">Delete Note</button>' : '') + '</small><div class="ntext">' + h(n.text) + '</div></div>';
+      }).join('') : '<div class="uempty">No notes yet.</div>') + '</div></div></div>';
     page('crm', inner, function () {
       var again = function () { page.keepScroll = true; clientView(id); };
       qs('#cEdit').onclick = function () { clientForm(c, d, g.txns, g.lender); };
@@ -2065,6 +2069,16 @@ function clientView(id) {
         qs('#nb').disabled = true;
         api('crmAddNote', { clientId: c.id, text: v }).then(function () { toast('Note added.'); again(); }).catch(function (x) { qs('#nb').disabled = false; qs('#ne').innerHTML = '<div class="err">' + h(x.message) + '</div>'; });
       };
+      qsa('.crmnd', qs('#cnotes')).forEach(function (b) {
+        b.onclick = function () {
+          var nid = b.getAttribute('data-nid');
+          var note = (g.notes || []).filter(function (n) { return n.id === nid; })[0];
+          if (!note) return;
+          confirmModal('Delete This Note?', 'Delete this note' + (note.by ? ' by <b>' + h(note.by) + '</b>' : '') + '? “' + h(String(note.text).slice(0, 140)) + (String(note.text).length > 140 ? '…' : '') + '”', 'Delete Note', function () {
+            return api('crmDeleteNote', { id: nid }).then(function () { toast('Note deleted.'); S.crm = null; again(); });
+          });
+        };
+      });
     });
   }).catch(function (e) { failView('crm', e); });
 }
