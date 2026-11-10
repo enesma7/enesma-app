@@ -120,6 +120,32 @@
     var t = a && b ? a + '–' + b : (a || b);
     return [day, t].filter(Boolean).join(' · ');
   }
+  /* Upcoming: status is still open, and the scheduled end has not passed.
+     End is the open-house date plus end time, in local time. With no end time,
+     the end is 11:59:59 PM on that date. A house in progress today counts.
+     A house the agent already ended, or whose end time has passed, does not.
+     Open Houses YTD: the scheduled date falls in the current calendar year. */
+  function scheduledEnd(house) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(house && house.date || ''));
+    if (!m) return null;
+    var y = parseInt(m[1], 10), mo = parseInt(m[2], 10) - 1, d = parseInt(m[3], 10);
+    var end = /^(\d{2}):(\d{2})$/.exec(String(house.endTime || ''));
+    if (end) return new Date(y, mo, d, parseInt(end[1], 10), parseInt(end[2], 10), 0, 0);
+    return new Date(y, mo, d, 23, 59, 59, 999);
+  }
+  function isUpcoming(house, now) {
+    if (!house || house.status !== 'open') return false;
+    var endAt = scheduledEnd(house);
+    if (!endAt) return false;
+    var t = now instanceof Date ? now : new Date();
+    return endAt.getTime() > t.getTime();
+  }
+  function isOpenHouseYtd(house, now) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(house && house.date || ''));
+    if (!m) return false;
+    var t = now instanceof Date ? now : new Date();
+    return parseInt(m[1], 10) === t.getFullYear();
+  }
   function parseTitle(title) {
     var s = String(title || '').trim();
     if (!s || /^referral\b/i.test(s)) return { address: '', city: '', state: 'CA', zip: '' };
@@ -313,6 +339,8 @@
     fmtTime: fmtTime,
     fmtDay: fmtDay,
     whenLabel: whenLabel,
+    isUpcoming: isUpcoming,
+    isOpenHouseYtd: isOpenHouseYtd,
     parseTitle: parseTitle,
     filterAddresses: filterAddresses,
     normalizeGuest: normalizeGuest,

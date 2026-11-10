@@ -12,35 +12,45 @@
         return '<button type="button" class="choice" data-name="' + name + '" data-v="' + esc(o.k) + '" aria-pressed="false">' + esc(o.ui || o.label) + '</button>';
       }).join('') + '</fieldset>';
   }
-  function html(house) {
-    var L = w.OHLogic;
-    house = house || {};
+  /* Light sign-in sheet: the black wordmark (Agent Hub’s light-background lockup). Full wordmark fits here. */
+  var WORDMARK = '../hub/assets/logo-black.png?v=1';
+  function sheetTop(house) {
     var mark = '<span class="oh-title oh-sm oh-on-light sheet-mark" role="img" aria-label="Open House Dashboard"><span class="oh-t1" aria-hidden="true"><span class="w">Open</span><span class="w">House</span></span><span class="oh-t2" aria-hidden="true">Dashboard</span></span>';
-    return '<article class="sheet"><div class="sheet-top">' + mark + '<p class="eyebrow">ENESMA Realty</p>' +
-      '<h1 class="addr">' + esc(house.addressLine || 'Open House') + '</h1>' +
-      (function () {
-        var bits = String(house.whenLabel || '').split(' · ').filter(Boolean);
-        return bits.map(function (part, i) {
-          var text = (i === bits.length - 1 ? esc(part).replace(/ /g, '\u00a0') : esc(part));
-          return '<p class="when">' + text + '</p>';
-        }).join('');
-      })() +
-      (house.host ? '<p class="host">Hosted by ' + esc(house.host) + '</p>' : '') +
-      '</div><div id="sheetBody"><form id="sheetForm" autocomplete="off" novalidate>' +
+    var logo = wordmark();
+    var bits = String(house.whenLabel || '').split(' · ').filter(Boolean);
+    var when = bits.map(function (part, i) {
+      var text = (i === bits.length - 1 ? esc(part).replace(/ /g, '\u00a0') : esc(part));
+      return '<p class="when">' + text + '</p>';
+    }).join('');
+    return '<div class="sheet-top">' + mark + logo +
+      '<h1 class="addr">' + esc(house.addressLine || 'Open House') + '</h1>' + when +
+      (house.host ? '<p class="host">Hosted by ' + esc(house.host) + '</p>' : '') + '</div>';
+  }
+  function sheetForm() {
+    var L = w.OHLogic;
+    return '<div id="sheetBody"><form id="sheetForm" autocomplete="off" novalidate>' +
       '<div id="sheetErr"></div><div class="fgrid">' +
       '<div class="f"><label for="sfF">First Name <span class="req">*</span></label><input id="sfF" name="oh-first" maxlength="50" autocomplete="off" autocapitalize="words" required></div>' +
       '<div class="f"><label for="sfL">Last Name <span class="req">*</span></label><input id="sfL" name="oh-last" maxlength="50" autocomplete="off" autocapitalize="words" required></div>' +
       '<div class="f"><label for="sfP">Phone <span class="req">*</span></label><input id="sfP" name="oh-phone" type="tel" inputmode="tel" maxlength="12" placeholder="000-000-0000" autocomplete="off" required></div>' +
       '<div class="f"><label for="sfE">Email</label><input id="sfE" name="oh-email" type="email" maxlength="120" autocapitalize="none" spellcheck="false" autocomplete="off"></div>' +
       '</div>' +
-      choices('intent', 'I Am Here to', L.INTENT) +
+      choices('intent', 'I Am:', L.INTENT) +
       choices('hasAgent', 'I Already Have an Agent', [{ k: 'no', label: 'No' }, { k: 'yes', label: 'Yes' }]) +
       '<div class="f other" id="otherWrap" hidden><label for="sfA">Your Agent’s Name</label><input id="sfA" maxlength="80" autocomplete="off"></div>' +
       choices('preApproved', 'Are You Pre-Approved?', L.PRE) +
       choices('timeframe', 'Timeframe', L.TIME) +
       '<div class="f note"><label for="sfN">Anything Else? <span class="opt">Optional</span></label><textarea id="sfN" maxlength="2000" autocomplete="off"></textarea></div>' +
-      '<button class="btn xl" id="sfB" type="submit">Sign in</button></form></div>' +
-      '<pre class="disc">' + esc(L.DISCLOSURE) + '</pre></article>';
+      '<button class="btn xl" id="sfB" type="submit">Sign In</button></form></div>';
+  }
+  function html(house, opts) {
+    var L = w.OHLogic;
+    house = house || {};
+    opts = opts || {};
+    var top = opts.head === false ? '' : sheetTop(house);
+    var form = opts.form === false ? '' : sheetForm();
+    var disc = opts.form === false ? '' : '<pre class="disc">' + esc(L.DISCLOSURE) + '</pre>';
+    return '<article class="sheet">' + top + form + disc + '</article>';
   }
   function selected(root, name) {
     var b = root.querySelector('.choice[data-name="' + name + '"][aria-pressed="true"]');
@@ -103,5 +113,8 @@
   function thanks() {
     return '<div class="thanks" role="status"><b>You’re signed in.</b><p>Enjoy the open house.</p></div>';
   }
-  w.OHSheet = { html: html, wire: wire, thanks: thanks };
+  function wordmark() {
+    return '<img class="wordmark" src="' + WORDMARK + '" alt="ENESMA Realty" width="480" height="160">';
+  }
+  w.OHSheet = { html: html, wire: wire, thanks: thanks, wordmark: wordmark };
 })(window);

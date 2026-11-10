@@ -116,6 +116,31 @@ test('CRM plan updates a matching client and creates a buyer when new', function
   assert.equal(created.client.note, created.note);
 });
 
+test('upcoming is still open and not yet ended; YTD is this calendar year', function () {
+  const now = new Date(2026, 10, 10, 15, 0, 0); // Tue Nov 10, 2026, 3:00 PM local
+  const today = { status: 'open', date: '2026-11-10', startTime: '13:00', endTime: '16:00' };
+  const laterToday = { status: 'open', date: '2026-11-10', startTime: '11:00', endTime: '14:00' };
+  const tomorrow = { status: 'open', date: '2026-11-14', startTime: '11:00', endTime: '14:00' };
+  const ended = { status: 'closed', date: '2026-11-14', startTime: '11:00', endTime: '14:00' };
+  const past = { status: 'open', date: '2026-11-04', startTime: '12:00', endTime: '15:00' };
+  const noEnd = { status: 'open', date: '2026-11-10' };
+  const lastYear = { status: 'closed', date: '2025-12-20', startTime: '11:00', endTime: '14:00' };
+  const nextYear = { status: 'open', date: '2027-01-03', startTime: '11:00', endTime: '14:00' };
+  assert.equal(L.isUpcoming(today, now), true);
+  assert.equal(L.isUpcoming(laterToday, now), false);
+  assert.equal(L.isUpcoming(tomorrow, now), true);
+  assert.equal(L.isUpcoming(ended, now), false);
+  assert.equal(L.isUpcoming(past, now), false);
+  assert.equal(L.isUpcoming(noEnd, now), true);
+  assert.equal(L.isUpcoming({ status: 'open' }, now), false);
+  assert.equal(L.isOpenHouseYtd(today, now), true);
+  assert.equal(L.isOpenHouseYtd(past, now), true);
+  assert.equal(L.isOpenHouseYtd(ended, now), true);
+  assert.equal(L.isOpenHouseYtd(lastYear, now), false);
+  assert.equal(L.isOpenHouseYtd(nextYear, now), false);
+  assert.equal(L.isUpcoming(nextYear, now), true);
+});
+
 test('house validation accepts a typed address and rejects a backwards time', function () {
   assert.equal(L.validateHouse({ address: '10 Main St', city: 'Riverside', state: 'ca', zip: '92501', date: '2026-11-09', startTime: '13:00', endTime: '16:00' }), '');
   assert.match(L.validateHouse({ address: '10', city: 'Riverside', date: '2026-11-09' }), /street address/);

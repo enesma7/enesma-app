@@ -239,18 +239,18 @@
     }).catch(failView);
   }
   function drawDash(houses) {
-    var open = houses.filter(function (item) { return item.status === 'open'; }).length;
-    var guests = houses.reduce(function (n, item) { return n + (item.guestCount || 0); }, 0);
+    var now = new Date();
+    var upcoming = houses.filter(function (item) { return window.OHLogic.isUpcoming(item, now); }).length;
+    var ytd = houses.filter(function (item) { return window.OHLogic.isOpenHouseYtd(item, now); }).length;
     var crm = houses.reduce(function (n, item) { return n + (item.crmCount || 0); }, 0);
     var cards = houses.length ? houses.map(function (item) {
       var line = window.OHLogic.addressLine(item);
       return '<a class="hcard gb" href="#/h/' + h(item.id) + '"><div class="pills"><span class="pill ' + (item.status === 'open' ? 'p-ok' : 'p-dark') + '">' + (item.status === 'open' ? 'Open' : 'Closed') + '</span>' +
         '<span class="pill p-pend">' + h(dayWord(item.date)) + '</span></div><h2>' + h(item.address || line) + '</h2><p>' + h([item.city, [item.state, item.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')) + '</p>' +
-        '<p class="meta">' + h(window.OHLogic.fmtDay(item.date)) + (timeRange(item) ? '<br>' + timeRange(item) : '') + '</p><p class="count"><b>' + item.guestCount + '</b> ' + (item.guestCount === 1 ? 'guest' : 'guests') + ' · <b>' + item.crmCount + '</b> in CRM' +
-        (item.pendingCount ? ' · <span class="wait">' + item.pendingCount + ' waiting</span>' : '') + '</p></a>';
+        '<p class="meta">' + h(window.OHLogic.fmtDay(item.date)) + (timeRange(item) ? '<br>' + timeRange(item) : '') + '</p><p class="count"><b>' + (item.crmCount || 0) + '</b> Guests in CRM</p></a>';
     }).join('') : '<div class="empty gb"><h2>No Open Houses Yet</h2><p>Start a sign-in sheet with the property address. You can type it, or pick it from your Transaction Center files.</p><a class="btn" href="#/new">New Open House</a></div>';
     $app.innerHTML = shell('home', '<div class="top"><div><h1>Open Houses</h1><p class="sub">Sign-in sheets for your open houses. Every guest is saved here and sent to your CRM.</p></div><a class="btn" href="#/new">New Open House</a></div>' +
-      '<div class="stats"><div class="stat gb"><b>' + open + '</b><span>Open Now</span></div><div class="stat gb"><b>' + guests + '</b><span>Guests</span></div><div class="stat gb"><b>' + crm + '</b><span>In CRM</span></div></div>' +
+      '<div class="stats"><div class="stat gb"><b>' + upcoming + '</b><span>Upcoming</span></div><div class="stat gb"><b>' + ytd + '</b><span>Open Houses YTD</span></div><div class="stat gb"><b>' + crm + '</b><span>In CRM</span></div></div>' +
       '<div class="f searchline"><label for="hq">Search History</label><input id="hq" type="search" placeholder="Address or city" autocomplete="off"></div>' +
       '<div class="houses" id="houses">' + cards + '</div>');
     wireShell();
@@ -390,16 +390,21 @@
   function drawHouse(d) {
     var house = d.house, guests = d.guests || [];
     var sheetHouse = { addressLine: house.addressLine, whenLabel: house.whenLabel, host: house.agentName };
-    var actions = '<div class="actions start">' +
+    var whenBits = String(house.whenLabel || '').split(' · ').filter(Boolean);
+    var when = whenBits.map(function (part, i) {
+      var text = (i === whenBits.length - 1 ? h(part).replace(/ /g, '\u00a0') : h(part));
+      return '<p class="when">' + text + '</p>';
+    }).join('');
+    var actions = '<div class="actions start house-actions">' +
       (house.status === 'open' ? '<a class="btn" href="#/kiosk/' + h(house.id) + '">iPad Sign-In</a>' : '') +
       '<a class="ub" href="#/qr/' + h(house.id) + '">QR Code</a>' +
       '<a class="ub" href="#/h/' + h(house.id) + '/edit">Edit</a>' +
       (house.status === 'open' ? '<button type="button" class="ub" id="end">End Open House</button>' : '<button type="button" class="ub" id="reopen">Reopen</button>') +
       (!guests.length ? '<button type="button" class="ub danger" id="del">Delete</button>' : '') +
       '</div>';
-    $app.innerHTML = shell('house', '<p class="crumb"><a href="#/">Open Houses</a></p><div class="top"><div><div class="pills"><span class="pill ' + (house.status === 'open' ? 'p-ok' : 'p-dark') + '">' + (house.status === 'open' ? 'Open' : 'Closed') + '</span><span class="pill p-pend">' + h(dayWord(house.date)) + '</span></div>' +
-      '<h1>' + h(house.address) + '</h1><p class="sub">' + h(house.addressLine) + (house.whenLabel ? ' · ' + h(house.whenLabel) : '') + '</p></div></div>' + actions +
-      (house.status === 'open' ? '<h2 class="sec">Sign-In Sheet</h2>' + window.OHSheet.html(sheetHouse) : '<div class="ok">This sign-in sheet is closed. Guests and CRM notes stay in the history below.</div>') +
+    $app.innerHTML = shell('house', '<p class="crumb"><a href="#/">Open Houses</a></p><div class="house-head">' + window.OHSheet.wordmark() + '<div class="pills"><span class="pill ' + (house.status === 'open' ? 'p-ok' : 'p-dark') + '">' + (house.status === 'open' ? 'Open' : 'Closed') + '</span></div>' +
+      '<h1>' + h(house.addressLine || house.address || 'Open House') + '</h1>' + when + '</div>' + actions +
+      (house.status === 'open' ? '<h2 class="sec">Sign-In Sheet</h2>' + window.OHSheet.html(sheetHouse, { head: false }) : '<div class="ok">This sign-in sheet is closed. Guests and CRM notes stay in the history below.</div>') +
       '<h2 class="sec">Guests <span class="countline">' + guests.length + '</span></h2>' +
       (guests.length ? '<div class="guestlist">' + guests.map(function (g) { return guestCard(g, house); }).join('') + '</div>' : '<div class="empty gb"><p>No guests yet. Use the sign-in sheet, hand the iPad to visitors, or show the QR code.</p></div>'));
     wireShell();
