@@ -8,7 +8,7 @@ var css = fs.readFileSync(__dirname + '/app.css', 'utf8');
 var html = fs.readFileSync(__dirname + '/index.html', 'utf8');
 
 assert.ok(html.indexOf('app.js?v=52') >= 0);
-assert.ok(html.indexOf('app.css?v=50') >= 0);
+assert.ok(html.indexOf('app.css?v=51') >= 0);
 assert.ok(app.indexOf('role="switch"') >= 0);
 assert.ok(app.indexOf('aria-checked') >= 0);
 assert.ok(app.indexOf('aria-label="Missing Only"') >= 0);
@@ -25,6 +25,9 @@ assert.ok(app.indexOf("p.approved + ' of ' + p.required + ' required approved") 
 assert.ok(css.indexOf('.tabs button.missw') >= 0);
 assert.ok(css.indexOf('.missw[aria-checked="true"]') >= 0);
 assert.ok(css.indexOf('.missw-lab{color:var(--k);text-transform:none}') >= 0);
+assert.ok(css.indexOf('@media(max-width:640px)') >= 0);
+assert.ok(css.indexOf('.tabs .tabbtns{flex:1 0 100%;position:relative}') >= 0);
+assert.ok(css.indexOf('.tabs button.missw{margin:0 0 0 auto;align-self:flex-end}') >= 0);
 
 var pred = app.match(/function checklistItemMissing\(it\) \{ return ([^;]+); \}/);
 assert.ok(pred, 'checklistItemMissing is a one-line predicate');

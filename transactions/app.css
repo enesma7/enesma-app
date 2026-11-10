@@ -127,10 +127,13 @@ textarea{min-height:84px;resize:vertical}
 .missw[aria-checked="true"] .missw-ui:before{transform:translateX(20px)}
 .missw:focus-visible{outline:2px solid #D5BE87;outline-offset:3px;border-radius:8px}
 .miss-empty{font-weight:700}
-@media(max-width:420px){
-  .tabs{gap:4px}
-  .tabs button.missw{padding:6px 0 6px 8px;gap:8px;font-size:13px}
-  .tabs .tabbtns button{padding:10px 10px}
+/* Narrow: the switch drops to its own row so the tabs keep their full scrolling row. */
+@media(max-width:640px){
+  .tabs{flex-wrap:wrap;align-items:stretch;row-gap:8px}
+  .tabs:after{content:none}
+  .tabs .tabbtns{flex:1 0 100%;position:relative}
+  .tabs .tabbtns:after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--line);pointer-events:none}
+  .tabs button.missw{margin:0 0 0 auto;align-self:flex-end}
 }
 .phase{font-size:13px;font-weight:700;letter-spacing:.04em;padding:14px 18px 6px;color:var(--soft)}
 .row{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
