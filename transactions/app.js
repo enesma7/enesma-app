@@ -1077,6 +1077,31 @@ function itemPill(s, req) {
   if (req === false && (!s || s === 'Missing')) return '<span class="pill p-opt">Not Required</span>';
   return '<span class="pill ' + ({ Approved: 'p-ok', Rejected: 'p-rej', Pending: 'p-pend', Missing: 'p-miss' }[s] || 'p-miss') + '">' + (s === 'Rejected' ? '<span class="rt">Rejected</span>' : ({ Pending: 'Uploaded – Pending Review' }[s] || h(s))) + '</span>';
 }
+/* Missing Only filters the checklist view. A missing item is required and not Approved, so Missing, Pending (uploaded, awaiting review), Rejected, and any other non-Approved status stay. Not Required and Approved are hidden. Nothing is written back to the file. */
+var MISS_ONLY_KEY = 'tc_missing_only';
+function checklistItemMissing(it) { return !!(it && it.req && it.status !== 'Approved'); }
+function checklistMissingOnly() {
+  if (S.missingOnly === true || S.missingOnly === false) return S.missingOnly;
+  try { S.missingOnly = localStorage.getItem(MISS_ONLY_KEY) === '1'; } catch (e) { S.missingOnly = false; }
+  return S.missingOnly;
+}
+function setChecklistMissingOnly(on) {
+  S.missingOnly = !!on;
+  try { localStorage.setItem(MISS_ONLY_KEY, S.missingOnly ? '1' : '0'); } catch (e) { /* private mode keeps the choice for this visit */ }
+}
+function missingOnlySwitch() {
+  var on = checklistMissingOnly();
+  return '<button type="button" class="missw" id="missOnly" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="Missing Only"><span class="missw-lab">Missing Only</span><span class="missw-ui" aria-hidden="true"></span></button>';
+}
+function wireMissingOnly() {
+  var sw = qs('#missOnly'); if (!sw) return;
+  sw.onclick = function () {
+    var on = sw.getAttribute('aria-checked') !== 'true';
+    setChecklistMissingOnly(on);
+    sw.setAttribute('aria-checked', on ? 'true' : 'false');
+    if (S.tab === 'checklist') drawTab();
+  };
+}
 var PHASE_LABEL = { listing: 'Listing', purchase: 'Purchase', purchase_buyer: 'Purchase', purchase_seller: 'Purchase', lease_listing: 'Lease Listing', lease: 'Lease', lease_landlord: 'Lease', lease_tenant: 'Lease', referral: 'Referral' };
 function phaseLabel(p) { p = String(p || ''); return PHASE_LABEL[p] || p.replace(/_(buyer|seller|landlord|tenant|both)$/, '').split('_').map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join(' '); }
 function txnView(id, keep) {
@@ -1151,10 +1176,11 @@ function drawTxn() {
   var docCount = d.documents.filter(function (x) { return !x.removed; }).length;
   var inner = '<div class="top"><div><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + statusPill(t.status) + '<span class="pill p-pend">' + h(t.typeLabel) + '</span>' + (t.convertedFrom ? '<span class="pill p-miss">' + (t.convertedFrom === 'listing' ? 'Accepted Contract · from Listing' : 'Converted from ' + h(TYPE_LABEL[t.convertedFrom] || t.convertedFrom)) + '</span>' : '') + '</div>' + addrHtml(t, 'h1', 'taddr') + '' +
     (who.length ? '<dl class="tmeta gb">' + who.map(function (x) { return '<div><dt>' + h(x[0]) + '</dt><dd>' + h(x[1]) + '</dd></div>'; }).join('') + '</dl>' : '') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap">' + acts + '</div></div>' + banner +
-    '<div class="tabs">' + [['checklist', 'Checklist'], ['storage', 'Document Storage (' + docCount + ')'], ['details', 'Details'], ['activity', 'Notes & Activity']].map(function (x) { return '<button data-tab="' + x[0] + '" class="' + (S.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div><div id="tabc"></div>' +
+    '<div class="tabs"><div class="tabbtns">' + [['checklist', 'Checklist'], ['storage', 'Document Storage (' + docCount + ')'], ['details', 'Details'], ['activity', 'Notes & Activity']].map(function (x) { return '<button data-tab="' + x[0] + '" class="' + (S.tab === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' + missingOnlySwitch() + '</div><div id="tabc"></div>' +
     '<div class="pbar"><div class="in"><b>' + p.approved + ' of ' + p.required + ' required approved</b><div class="bar"><i style="width:' + pct + '%"></i></div><b class="gt">' + pct + '%</b></div></div>';
   page('dash', inner, function () {
-    qsa('.tabs button').forEach(function (b) { b.onclick = function () { S.tab = b.getAttribute('data-tab'); qsa('.tabs button').forEach(function (x) { x.classList.toggle('on', x === b); }); drawTab(); }; });
+    qsa('.tabbtns button').forEach(function (b) { b.onclick = function () { S.tab = b.getAttribute('data-tab'); qsa('.tabbtns button').forEach(function (x) { x.classList.toggle('on', x === b); }); drawTab(); }; });
+    wireMissingOnly();
     if (qs('#aSplit')) qs('#aSplit').onclick = function () { splitModal(); };
     if (qs('#aConv')) qs('#aConv').onclick = convertModal;
     if (qs('#aCancel')) qs('#aCancel').onclick = cancelModal;
@@ -1172,7 +1198,10 @@ function drawTab() {
     var html = '', lastPhase = null, lastCat = null, groups = 0, v15 = !!S.v150;
     var act = d.items.filter(function (it) { return it.active; });
     act = act.filter(function (it) { return !it.cancel; }).concat(act.filter(function (it) { return it.cancel; }));   // Cancellation always sits at the very end
+    var missingOnly = checklistMissingOnly();
+    if (missingOnly) act = act.filter(checklistItemMissing);   // view only: headings below are emitted from the items that remain
     var escrow = (window.TCCdaUi && TCCdaUi.escrowHtml) ? TCCdaUi.escrowHtml() : '';
+    if (!act.length && missingOnly) html = '<div class="ok miss-empty" role="status">All Required Files Approved</div>';
     act.forEach(function (it) {
       var ph = it.cancel && lastPhase ? lastPhase : phaseLabel(it.phase);
       if (ph !== lastPhase) { if (groups++) html += '</div><div class="phsep" role="separator" aria-hidden="true"></div>'; html += '<div class="gb" style="padding:4px 0;margin-bottom:16px"><div class="phase">' + h(ph) + ' Checklist</div>'; lastPhase = ph; lastCat = null; }
@@ -1192,7 +1221,8 @@ function drawTab() {
           : (t.readOnly ? '' : '<button class="link addn" data-item="' + h(it.id) + '">Note</button>')) + '</div></div>';
     });
     if (groups) html += '</div>';
-    c.innerHTML = escrow + html + '<p class="sub"><span class="req-dot"></span> Required for compliance. Agents can upload but cannot delete; only an admin can remove a document, and it stays in the archive.' + (v15 ? ' The note bubble on each item shows how many notes it has; tap it to read or add notes.' : '') + '</p>';
+    var foot = (!act.length && missingOnly) ? '' : '<p class="sub"><span class="req-dot"></span> Required for compliance. Agents can upload but cannot delete; only an admin can remove a document, and it stays in the archive.' + (v15 ? ' The note bubble on each item shows how many notes it has; tap it to read or add notes.' : '') + '</p>';
+    c.innerHTML = escrow + html + foot;
     if (window.TCCdaUi && TCCdaUi.wireEscrow) TCCdaUi.wireEscrow(c);
     qsa('.cdaBtn', c).forEach(function (b) { b.onclick = function () { if (window.TCCdaUi) TCCdaUi.open(b.getAttribute('data-item')); }; });
     qsa('.up', c).forEach(function (inp) { inp.onchange = function () { var f = inp.files[0], id = inp.getAttribute('data-item'); inp.value = ''; if (!f) return; var it = d.items.filter(function (x) { return x.id === id; })[0];
