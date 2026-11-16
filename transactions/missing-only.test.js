@@ -7,8 +7,8 @@ var app = fs.readFileSync(__dirname + '/app.js', 'utf8');
 var css = fs.readFileSync(__dirname + '/app.css', 'utf8');
 var html = fs.readFileSync(__dirname + '/index.html', 'utf8');
 
-assert.ok(html.indexOf('app.js?v=53') >= 0);
-assert.ok(html.indexOf('app.css?v=51') >= 0);
+assert.ok(html.indexOf('app.js?v=54') >= 0);
+assert.ok(html.indexOf('app.css?v=53') >= 0);
 assert.ok(app.indexOf('role="switch"') >= 0);
 assert.ok(app.indexOf('aria-checked') >= 0);
 assert.ok(app.indexOf('aria-label="Missing Only"') >= 0);
