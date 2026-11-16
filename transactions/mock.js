@@ -591,6 +591,37 @@ function applyClose(t, date, price) {
   if (t.type === 'purchase') { var fp = num(price || (t.intake && t.intake.purchasePrice)); if (!fp) Fail('Enter the final sales price.'); t.intake.finalPrice = String(fp); }
   t.closedAt = date; t.retentionUntil = addYears(date, 7); t.status = 'Closed'; t.closeRequest = null;
 }
+function closeMoney(v) {
+  var n = Number(String(v || '').replace(/[^0-9.]/g, ''));
+  if (!(n > 0)) return '';
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function closeAddr(t) { return [t.address, [t.city, 'CA', t.zip].filter(Boolean).join(' ')].filter(Boolean).join(', '); }
+function closeMail(kind, recipients, subject, html) {
+  DB.closeMail = DB.closeMail || [];
+  var seen = {}, to = [];
+  recipients.forEach(function (em) {
+    em = String(em || '').trim().toLowerCase();
+    if (!em || seen[em]) return;
+    seen[em] = 1; to.push(em);
+    DB.closeMail.push({ kind: kind, to: em, subject: subject, html: html });
+  });
+  return { to: to, error: '', previewHtml: html };
+}
+function closeRequestMail(t, u) {
+  var brokers = DB.users.filter(function (x) { return x.active && (x.role === 'admin' || x.owner); }).map(function (x) { return x.email; });
+  var price = closeMoney(t.closeRequest && t.closeRequest.finalPrice);
+  var html = '<h2>Close Requested</h2><p>' + closeAddr(t) + '</p><p>Requested by ' + (u.name || '') + '.</p><p>Close date ' + (t.closeRequest.closeDate || '') + (price ? '. Final price ' + price + '.' : '') + '</p><p><a class="btn">Approve Or Decline</a></p>';
+  return closeMail('request', brokers, 'ENESMA Realty: Close Requested for ' + closeAddr(t), html);
+}
+function closePartyMail(t, kind, heading, extra) {
+  var ids = [t.agentId, t.tcId, t.closeRequest && t.closeRequest.requestedBy];
+  if (kind === 'congrats') ids = [t.agentId, t.tcId].concat(DB.users.filter(function (x) { return x.owner; }).map(function (x) { return x.id; }));
+  var emails = [];
+  ids.forEach(function (id) { var p = user(id); if (p && p.active && p.email) emails.push(p.email); });
+  var html = '<h2>' + heading + '</h2><p>' + closeAddr(t) + '</p>' + (extra || '') + '<p><a class="btn">Open The Transaction</a></p>';
+  return closeMail(kind, emails, 'ENESMA Realty: ' + heading + ' for ' + closeAddr(t), html);
+}
 A.setStatus = function (b, u) {
   var t = txn(b.id); if (!t) Fail('Transaction not found.');
   if (!canSetStatus(u, t)) Fail('You can’t change this file’s status.', 'FORBIDDEN');
@@ -599,17 +630,38 @@ A.setStatus = function (b, u) {
   if (s === 'Closed' && u.role !== 'admin') {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(b.closeDate || '')) Fail('Enter the close of escrow date.');
     if (t.type === 'purchase' && !num(b.finalPrice || (t.intake && t.intake.purchasePrice))) Fail('Enter the final sales price.');
+    var prior = t.status;
     t.closeRequest = { state: 'pending', closeDate: b.closeDate, finalPrice: String(b.finalPrice || ''), requestedBy: u.id, requestedByName: u.name, requestedAt: now() };
-    touch(t); audit(t.id, u.username, 'close_requested'); return { pendingClose: true };
+    touch(t); audit(t.id, u.username, 'close_requested');
+    var asked = closeRequestMail(t, u);
+    return { pendingClose: true, status: prior, emailedTo: asked.to, previewHtml: asked.previewHtml };
   }
-  if (s === 'Closed') applyClose(t, b.closeDate, b.finalPrice);
+  var mail = { to: [], previewHtml: '' };
+  if (s === 'Closed') { applyClose(t, b.closeDate, b.finalPrice); mail = closePartyMail(t, 'congrats', 'Congratulations On Your Closing', '<p>This file is closed and archived.</p>'); }
   else if (s === 'Expired Contract') { t.status = s; t.closedAt = ''; t.retentionUntil = addYears((t.intake && t.intake.expirationDate) || now(), 7); t.closeRequest = null; }
   else { t.status = s; t.closedAt = ''; t.retentionUntil = ''; t.closeRequest = null; }
-  touch(t); audit(t.id, u.username, 'status_changed'); return { pendingClose: false };
+  touch(t); audit(t.id, u.username, 'status_changed');
+  return { pendingClose: false, status: t.status, emailedTo: mail.to, previewHtml: mail.previewHtml };
 };
 A.approveClose = function (b, u) {
   needAdmin(u); var t = txn(b.id); if (!t || !t.closeRequest || t.closeRequest.state !== 'pending') Fail('No close is waiting for approval.');
-  applyClose(t, t.closeRequest.closeDate, t.closeRequest.finalPrice); touch(t); audit(t.id, u.username, 'close_approved'); return {};
+  applyClose(t, t.closeRequest.closeDate, t.closeRequest.finalPrice); touch(t); audit(t.id, u.username, 'close_approved');
+  var mail = closePartyMail(t, 'congrats', 'Congratulations On Your Closing', '<p>This file is closed and archived.</p>');
+  return { status: t.status, closedAt: t.closedAt, retentionUntil: t.retentionUntil, emailedTo: mail.to, previewHtml: mail.previewHtml };
+};
+A.declineClose = function (b, u) {
+  needAdmin(u); var t = txn(b.id); if (!t || !t.closeRequest || t.closeRequest.state !== 'pending') Fail('No close is waiting for approval.');
+  var note = String(b.note || '').replace(/\s+/g, ' ').trim();
+  if (!note) Fail('A note is required.', 'BAD_REQUEST');
+  var kept = t.status;
+  t.closeRequest.state = 'declined';
+  t.closeRequest.note = note.slice(0, 1000);
+  t.closeRequest.declinedBy = u.id;
+  t.closeRequest.declinedByName = u.name;
+  t.closeRequest.declinedAt = now();
+  touch(t); audit(t.id, u.username, 'close_declined');
+  var mail = closePartyMail(t, 'declined', 'Close Declined', '<p>' + note.slice(0, 1000) + '</p>');
+  return { declined: true, status: kept, closeRequest: t.closeRequest, emailedTo: mail.to, previewHtml: mail.previewHtml };
 };
 /* ---- 1.6.0 E-Books (demo): same shapes and the same owner-only rule as EBooks.gs ---- */
 var EBD = { cats: [], vendors: [], agents: {}, entries: [] };

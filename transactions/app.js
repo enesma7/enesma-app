@@ -1167,7 +1167,8 @@ function drawTxn() {
   if (isAdmin() || canEdit()) acts += '<button class="ub" id="aStatus">Set Status</button>';
   var banner = '';
   var closeAsk = t.closeRequest && t.closeRequest.state === 'pending';
-  if (closeAsk) banner += '<div class="err"><b>Close requested</b> by ' + h(t.closeRequest.requestedByName || 'the file') + ' for ' + h(fmtDate(t.closeRequest.closeDate)) + '. The file stays open until an admin approves it and archives it as closed. E-Books does not see these amounts yet.' + (isAdmin() ? ' <button type="button" class="btn sm" id="aCloseOk">Approve and Archive</button>' : '') + '</div>';
+  if (closeAsk) banner += '<div class="err"><b>Close Requested</b> by ' + h(t.closeRequest.requestedByName || 'the file') + ' for ' + h(fmtDate(t.closeRequest.closeDate)) + (t.closeRequest.finalPrice ? ' · final price ' + h(money(t.closeRequest.finalPrice)) : '') + '. The file stays open until an admin approves it and archives it as closed. E-Books does not see these amounts yet.' + (isAdmin() ? ' <button type="button" class="btn sm" id="aCloseOk">Approve and Archive</button> <button type="button" class="ub" id="aCloseNo">Decline Close</button>' : '') + '</div>';
+  else if (t.closeRequest && t.closeRequest.state === 'declined') banner += '<div class="err"><b>Close Declined</b>' + (t.closeRequest.declinedByName ? ' by ' + h(t.closeRequest.declinedByName) : '') + (t.closeRequest.declinedAt ? ' on ' + h(fmtTs(t.closeRequest.declinedAt)) : '') + (t.closeRequest.note ? '. ' + h(t.closeRequest.note) : '') + ' Set the status to Closed again after this note is addressed.</div>';
   if (crPending) banner += '<div class="err"><b>Cancellation requested</b> by ' + h(cr.requestedByName) + ' on ' + h(fmtTs(cr.requestedAt)) + (cr.reason ? ' · “' + h(cr.reason) + '”' : '') + (cr.relist === true ? ' · Going back on the market (a new listing is created on approval)' : cr.relist === false ? ' · Not going back on the market' : '') + '. Waiting for admin approval.' + (isAdmin() ? ' <a href="#/review">Decide in Review</a>' : '') + '</div>';
   else if (cr && cr.state === 'denied') banner += '<div class="ok">Cancellation request was denied' + (cr.note ? ': “' + h(cr.note) + '”' : '') + '.</div>';
   if (t.readOnly) banner += '<div class="ok">Team view · ' + h(t.agentName) + '’s file. You can read the checklist, notes and documents; only ' + h(t.agentName) + ', their TC or an admin can change it.</div>';
@@ -1186,6 +1187,7 @@ function drawTxn() {
     if (qs('#aCancel')) qs('#aCancel').onclick = cancelModal;
     if (qs('#aStatus')) qs('#aStatus').onclick = statusModal;
     if (qs('#aCloseOk')) qs('#aCloseOk').onclick = function () { var b = this; b.disabled = true; api('approveClose', { id: t.id }).then(function () { toast('Closed and archived.'); refresh(); }).catch(function (e) { b.disabled = false; toast(e.message, 1); }); };
+    if (qs('#aCloseNo')) qs('#aCloseNo').onclick = function () { declineCloseModal(t); };
     drawTab();
   });
 }
@@ -1662,6 +1664,18 @@ function cancelModal() {
     if (t.relistQuestion) { var c = qs('#rl input:checked', m); if (!c) { qs('#xe', m).innerHTML = '<div class="err">Answer whether the property is going back on the market.</div>'; return; } p.relist = c.value === 'yes'; }
     this.disabled = true;
     api('requestCancel', p).then(function () { m.close(); toast('Cancellation request sent to the office.'); refresh(); }).catch(function (e) { qs('#xb', m).disabled = false; qs('#xe', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
+  };
+}
+function declineCloseModal(t) {
+  var m = modal('<h2>Decline Close</h2><p class="sub">The file stays ' + h(t.status) + '. The agent and transaction coordinator receive this note.</p><div id="dce"></div><div class="f"><label for="dcn">Note</label><textarea id="dcn" maxlength="1000" required></textarea></div><div class="actions"><button type="button" class="ub" id="dcc">Cancel</button><button type="button" class="btn red" id="dcy">Decline Close</button></div>');
+  qs('#dcc', m).onclick = m.close;
+  qs('#dcn', m).focus();
+  qs('#dcy', m).onclick = function () {
+    var note = qs('#dcn', m).value.trim();
+    if (!note) { qs('#dce', m).innerHTML = '<div class="err">A note is required.</div>'; return; }
+    var b = this; b.disabled = true;
+    api('declineClose', { id: t.id, note: note }).then(function () { m.close(); toast('Close declined.'); refresh(); })
+      .catch(function (e) { b.disabled = false; qs('#dce', m).innerHTML = '<div class="err">' + h(e.message) + '</div>'; });
   };
 }
 function statusModal() {
