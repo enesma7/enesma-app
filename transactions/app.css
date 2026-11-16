@@ -300,6 +300,8 @@ h1.taddr{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100
 .top h1{overflow-wrap:anywhere}
 .top>div:first-child{min-width:0;flex:1 1 280px}
 .csub{margin:18px 0 10px;font-size:15px}.csub small{font-weight:400;color:var(--soft)}
+.spouse{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.spouse .csub{margin-top:0}
 .clinks{display:flex;flex-wrap:wrap;gap:8px}.clinks .ub{white-space:normal;text-align:left}
 .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
 .cgrid .card{min-width:0}
@@ -312,7 +314,7 @@ h1.taddr{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100
 .clinkp input{margin:2px 0 0;width:18px;height:18px;accent-color:#D5BE87;flex:none}
 .clinkp small{font-weight:400;color:var(--soft)}
 .cmuted{color:var(--soft);font-size:13px}
-.imap{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px 12px}
+.imap{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px 12px}
 .icounts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .iprev{max-height:50vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
 .iprev .ctbl{table-layout:auto}

@@ -385,7 +385,7 @@ function access(u, id) { var t = txn(id); if (!t || (u.role !== 'admin' && t.age
 function needAdmin(u) { if (u.role !== 'admin') Fail('Admins only.', 'FORBIDDEN'); }
 function touch(t) { t.updatedAt = now(); }
 var A = {};
-A.ping = function () { return { pong: true, features: ['crm'] }; };
+A.ping = function () { return { pong: true, features: ['crm', 'crm_note_delete', 'close_approval', 'crm_spouse'] }; };
 A.login = function (b) {
   var e = String(b.email || b.username || '').trim().toLowerCase(); if (e === 'admin' || e === 'agent') e += '@demo.test';
   var u = DB.users.filter(function (x) { return x.username === e; })[0];
@@ -1007,7 +1007,7 @@ A.ebConfirmEscrowCheck = function (b, u) {
 function crmGate(u) { if (!u || !u.active || (u.role !== 'admin' && u.role !== 'agent')) Fail('CRM is not available in this view.', 'FORBIDDEN'); }
 if (!DB.crmClients) {
   DB.crmClients = [
-    { id: 'C1', ownerId: 'U1', firstName: 'Jordan', lastName: 'Hale', phone: '951-555-0142', email: 'jordan.hale.sample.client@example.test', address: '400 Sample St', type: 'buyer', source: 'Website', status: 'Active', tags: ['Sphere', 'Buyer lead', 'Follow up'], groups: ['G1'], txnIds: [], deleted: false },
+    { id: 'C1', ownerId: 'U1', firstName: 'Jordan', lastName: 'Hale', phone: '951-555-0142', email: 'jordan.hale.sample.client@example.test', address: '400 Sample St', type: 'buyer', source: 'Website', status: 'Active', tags: ['Sphere', 'Buyer lead', 'Follow up'], groups: ['G1'], txnIds: [], spouseFirstName: 'Avery', spouseLastName: 'Hale', spousePhone: '951-555-0148', spouseEmail: 'avery.hale.sample@example.test', deleted: false },
     { id: 'C2', ownerId: 'U2', firstName: 'Riley', lastName: 'Chen', phone: '951-555-0190', email: 'riley.chen.longname.client@example.test', address: '18 Sample Ave', type: 'seller', source: 'Referral', status: 'New Lead', tags: ['VIP', 'Listing soon'], groups: [], txnIds: [], deleted: false }
   ];
   DB.crmNotes = [
@@ -1018,7 +1018,65 @@ if (!DB.crmClients) {
   DB.crmAudit = [];
 }
 function crmSee(u, c) { return !!(c && !c.deleted && (u.role === 'admin' || c.ownerId === u.id)); }
-function crmClientOut(c) { var o = user(c.ownerId) || {}; return { id: c.id, ownerId: c.ownerId, ownerName: o.name || '', firstName: c.firstName, lastName: c.lastName, phone: c.phone, email: c.email, address: c.address, type: c.type, source: c.source, status: c.status, tags: c.tags, groups: c.groups, txnIds: c.txnIds, createdAt: c.createdAt || daysAgo(3), updatedAt: c.updatedAt || daysAgo(1), nextDue: '' }; }
+function crmClientOut(c) { var o = user(c.ownerId) || {}; return { id: c.id, ownerId: c.ownerId, ownerName: o.name || '', firstName: c.firstName, lastName: c.lastName, phone: c.phone, email: c.email, address: c.address, type: c.type, source: c.source, status: c.status, tags: c.tags, groups: c.groups, txnIds: c.txnIds, spouseFirstName: c.spouseFirstName || '', spouseLastName: c.spouseLastName || '', spousePhone: c.spousePhone || '', spouseEmail: c.spouseEmail || '', createdAt: c.createdAt || daysAgo(3), updatedAt: c.updatedAt || daysAgo(1), nextDue: '' }; }
+function crmNormHeader(label) {
+  return String(label == null ? '' : label).toLowerCase().replace(/[_/]+/g, ' ').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function crmHeaderKey(label) {
+  var s = crmNormHeader(label);
+  var spouse = { 'spouse first name': 'spouseFirstName', 'spouse last name': 'spouseLastName', 'spouse phone': 'spousePhone', 'spouse email': 'spouseEmail', 'spouse partner first name': 'spouseFirstName', 'spouse partner last name': 'spouseLastName', 'spouse partner phone': 'spousePhone', 'spouse partner email': 'spouseEmail', 'partner first name': 'spouseFirstName', 'partner last name': 'spouseLastName', 'partner phone': 'spousePhone', 'partner email': 'spouseEmail' };
+  if (spouse[s]) return spouse[s];
+  return { 'first name': 'firstName', 'last name': 'lastName', 'full name': 'fullName', phone: 'phone', mobile: 'phone', email: 'email', 'e mail': 'email', address: 'address', 'client type': 'type', type: 'type', source: 'source', status: 'status', tags: 'tags', note: 'note', notes: 'note' }[s] || '';
+}
+function crmPhone(v) {
+  var d = String(v == null ? '' : v).replace(/\D/g, '');
+  if (d.charAt(0) === '1') d = d.slice(1);
+  if (!d) return '';
+  if (d.length !== 10) Fail('Phone must be a 10-digit number (000-000-0000).', 'BAD_REQUEST');
+  return d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6);
+}
+function crmEmail(v) {
+  var s = String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, '').trim();
+  if (!s) return '';
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s)) Fail('Email address is not valid.', 'BAD_REQUEST');
+  return s;
+}
+function crmName(v) {
+  var s = String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (s.length > 50) Fail('Spouse/Partner name must be 50 characters or fewer.', 'BAD_REQUEST');
+  return s;
+}
+function crmParseCsv(text) {
+  var rows = [], row = [], cur = '', q = false, i, c;
+  var s = String(text == null ? '' : text).replace(/^\uFEFF/, '');
+  for (i = 0; i < s.length; i++) {
+    c = s.charAt(i);
+    if (q) {
+      if (c === '"') { if (s.charAt(i + 1) === '"') { cur += '"'; i++; } else q = false; }
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+    else if (c !== '\r') cur += c;
+  }
+  if (cur.length || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(function (r) { return r.some(function (cell) { return String(cell || '').trim(); }); });
+}
+function crmAutoMap(headers) {
+  var mapping = {};
+  headers.forEach(function (hd, i) {
+    var key = crmHeaderKey(hd);
+    if (key && mapping[key] === undefined) mapping[key] = i;
+  });
+  return mapping;
+}
+var CRM_IMPORT_FIELDS = [['firstName', 'First Name'], ['lastName', 'Last Name'], ['phone', 'Phone'], ['email', 'Email'], ['address', 'Address'], ['type', 'Client Type'], ['source', 'Source'], ['status', 'Status'], ['tags', 'Tags'], ['note', 'Note'], ['spouseFirstName', 'Spouse/Partner First Name'], ['spouseLastName', 'Spouse/Partner Last Name'], ['spousePhone', 'Spouse/Partner Phone'], ['spouseEmail', 'Spouse/Partner Email']];
+function crmApplySpouse(rec, src) {
+  if (src.spouseFirstName !== undefined) rec.spouseFirstName = crmName(src.spouseFirstName);
+  if (src.spouseLastName !== undefined) rec.spouseLastName = crmName(src.spouseLastName);
+  if (src.spousePhone !== undefined) rec.spousePhone = crmPhone(src.spousePhone);
+  if (src.spouseEmail !== undefined) rec.spouseEmail = crmEmail(src.spouseEmail);
+}
 function crmNoteOut(n, u) {
   var who = user(n.userId) || {};
   var can = u.role === 'admin' || n.userId === u.id;
@@ -1027,7 +1085,7 @@ function crmNoteOut(n, u) {
 A.crmBoot = function (b, u) {
   crmGate(u);
   var clients = DB.crmClients.filter(function (c) { return crmSee(u, c); }).map(crmClientOut);
-  return { admin: u.role === 'admin', me: u.id, lendersReady: false, lenders: [], statuses: ['New Lead', 'Active', 'Under Contract', 'Closed', 'Past Client', 'Inactive'], types: { buyer: 'Buyer', seller: 'Seller' }, agents: DB.users.filter(function (x) { return x.role === 'agent' && x.active; }).map(function (x) { return { id: x.id, name: x.name }; }), groups: [{ id: 'G1', name: 'Sphere', ownerName: 'Enrique Esparza', count: 1 }], reminders: [], clients: clients };
+  return { admin: u.role === 'admin', me: u.id, lendersReady: false, lenders: [], statuses: ['New Lead', 'Active', 'Under Contract', 'Closed', 'Past Client', 'Inactive'], types: { buyer: 'Buyer', seller: 'Seller', landlord: 'Landlord', tenant: 'Tenant' }, sources: ['Website', 'Referral', 'Open House', 'Sphere'], agents: DB.users.filter(function (x) { return x.role === 'agent' && x.active; }).map(function (x) { return { id: x.id, name: x.name }; }), groups: [{ id: 'G1', ownerId: 'U1', name: 'Sphere', ownerName: 'Enrique Esparza', count: 1 }], txns: [], reminders: [], clients: clients };
 };
 A.crmGetClient = function (b, u) {
   crmGate(u);
@@ -1035,6 +1093,78 @@ A.crmGetClient = function (b, u) {
   if (!crmSee(u, c)) Fail('Client not found.', 'NOT_FOUND');
   var notes = DB.crmNotes.filter(function (n) { return n.clientId === c.id && !n.deleted; }).sort(function (a, d) { return String(d.createdAt).localeCompare(String(a.createdAt)); }).map(function (n) { return crmNoteOut(n, u); });
   return { client: crmClientOut(c), notes: notes, txns: [], reminders: [], lender: null };
+};
+A.crmSaveClient = function (b, u) {
+  crmGate(u);
+  var src = b.client || {};
+  var phone = crmPhone(src.phone), email = crmEmail(src.email);
+  if (!String(src.firstName || '').trim() && !String(src.lastName || '').trim()) Fail('Enter a first or last name.');
+  if (!src.type) Fail('Choose a client type.');
+  var rec = b.id ? DB.crmClients.filter(function (x) { return x.id === b.id; })[0] : null;
+  if (b.id && !crmSee(u, rec)) Fail('Client not found.', 'NOT_FOUND');
+  if (!rec) {
+    rec = { id: nid('C'), ownerId: u.role === 'admin' && b.ownerId ? b.ownerId : u.id, tags: [], groups: [], txnIds: [], deleted: false, createdAt: now() };
+    DB.crmClients.push(rec);
+  } else if (u.role !== 'admin' && rec.ownerId !== u.id) Fail('Client not found.', 'NOT_FOUND');
+  rec.firstName = String(src.firstName || '').trim();
+  rec.lastName = String(src.lastName || '').trim();
+  rec.phone = phone; rec.email = email; rec.address = String(src.address || '').trim();
+  rec.type = src.type; rec.status = src.status || 'New Lead'; rec.source = src.source || '';
+  rec.updatedAt = now();
+  crmApplySpouse(rec, src);
+  return { id: rec.id, client: crmClientOut(rec) };
+};
+A.crmImportPreview = function (b, u) {
+  crmGate(u);
+  var table = crmParseCsv(b.csv);
+  if (!table.length) Fail('That CSV has no rows.');
+  var headers = table[0];
+  var explicit = b.mapping && Object.keys(b.mapping).length;
+  var mapping = explicit ? b.mapping : crmAutoMap(headers);
+  var labels = {}, fields = CRM_IMPORT_FIELDS.map(function (f) { labels[f[0]] = f[1]; return f[0]; });
+  var rows = [], counts = { 'new': 0, duplicate: 0, invalid: 0 };
+  table.slice(1).forEach(function (row, i) {
+    var cell = function (k) { var idx = mapping[k]; return idx === undefined || idx === '' ? '' : String(row[idx] == null ? '' : row[idx]).trim(); };
+    var errors = [];
+    var first = cell('firstName'), last = cell('lastName'), full = cell('fullName');
+    if (!first && !last && full) { var p = full.split(/\s+/); first = p[0] || ''; last = p.slice(1).join(' '); }
+    try { crmPhone(cell('phone')); } catch (e) { errors.push(e.message); }
+    try { crmEmail(cell('email')); } catch (e) { errors.push(e.message); }
+    ['spouseFirstName', 'spouseLastName', 'spousePhone', 'spouseEmail'].forEach(function (k) {
+      if (mapping[k] === undefined || mapping[k] === '') return;
+      try { if (k.indexOf('Phone') >= 0) crmPhone(cell(k)); else if (k.indexOf('Email') >= 0) crmEmail(cell(k)); else crmName(cell(k)); }
+      catch (e) { errors.push(labels[k] + ': ' + e.message); }
+    });
+    if (!first && !last) errors.push('A name is required.');
+    var state = errors.length ? 'invalid' : 'new';
+    counts[state]++;
+    rows.push({ n: i + 2, name: [first, last].filter(Boolean).join(' '), state: state, phone: cell('phone'), email: cell('email'), status: cell('status'), errors: errors, warnings: [] });
+  });
+  return { headers: headers, fields: fields, labels: labels, mapping: mapping, rows: rows, counts: counts, total: rows.length, named: mapping.firstName !== undefined || mapping.lastName !== undefined || mapping.fullName !== undefined };
+};
+A.crmImportCommit = function (b, u) {
+  crmGate(u);
+  var preview = A.crmImportPreview(b, u);
+  var table = crmParseCsv(b.csv), ownerId = u.role === 'admin' && b.ownerId ? b.ownerId : u.id;
+  var created = 0, invalid = preview.counts.invalid;
+  preview.rows.forEach(function (r) {
+    if (r.state !== 'new') return;
+    var row = table[r.n - 1] || [], cell = function (k) { var idx = preview.mapping[k]; return idx === undefined || idx === '' ? '' : row[idx]; };
+    var rec = { id: nid('C'), ownerId: ownerId, firstName: '', lastName: '', phone: crmPhone(cell('phone')), email: crmEmail(cell('email')), address: String(cell('address') || '').trim(), type: 'buyer', status: 'New Lead', source: '', tags: [], groups: [], txnIds: [], deleted: false, createdAt: now() };
+    var name = r.name.split(/\s+/); rec.firstName = name[0] || ''; rec.lastName = name.slice(1).join(' ');
+    crmApplySpouse(rec, { spouseFirstName: cell('spouseFirstName'), spouseLastName: cell('spouseLastName'), spousePhone: cell('spousePhone'), spouseEmail: cell('spouseEmail') });
+    DB.crmClients.push(rec); created++;
+  });
+  return { created: created, merged: 0, skipped: 0, invalid: invalid, lendersAdded: 0 };
+};
+function crmCsvCell(v) { var s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s)) s = "'" + s; if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"'; return s; }
+A.crmExport = function (b, u) {
+  crmGate(u);
+  var ownerId = u.role === 'admin' ? String(b.agentId || '') : u.id;
+  var list = DB.crmClients.filter(function (c) { return crmSee(u, c) && (!ownerId || c.ownerId === ownerId); });
+  var headers = ['First Name', 'Last Name', 'Phone', 'Email', 'Spouse/Partner First Name', 'Spouse/Partner Last Name', 'Spouse/Partner Phone', 'Spouse/Partner Email'];
+  var lines = [headers.join(',')].concat(list.map(function (c) { return [c.firstName, c.lastName, c.phone, c.email, c.spouseFirstName || '', c.spouseLastName || '', c.spousePhone || '', c.spouseEmail || ''].map(crmCsvCell).join(','); }));
+  return { fileName: 'clients.csv', csv: lines.join('\r\n'), count: list.length };
 };
 A.crmAddNote = function (b, u) {
   crmGate(u);

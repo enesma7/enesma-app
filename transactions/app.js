@@ -2014,7 +2014,7 @@ function crmHome() {
   loading('crm');
   api('crmBoot', isAdmin() ? { agentId: crmAg() } : {}).then(function (d) {
     S.crm = d;
-    var byId = {}; d.clients.forEach(function (c) { byId[c.id] = c; c._s = [cName(c), c.phone, String(c.phone || '').replace(/\D/g, ''), c.email, c.address, c.source, (c.tags || []).join(' '), c.ownerName || '', c.lenderName || '', c.lenderCompany || ''].join(' ').toLowerCase(); });
+    var byId = {}; d.clients.forEach(function (c) { byId[c.id] = c; c._s = [cName(c), c.phone, String(c.phone || '').replace(/\D/g, ''), c.email, c.address, c.source, (c.tags || []).join(' '), c.ownerName || '', c.lenderName || '', c.lenderCompany || '', c.spouseFirstName || '', c.spouseLastName || '', c.spousePhone || '', String(c.spousePhone || '').replace(/\D/g, ''), c.spouseEmail || ''].join(' ').toLowerCase(); });
     var LO = lendOn(d);
     var gName = {}; d.groups.forEach(function (g) { gName[g.id] = g.name; });
     var tags = {}; d.clients.forEach(function (c) { (c.tags || []).forEach(function (t) { tags[t.toLowerCase()] = tags[t.toLowerCase()] || t; }); });
@@ -2030,7 +2030,7 @@ function crmHome() {
       '<div class="card gb crems"><div class="ush"><h2>Follow-Ups</h2></div><div class="seg" role="group" aria-label="Follow-Ups">' +
       [['overdue', 'Overdue'], ['due', 'Due Today'], ['upcoming', 'Upcoming']].map(function (x) { return '<button type="button" data-rt="' + x[0] + '" class="' + (CRM_UI.remTab === x[0] ? 'on' : '') + '" aria-pressed="' + (CRM_UI.remTab === x[0]) + '">' + x[1] + ' <span class="ucount' + (x[0] === 'overdue' && buckets.overdue.length ? ' red' : '') + '">' + buckets[x[0]].length + '</span></button>'; }).join('') + '</div>' +
       '<div id="remList">' + (buckets[CRM_UI.remTab].length ? buckets[CRM_UI.remTab].slice(0, 50).map(function (r) { return remRow(r, byId[r.clientId], true); }).join('') : '<div class="uempty">' + { overdue: 'Nothing overdue.', due: 'Nothing due today.', upcoming: 'No upcoming follow-ups. Add one from a client’s page.' }[CRM_UI.remTab] + '</div>') + '</div></div>' +
-      '<div class="cfil"><div class="f cq"><label for="cQ">Search</label><input type="search" id="cQ" placeholder="Name, phone, tag…" value="' + h(CRM_UI.q) + '" autocomplete="off"></div>' +
+      '<div class="cfil"><div class="f cq"><label for="cQ">Search</label><input type="search" id="cQ" placeholder="Name, phone, tag, spouse…" value="' + h(CRM_UI.q) + '" autocomplete="off"></div>' +
       '<div class="f"><label for="cSt">Status</label><select id="cSt">' + opt('', 'All', CRM_UI.status) + d.statuses.map(function (s) { return opt(s, s, CRM_UI.status); }).join('') + '</select></div>' +
       '<div class="f"><label for="cTy">Type</label><select id="cTy">' + opt('', 'All', CRM_UI.type) + Object.keys(d.types).map(function (k) { return opt(k, d.types[k], CRM_UI.type); }).join('') + '</select></div>' +
       '<div class="f"><label for="cTg">Tag</label><select id="cTg">' + opt('', 'All', CRM_UI.tag) + tagList.map(function (t) { return opt(t.toLowerCase(), t, CRM_UI.tag); }).join('') + '</select></div>' +
@@ -2087,6 +2087,7 @@ function clientView(id) {
       (c.ownerName !== undefined ? kv('Agent', h(c.ownerName)) : '') +
       (lendOn(d) ? kv('Lender', g.lender ? lenderLabel(g.lender.name, g.lender.company) + ([g.lender.phone, g.lender.email, g.lender.nmls ? 'NMLS #' + g.lender.nmls : ''].filter(Boolean).length ? '<small class="lco">' + h([g.lender.phone, g.lender.email, g.lender.nmls ? 'NMLS #' + g.lender.nmls : ''].filter(Boolean).join(' · ')) + '</small>' : '') : '') : '') +
       kv('Added', h(fmtTs(c.createdAt))) + kv('Updated', h(fmtTs(c.updatedAt))) + '</div>' +
+      spouseSection(c) +
       (g.txns.length ? '<h3 class="csub">Linked Transactions</h3><div class="clinks">' + g.txns.map(function (t) { return '<a class="ub" data-ownfile="1" href="#/t/' + h(t.id) + '">' + h(t.title) + ' · ' + h(t.typeLabel) + ' · ' + h(t.status) + '</a>'; }).join('') + '</div>' : '') + '</div>' +
       '<div class="cgrid"><div class="card gb"><h3>Follow-Ups</h3><form id="rf" class="rform" novalidate><div class="f"><label for="rd">Date &amp; time</label><input type="datetime-local" id="rd" required></div><div class="f rnote"><label for="rn">Note</label><input type="text" id="rn" maxlength="300" placeholder="Call about…"></div><button class="btn" id="rb">Add Follow-Up</button></form><div id="re"></div>' +
       '<div id="rl">' + (g.reminders.length ? g.reminders.map(function (r) { return remRow(r, c, false); }).join('') : '<div class="uempty">No follow-ups yet.</div>') + '</div></div>' +
@@ -2178,6 +2179,11 @@ function bdayValue(m) {
   if (parseInt(d, 10) > max) return { err: 'That birthday date does not exist.' };
   return { v: (y ? y + '-' : '') + p2(mo) + '-' + p2(d) };
 }
+function spouseSection(c) {
+  var bits = [['Spouse/Partner First Name', c.spouseFirstName], ['Spouse/Partner Last Name', c.spouseLastName], ['Spouse/Partner Phone', c.spousePhone], ['Spouse/Partner Email', c.spouseEmail]].filter(function (x) { return String(x[1] || '').trim(); });
+  if (!bits.length) return '';
+  return '<div class="spouse"><h3 class="csub">Spouse/Partner</h3><div class="kv">' + bits.map(function (x) { return '<div><span>' + h(x[0]) + '</span><b>' + h(x[1]) + '</b></div>'; }).join('') + '</div></div>';
+}
 function clientForm(c, d, linked, curLender) {
   var isNew = !c; c = c || { type: '', status: 'New Lead', tags: [], groups: [], txnIds: [] };
   var ownerId = c.ownerId || (d.admin ? (CRM_UI.agentId || S.user.id) : S.user.id);
@@ -2185,6 +2191,7 @@ function clientForm(c, d, linked, curLender) {
   var inp = function (id, l, v, type, extra) { return '<div class="f' + (extra || '') + '"><label for="' + id + '">' + l + '</label><input type="' + (type || 'text') + '" id="' + id + '" value="' + h(v || '') + '"' + (type === 'email' ? ' autocapitalize="none" spellcheck="false"' : '') + '></div>'; };
   var m = modal('<h2>' + (isNew ? 'Add Client' : 'Edit Client') + '</h2><div id="ce"></div><form id="cf" novalidate><div class="fgrid">' +
     inp('cfF', 'First name', c.firstName) + inp('cfL', 'Last name', c.lastName) + '<div class="f"><label for="cfP">Phone</label><input type="tel" id="cfP" inputmode="tel" autocomplete="tel-national" placeholder="000-000-0000" maxlength="12" value="' + h(c.phone || '') + '"></div>' + inp('cfE', 'Email', c.email, 'email', ' w2') + inp('cfA', 'Address', c.address, 'text', ' w3') + (S.crmBday ? bdayFields(c.birthday) : '') +
+    '<div class="f w3"><h3 class="csub">Spouse/Partner</h3></div>' + inp('cfSF', 'Spouse/Partner First Name', c.spouseFirstName) + inp('cfSL', 'Spouse/Partner Last Name', c.spouseLastName) + '<div class="f"><label for="cfSP">Spouse/Partner Phone</label><input type="tel" id="cfSP" inputmode="tel" autocomplete="tel" placeholder="000-000-0000" maxlength="12" value="' + h(c.spousePhone || '') + '"></div>' + inp('cfSE', 'Spouse/Partner Email', c.spouseEmail, 'email', ' w2') +
     '<div class="f"><label for="cfT">Client type <span class="req">*</span></label><select id="cfT">' + opt('', 'Choose…', c.type) + Object.keys(d.types).map(function (k) { return opt(k, d.types[k], c.type); }).join('') + '</select></div>' +
     '<div class="f"><label for="cfS">Status</label><select id="cfS">' + d.statuses.map(function (s) { return opt(s, s, c.status); }).join('') + '</select></div>' +
     '<div class="f"><label for="cfSo">Source</label><input type="text" id="cfSo" list="cfSoL" maxlength="60" value="' + h(c.source || '') + '"><datalist id="cfSoL">' + d.sources.map(function (s) { return '<option value="' + h(s) + '">'; }).join('') + '</datalist></div>' +
@@ -2248,6 +2255,7 @@ function clientForm(c, d, linked, curLender) {
   }
   drawPicks();
   wirePhone(qs('#cfP', m));
+  wirePhone(qs('#cfSP', m));
   if (qs('#cfO', m)) qs('#cfO', m).onchange = function () { if (qs('#cfLnew', m)) qs('#cfLnew', m).innerHTML = ''; drawPicks(); };
   if (LO) {
     qs('#cfLq', m).addEventListener('input', drawLenders);
@@ -2258,10 +2266,10 @@ function clientForm(c, d, linked, curLender) {
   }
   function save(allowDup) {
     var v = function (id) { return qs(id, m) ? qs(id, m).value.trim() : ''; };
-    var client = { firstName: v('#cfF'), lastName: v('#cfL'), phone: v('#cfP'), email: v('#cfE'), address: v('#cfA'), type: v('#cfT'), status: v('#cfS'), source: v('#cfSo'), tags: v('#cfTg'), groups: sel.g, txnIds: sel.x };
+    var client = { firstName: v('#cfF'), lastName: v('#cfL'), phone: v('#cfP'), email: v('#cfE'), address: v('#cfA'), spouseFirstName: v('#cfSF'), spouseLastName: v('#cfSL'), spousePhone: v('#cfSP'), spouseEmail: v('#cfSE'), type: v('#cfT'), status: v('#cfS'), source: v('#cfSo'), tags: v('#cfTg'), groups: sel.g, txnIds: sel.x };
     if (LO) client.lenderId = sel.l;   // only sent when lenders are on, so older backends never see it
     var bdv = S.crmBday ? bdayValue(m) : null; if (bdv) client.birthday = bdv.v;
-    var err = bdv && bdv.err ? bdv.err : !client.firstName && !client.lastName ? 'Enter a first or last name.' : !client.type ? 'Choose a client type.' : !phoneOk(client.phone) ? PHONE_ERR : (client.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(client.email)) ? 'Email address is not valid.' : '';
+    var err = bdv && bdv.err ? bdv.err : !client.firstName && !client.lastName ? 'Enter a first or last name.' : !client.type ? 'Choose a client type.' : !phoneOk(client.phone) || !phoneOk(client.spousePhone) ? PHONE_ERR : (client.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(client.email)) || (client.spouseEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(client.spouseEmail)) ? 'Email address is not valid.' : '';
     if (err) { qs('#ce', m).innerHTML = '<div class="err">' + h(err) + '</div>'; return; }
     if (isNew) client.note = v('#cfN');
     var b = qs('#cfB', m); b.disabled = true;
@@ -2287,8 +2295,8 @@ function exportModal(d) {
   };
 }
 
-var CRM_TEMPLATE_L = 'First Name,Last Name,Phone,Email,Address,City,State,Zip,Client Type,Source,Status,Tags,Groups,Note,Lender,Lender Company,Lender Phone,Lender Email,Lender NMLS #\r\nJane,Sample,(951) 555-0100,jane@example.com,123 Main St,Riverside,CA,92501,Buyer,Referral,New Lead,"first-time, vip",Open House Oct,Pre-approved up to 600k,Lisa Lender,Sample Mortgage Co,951-555-0199,lisa@example.com,123456\r\n';
-var CRM_TEMPLATE = 'First Name,Last Name,Phone,Email,Address,City,State,Zip,Client Type,Source,Status,Tags,Groups,Note\r\nJane,Sample,(951) 555-0100,jane@example.com,123 Main St,Riverside,CA,92501,Buyer,Referral,New Lead,"first-time, vip",Open House Oct,Pre-approved up to 600k\r\n';
+var CRM_TEMPLATE_L = 'First Name,Last Name,Phone,Email,Address,City,State,Zip,Client Type,Source,Status,Tags,Groups,Note,Spouse/Partner First Name,Spouse/Partner Last Name,Spouse/Partner Phone,Spouse/Partner Email,Lender,Lender Company,Lender Phone,Lender Email,Lender NMLS #\r\nJane,Sample,(951) 555-0100,jane@example.com,123 Main St,Riverside,CA,92501,Buyer,Referral,New Lead,"first-time, vip",Open House Oct,Pre-approved up to 600k,Sam,Sample,951-555-0102,sam@example.com,Lisa Lender,Sample Mortgage Co,951-555-0199,lisa@example.com,123456\r\n';
+var CRM_TEMPLATE = 'First Name,Last Name,Phone,Email,Address,City,State,Zip,Client Type,Source,Status,Tags,Groups,Note,Spouse/Partner First Name,Spouse/Partner Last Name,Spouse/Partner Phone,Spouse/Partner Email\r\nJane,Sample,(951) 555-0100,jane@example.com,123 Main St,Riverside,CA,92501,Buyer,Referral,New Lead,"first-time, vip",Open House Oct,Pre-approved up to 600k,Sam,Sample,951-555-0102,sam@example.com\r\n';
 function importModal(d) {
   var st = { csv: '', name: '', mapping: null, owner: d.admin ? (CRM_UI.agentId || S.user.id) : '' };
   var opt = function (v, l, cur) { return '<option value="' + h(v) + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + h(l) + '</option>'; };
