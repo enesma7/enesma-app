@@ -1096,23 +1096,59 @@
     { id: 'allura', family: 'ENESMA Allura', file: 'assets/Allura-Regular.ttf', label: 'Allura' },
     { id: 'sacramento', family: 'ENESMA Sacramento', file: 'assets/Sacramento-Regular.ttf', label: 'Sacramento' }
   ];
+  var SYSTEM_CURSIVE = 'cursive, "Segoe Script", "Apple Chancery", "Snell Roundhand", "Lucida Handwriting", "Comic Sans MS"';
+  var SIG_FONT_TIMEOUT_MS = 4000;
   var sigFontReady = {};
+  function sigFontSrc_(font) {
+    try { return 'url("' + new URL(font.file, document.baseURI).href + '")'; }
+    catch (e) { return 'url("' + font.file + '")'; }
+  }
+  function fontsCheck_(family) {
+    try { return !!(document.fonts && document.fonts.check('48px "' + family + '"')); }
+    catch (e) { return false; }
+  }
   function loadSigFont(font) {
     if (sigFontReady[font.id]) return sigFontReady[font.id];
     if (typeof FontFace !== 'function' || !document.fonts || !document.fonts.add) {
-      sigFontReady[font.id] = Promise.reject(new Error('This browser cannot load the signature font.'));
-      return sigFontReady[font.id];
+      return Promise.reject(new Error('This browser cannot load the signature font.'));
     }
-    sigFontReady[font.id] = new FontFace(font.family, 'url(' + font.file + ')').load().then(function (face) {
-      document.fonts.add(face);
-      if (!document.fonts.check('48px "' + font.family + '"')) throw new Error('The signature font did not load.');
-      return font;
+    var p = new Promise(function (resolve, reject) {
+      var settled = false, timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        reject(new Error('The signature font took too long to load.'));
+      }, SIG_FONT_TIMEOUT_MS);
+      var face;
+      try { face = new FontFace(font.family, sigFontSrc_(font)); }
+      catch (err) { settled = true; clearTimeout(timer); return reject(err); }
+      face.load().then(function (loaded) {
+        try { document.fonts.add(loaded); } catch (e2) {}
+        var start = Date.now();
+        (function tick() {
+          if (settled) return;
+          if (fontsCheck_(font.family) || Date.now() - start >= 800) {
+            settled = true;
+            clearTimeout(timer);
+            // FontFace.load already resolved; a flaky document.fonts.check must not fail the load.
+            resolve(font);
+          } else setTimeout(tick, 50);
+        })();
+      }, function (err) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(err);
+      });
+    });
+    sigFontReady[font.id] = p.then(function (font) { return font; }, function (err) {
+      if (sigFontReady[font.id] === p) delete sigFontReady[font.id];
+      throw err;
     });
     return sigFontReady[font.id];
   }
   function fontIsCursive(family, sample) {
     var c = document.createElement('canvas').getContext('2d');
-    c.font = '48px "' + family + '"';
+    c.font = '48px "' + family + '", cursive';
     var script = c.measureText(sample || 'Jordan Hale').width;
     c.font = '48px Times, "Times New Roman", serif';
     var serif = c.measureText(sample || 'Jordan Hale').width;
@@ -1123,18 +1159,61 @@
     var isSig = kind === 'signature', mode = 'type', W = isSig ? 600 : 300, H = isSig ? 180 : 150;
     var txt = h('input', { type: 'text', maxlength: 60, value: isSig ? name : initials(name), 'aria-label': isSig ? 'Your name' : 'Your initials' });
     var chosen = SIG_FONTS[0];
+    var fontCss = '"' + chosen.family + '"';
+    var fontReady = false;
+    var fontHint = h('p', { class: 'hint', style: { display: 'none', margin: '0 0 8px' } });
     var prev = h('div', { class: 'typed', style: { fontFamily: 'sans-serif' } });
     function showTyped() { prev.textContent = txt.value || ' '; }
-    txt.addEventListener('input', function () { if (prev.dataset.ready === '1') showTyped(); });
-    var cv = h('canvas'), pad = h('div', { class: 'pad' }, cv, h('div', { class: 'base' }), h('button', { class: 'btn sm plain clr', type: 'button', onclick: function () { strokes = []; redraw(); } }, 'Clear'));
-    var strokes = [], cur = null, ctx = cv.getContext('2d');
+    txt.addEventListener('input', function () { if (prev.dataset.ready === '1') showTyped(); syncAdopt(); });
+    var cv = h('canvas'), pad = h('div', { class: 'pad' }, cv, h('div', { class: 'base' }), h('button', { class: 'btn sm plain clr', type: 'button', onclick: function () { strokes = []; cur = null; redraw(); syncAdopt(); } }, 'Clear'));
+    var strokes = [], cur = null, ctx = cv.getContext('2d'), drawing = false;
     function fit() { var r = cv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); cv.width = Math.max(1, r.width * d); cv.height = Math.max(1, r.height * d); redraw(); }
     function redraw() { var d = cv.width / (cv.getBoundingClientRect().width || 1); ctx.setTransform(d, 0, 0, d, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.lineCap = ctx.lineJoin = 'round'; ctx.strokeStyle = '#000007'; ctx.lineWidth = 2.6;
       strokes.forEach(function (s) { ctx.beginPath(); s.forEach(function (p, i) { if (!i) ctx.moveTo(p[0], p[1]); else { var q = s[i - 1]; ctx.quadraticCurveTo(q[0], q[1], (q[0] + p[0]) / 2, (q[1] + p[1]) / 2); } }); if (s.length === 1) ctx.lineTo(s[0][0] + 0.1, s[0][1] + 0.1); ctx.stroke(); }); }
-    function pt(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
-    cv.addEventListener('pointerdown', function (e) { e.preventDefault(); cv.setPointerCapture(e.pointerId); cur = [pt(e)]; strokes.push(cur); redraw(); });
-    cv.addEventListener('pointermove', function (e) { if (!cur) return; cur.push(pt(e)); redraw(); });
-    ['pointerup', 'pointercancel'].forEach(function (ev) { cv.addEventListener(ev, function () { cur = null; }); });
+    function pt(e) { var r = cv.getBoundingClientRect(), x = e.clientX, y = e.clientY;
+      if ((x == null || y == null) && e.touches && e.touches[0]) { x = e.touches[0].clientX; y = e.touches[0].clientY; }
+      return [x - r.left, y - r.top];
+    }
+    function hasStroke() { return strokes.some(function (s) { return s && s.length; }); }
+    function syncAdopt() {
+      if (!ok) return;
+      if (mode === 'draw') ok.disabled = !hasStroke();
+      else ok.disabled = !(fontReady && String(txt.value || '').trim());
+    }
+    function strokeStart(e) {
+      if (drawing) return;
+      if (e.button != null && e.button !== 0) return;
+      drawing = true;
+      try { e.preventDefault(); } catch (err) {}
+      if (e.pointerId != null && cv.setPointerCapture) try { cv.setPointerCapture(e.pointerId); } catch (err2) {}
+      cur = [pt(e)];
+      strokes.push(cur);
+      redraw();
+      syncAdopt();
+    }
+    function strokeMove(e) {
+      if (!drawing || !cur) return;
+      try { e.preventDefault(); } catch (err) {}
+      cur.push(pt(e));
+      redraw();
+    }
+    function unbindMouse() {
+      window.removeEventListener('mousemove', strokeMove);
+      window.removeEventListener('mouseup', strokeEnd);
+    }
+    function strokeEnd() { drawing = false; cur = null; unbindMouse(); syncAdopt(); }
+    cv.addEventListener('pointerdown', strokeStart);
+    cv.addEventListener('pointermove', strokeMove);
+    cv.addEventListener('pointerup', strokeEnd);
+    cv.addEventListener('pointercancel', strokeEnd);
+    // Mouse fallback when PointerEvent is missing. If PointerEvent exists, Chrome already
+    // sends pointer events for mouse, so ignore the compatibility mouse events to avoid double strokes.
+    cv.addEventListener('mousedown', function (e) {
+      if (window.PointerEvent) return;
+      strokeStart(e);
+      window.addEventListener('mousemove', strokeMove);
+      window.addEventListener('mouseup', strokeEnd);
+    });
     var fontSeg = h('div', { class: 'seg sigfonts', style: { margin: '8px 0 12px' } });
     function paintFontButtons() {
       clear(fontSeg);
@@ -1142,18 +1221,46 @@
         fontSeg.appendChild(h('button', { type: 'button', class: font.id === chosen.id ? 'on' : '', onclick: function () { chooseFont(font); } }, font.label));
       });
     }
+    function useFallback(reason) {
+      fontCss = SYSTEM_CURSIVE;
+      fontReady = true;
+      prev.style.fontFamily = SYSTEM_CURSIVE;
+      prev.dataset.ready = '1';
+      showTyped();
+      fontHint.style.display = '';
+      fontHint.textContent = (chosen.label || 'That font') + ' did not load. You can still adopt a typed signature in a system cursive font, or switch to Draw.';
+      syncAdopt();
+    }
     function chooseFont(font) {
-      chosen = font; prev.dataset.ready = ''; prev.style.fontFamily = 'sans-serif'; prev.textContent = 'Loading signature font…'; if (ok) ok.disabled = true; paintFontButtons();
+      chosen = font;
+      fontReady = false;
+      fontCss = '"' + font.family + '"';
+      prev.dataset.ready = '';
+      prev.style.fontFamily = 'sans-serif';
+      prev.textContent = 'Loading signature font…';
+      fontHint.style.display = 'none';
+      fontHint.textContent = '';
+      paintFontButtons();
+      if (mode !== 'draw') { if (ok) ok.disabled = true; }
+      var wait = setTimeout(function () { if (chosen.id === font.id && !fontReady) useFallback('timeout'); }, SIG_FONT_TIMEOUT_MS);
       loadSigFont(font).then(function () {
+        clearTimeout(wait);
         if (chosen.id !== font.id) return;
-        prev.style.fontFamily = '"' + font.family + '"'; prev.dataset.ready = '1'; showTyped(); if (ok) ok.disabled = false;
+        fontCss = '"' + font.family + '"';
+        fontReady = true;
+        prev.style.fontFamily = fontCss;
+        prev.dataset.ready = '1';
+        fontHint.style.display = 'none';
+        showTyped();
+        syncAdopt();
       }, function () {
+        clearTimeout(wait);
         if (chosen.id !== font.id) return;
-        prev.textContent = 'This signature font did not load.'; prev.dataset.ready = ''; if (ok) ok.disabled = true;
+        useFallback('error');
       });
     }
-    var typeBox = h('div', null, h('div', { class: 'f' }, h('label', null, isSig ? 'Type your name' : 'Type your initials'), txt), fontSeg, prev), drawBox = h('div', { class: 'hidden' }, h('p', { class: 'hint', style: { marginTop: 0 } }, 'Draw with your finger, mouse or stylus.'), pad);
-    var seg = h('div', { class: 'seg', style: { marginBottom: '14px' } }, [['type', 'Type'], ['draw', 'Draw']].map(function (m) { return h('button', { type: 'button', class: m[0] === mode ? 'on' : '', onclick: function (e) { mode = m[0]; Array.prototype.forEach.call(seg.children, function (b) { b.className = ''; }); e.currentTarget.className = 'on'; typeBox.classList.toggle('hidden', mode !== 'type'); drawBox.classList.toggle('hidden', mode !== 'draw'); if (mode === 'draw') setTimeout(fit, 20); } }, m[1]); }));
+    var typeBox = h('div', null, h('div', { class: 'f' }, h('label', null, isSig ? 'Type your name' : 'Type your initials'), txt), fontSeg, fontHint, prev), drawBox = h('div', { class: 'hidden' }, h('p', { class: 'hint', style: { marginTop: 0 } }, 'Draw with your finger, mouse or stylus.'), pad);
+    var seg = h('div', { class: 'seg', style: { marginBottom: '14px' } }, [['type', 'Type'], ['draw', 'Draw']].map(function (m) { return h('button', { type: 'button', class: m[0] === mode ? 'on' : '', onclick: function (e) { mode = m[0]; Array.prototype.forEach.call(seg.children, function (b) { b.className = ''; }); e.currentTarget.className = 'on'; typeBox.classList.toggle('hidden', mode !== 'type'); drawBox.classList.toggle('hidden', mode !== 'draw'); if (mode === 'draw') setTimeout(function () { fit(); syncAdopt(); }, 20); else syncAdopt(); } }, m[1]); }));
     var msg = h('div');
     var ok = h('button', { class: 'btn red', type: 'button', disabled: true, onclick: function () {
       clear(msg);
@@ -1162,7 +1269,7 @@
         closeModal(); cb(out.toDataURL('image/png'));
       }
       if (mode !== 'type') {
-        if (!strokes.length) return msg.appendChild(errBox('Draw your ' + (isSig ? 'signature' : 'initials') + '.'));
+        if (!hasStroke()) return msg.appendChild(errBox('Draw your ' + (isSig ? 'signature' : 'initials') + '.'));
         var outd = document.createElement('canvas'), od = outd.getContext('2d'); outd.width = W; outd.height = H;
         var b = cropBox(cv); if (!b) return msg.appendChild(errBox('Draw your ' + (isSig ? 'signature' : 'initials') + '.'));
         var sc = Math.min((W - 20) / b.w, (H - 20) / b.h); od.drawImage(cv, b.x, b.y, b.w, b.h, (W - b.w * sc) / 2, (H - b.h * sc) / 2, b.w * sc, b.h * sc);
@@ -1170,19 +1277,31 @@
       }
       var t = txt.value.trim(); if (!t) return msg.appendChild(errBox('Type your ' + (isSig ? 'name' : 'initials') + '.'));
       ok.disabled = true;
-      loadSigFont(chosen).then(function (font) {
-        if (!document.fonts.check('48px "' + font.family + '"') || !fontIsCursive(font.family)) throw new Error('The signature font did not load. Choose it again when it is ready.');
+      function paintTyped(css) {
         var out = document.createElement('canvas'), o = out.getContext('2d'); out.width = W; out.height = H;
-        var fs = H * 0.62; o.font = fs + 'px "' + font.family + '"';
-        while (o.measureText(t).width > W - 30 && fs > 20) { fs -= 2; o.font = fs + 'px "' + font.family + '"'; }
-        if (!fontIsCursive(font.family)) throw new Error('The signature font did not load. Choose it again when it is ready.');
+        var fs = H * 0.62; o.font = fs + 'px ' + css;
+        while (o.measureText(t).width > W - 30 && fs > 20) { fs -= 2; o.font = fs + 'px ' + css; }
         o.fillStyle = '#000007'; o.textBaseline = 'middle'; o.fillText(t, 15, H * 0.55);
         finishPng(out);
-      }, function (err) { ok.disabled = false; msg.appendChild(errBox(err.message || 'The signature font did not load.')); });
+      }
+      var preferred = '"' + chosen.family + '"';
+      loadSigFont(chosen).then(function (font) {
+        var css = '"' + font.family + '"';
+        if (fontsCheck_(font.family) && fontIsCursive(font.family, t)) return paintTyped(css);
+        // Loaded file but a flaky check: still try the family, then system cursive if the canvas didn't pick it up.
+        if (fontsCheck_(font.family)) return paintTyped(css);
+        paintTyped(SYSTEM_CURSIVE);
+      }, function () {
+        paintTyped(SYSTEM_CURSIVE);
+      }).catch(function (err) {
+        ok.disabled = false;
+        msg.appendChild(errBox(err.message || 'The signature font did not load.'));
+      });
     } }, isSig ? 'Adopt and sign' : 'Adopt initials');
     paintFontButtons(); chooseFont(chosen);
     openModal(isSig ? 'Adopt your signature' : 'Adopt your initials', h('div', null, seg, typeBox, drawBox, msg, h('p', { class: 'hint' }, 'By selecting Adopt, I agree this mark is my electronic ' + (isSig ? 'signature' : 'initials') + ' for every ' + (isSig ? 'signature' : 'initials') + ' field in these documents.'), h('div', { class: 'actions' }, ok)), { sticky: true, noFocus: true });
   }
+
   function cropBox(c) {
     var w = c.width, hh = c.height, d = c.getContext('2d').getImageData(0, 0, w, hh).data, x0 = w, y0 = hh, x1 = -1, y1 = -1;
     for (var y = 0; y < hh; y++) for (var x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
