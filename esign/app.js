@@ -1019,7 +1019,13 @@
         pending = true; go2.disabled = true;
         api('signConsent', { token: token, consent: true, ip: ip, userAgent: navigator.userAgent.slice(0, 250) })
           .then(function () { pending = false; go2.disabled = !cb.checked; })
-          .catch(function (err) { pending = false; cb.checked = false; go2.disabled = true; toast(err.message); });
+          .catch(function (err) {
+            // 1.2.2 backends have no signConsent; Finish still sends consent:true.
+            var stale = err && (err.code === 'BAD_REQUEST' || /unknown action/i.test(err.message || ''));
+            pending = false;
+            if (stale) { go2.disabled = !cb.checked; return; }
+            cb.checked = false; go2.disabled = true; toast(err.message);
+          });
       });
       $app.appendChild(h('div', { class: 'consent card' }, h('img', { src: 'assets/esign-logo-light.svg', alt: 'ENESMA E-Sign', style: { width: '180px', display: 'block', marginBottom: '16px' } }),
         h('h1', { class: 'dochead', style: { fontSize: '22px' } }, X.envelope.name), h('p', { class: 'sub' }, X.envelope.sender + ' (' + X.envelope.senderEmail + ') sent you documents to review and sign.'),
