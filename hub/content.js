@@ -544,7 +544,7 @@ window.HUB_CONTENT = {
         { "label": "Facebook", "href": "https://www.facebook.com/enesma7/" },
         { "label": "Instagram", "href": "https://www.instagram.com/enesma7/" },
         { "label": "TikTok", "href": "https://www.tiktok.com/@enesma7" },
-        { "label": "X", "href": "https://x.com/enesma909" },
+        { "label": "X", "href": "https://x.com/enesma7_" },
         { "label": "LinkedIn", "href": "https://www.linkedin.com/in/enesma7" },
         { "label": "YouTube", "href": "https://www.youtube.com/@enesma7" },
         { "label": "Zillow", "href": "https://www.zillow.com/profile/ENESMA#reviews" }
