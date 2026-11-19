@@ -1,8 +1,5 @@
 /* ENESMA E-Sign. Palette: Rocket Black #000007, Universal White #FBFBFB, Aztec Gold gradient, Illyrian Red gradient (gold/red always gradients). */
 @font-face{font-family:'Inter';src:url(assets/Inter.ttf) format('truetype');font-weight:100 900;font-display:swap}
-@font-face{font-family:'ENESMA Great Vibes';src:url(assets/GreatVibes-Regular.ttf) format('truetype');font-display:block}
-@font-face{font-family:'ENESMA Allura';src:url(assets/Allura-Regular.ttf) format('truetype');font-display:block}
-@font-face{font-family:'ENESMA Sacramento';src:url(assets/Sacramento-Regular.ttf) format('truetype');font-display:block}
 :root{--k:#000007;--w:#FBFBFB;--black:#000007;--white:#FBFBFB;--gold-a:#EAD59E;--gold-b:#D5BE87;--gold:linear-gradient(135deg,#EAD59E,#D5BE87);--red-a:#EF0207;--red-b:#9A0007;--red:linear-gradient(135deg,#EF0207,#9A0007);--line:rgba(0,0,7,.14);--soft:rgba(0,0,7,.62);--tint:rgba(0,0,7,.04);--max:1120px;--radius:8px;--nav-h:64px;--gap:22px;--section-pad:64px}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--w);color:var(--k);font-family:Inter,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;padding-bottom:env(safe-area-inset-bottom)}
