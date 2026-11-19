@@ -1091,77 +1091,103 @@
     for (i = 0; i < lines.length; i++) { var s = lines[i].replace(/\s+/g, ' ').trim(); if (s) return s; }
     return 'this document';
   }
+  // Signature styles load only through FontFace (no CSS @font-face twin): a duplicate, never-used CSS
+  // face kept document.fonts.check() false, which sent every typed signature to the plain system fallback.
   var SIG_FONTS = [
-    { id: 'great-vibes', family: 'ENESMA Great Vibes', file: 'assets/GreatVibes-Regular.ttf', label: 'Great Vibes' },
-    { id: 'allura', family: 'ENESMA Allura', file: 'assets/Allura-Regular.ttf', label: 'Allura' },
-    { id: 'sacramento', family: 'ENESMA Sacramento', file: 'assets/Sacramento-Regular.ttf', label: 'Sacramento' }
+    { id: 'great-vibes', family: 'ENESMA Great Vibes', file: 'assets/GreatVibes-Regular.woff2', ttf: 'assets/GreatVibes-Regular.ttf', label: 'Great Vibes' },
+    { id: 'allura', family: 'ENESMA Allura', file: 'assets/Allura-Regular.woff2', ttf: 'assets/Allura-Regular.ttf', label: 'Allura' },
+    { id: 'sacramento', family: 'ENESMA Sacramento', file: 'assets/Sacramento-Regular.woff2', ttf: 'assets/Sacramento-Regular.ttf', label: 'Sacramento' }
   ];
-  var SYSTEM_CURSIVE = 'cursive, "Segoe Script", "Apple Chancery", "Snell Roundhand", "Lucida Handwriting", "Comic Sans MS"';
-  var SIG_FONT_TIMEOUT_MS = 4000;
+  var SIG_FONT_TIMEOUT_MS = 20000;
+  var SIG_FONT_TRIES = 2;
+  var SIG_PROBE = 'Jordan Hale Signature';
   var sigFontReady = {};
+  function absUrl_(file) {
+    try { return new URL(file, document.baseURI).href; } catch (e) { return file; }
+  }
   function sigFontSrc_(font) {
-    try { return 'url("' + new URL(font.file, document.baseURI).href + '")'; }
-    catch (e) { return 'url("' + font.file + '")'; }
+    return 'url("' + absUrl_(font.file) + '") format("woff2"), url("' + absUrl_(font.ttf) + '") format("truetype")';
   }
-  function fontsCheck_(family) {
-    try { return !!(document.fonts && document.fonts.check('48px "' + family + '"')); }
-    catch (e) { return false; }
+  /** True only when the canvas really draws `sample` in the bundled family (no generic fallback glyphs). */
+  function sigFontRenders(family, sample) {
+    try {
+      var c = document.createElement('canvas').getContext('2d'), q = '"' + family + '"';
+      var w = function (f, s) { c.font = '48px ' + f; return c.measureText(s).width; };
+      var near = function (x, y) { return Math.abs(x - y) < 0.01; };
+      // The face itself must be live: it must not measure like plain serif or sans.
+      var p = w(q + ', monospace', SIG_PROBE);
+      if (!near(p, w(q + ', serif', SIG_PROBE))) return false;
+      if (Math.abs(p - w('serif', SIG_PROBE)) <= 2 || Math.abs(p - w('sans-serif', SIG_PROBE)) <= 2) return false;
+      // Every character must come from the face. A missing glyph measures exactly like the generic
+      // font it falls back to, under both a monospace and a serif fallback.
+      var seen = {}, chars = Array.from(String(sample || SIG_PROBE));
+      for (var i = 0; i < chars.length; i++) {
+        var ch = chars[i];
+        if (/\s/.test(ch) || seen[ch]) continue;
+        seen[ch] = 1;
+        var qm = w(q + ', monospace', ch), qs = w(q + ', serif', ch);
+        if (!near(qm, qs)) return false;
+        if (near(qm, w('monospace', ch)) && near(qs, w('serif', ch))) return false;
+      }
+      return true;
+    } catch (e) { return false; }
   }
-  function loadSigFont(font) {
-    if (sigFontReady[font.id]) return sigFontReady[font.id];
-    if (typeof FontFace !== 'function' || !document.fonts || !document.fonts.add) {
-      return Promise.reject(new Error('This browser cannot load the signature font.'));
-    }
-    var p = new Promise(function (resolve, reject) {
+  function loadSigFontOnce_(font) {
+    return new Promise(function (resolve, reject) {
       var settled = false, timer = setTimeout(function () {
         if (settled) return;
         settled = true;
-        reject(new Error('The signature font took too long to load.'));
+        reject(new Error('The signature style took too long to load.'));
       }, SIG_FONT_TIMEOUT_MS);
       var face;
-      try { face = new FontFace(font.family, sigFontSrc_(font)); }
+      try { face = new FontFace(font.family, sigFontSrc_(font), { display: 'block' }); }
       catch (err) { settled = true; clearTimeout(timer); return reject(err); }
       face.load().then(function (loaded) {
+        if (settled) return;
         try { document.fonts.add(loaded); } catch (e2) {}
         var start = Date.now();
         (function tick() {
           if (settled) return;
-          if (fontsCheck_(font.family) || Date.now() - start >= 800) {
-            settled = true;
-            clearTimeout(timer);
-            // FontFace.load already resolved; a flaky document.fonts.check must not fail the load.
-            resolve(font);
-          } else setTimeout(tick, 50);
+          if (sigFontRenders(font.family)) { settled = true; clearTimeout(timer); return resolve(font); }
+          if (Date.now() - start > 3000) { settled = true; clearTimeout(timer); return reject(new Error('The signature style did not render.')); }
+          setTimeout(tick, 50);
         })();
       }, function (err) {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        reject(err);
+        reject(err || new Error('The signature style did not load.'));
       });
     });
-    sigFontReady[font.id] = p.then(function (font) { return font; }, function (err) {
-      if (sigFontReady[font.id] === p) delete sigFontReady[font.id];
-      throw err;
-    });
-    return sigFontReady[font.id];
   }
-  function fontIsCursive(family, sample) {
-    var c = document.createElement('canvas').getContext('2d');
-    c.font = '48px "' + family + '", cursive';
-    var script = c.measureText(sample || 'Jordan Hale').width;
-    c.font = '48px Times, "Times New Roman", serif';
-    var serif = c.measureText(sample || 'Jordan Hale').width;
-    return Math.abs(script - serif) > 2;
+  function loadSigFont(font) {
+    if (sigFontReady[font.id]) return sigFontReady[font.id];
+    if (typeof FontFace !== 'function' || !document.fonts || !document.fonts.add) {
+      return Promise.reject(new Error('This browser cannot load signature styles.'));
+    }
+    var tries = 0;
+    function attempt() {
+      tries++;
+      return loadSigFontOnce_(font).catch(function (err) {
+        if (tries < SIG_FONT_TRIES) return attempt();
+        throw err;
+      });
+    }
+    var p = attempt();
+    sigFontReady[font.id] = p;
+    p.catch(function () { if (sigFontReady[font.id] === p) delete sigFontReady[font.id]; });
+    return p;
+  }
+  function preloadSigFonts() {
+    SIG_FONTS.forEach(function (font) { loadSigFont(font).catch(function () {}); });
   }
   /** Adopt a signature or initials: draw, or type in one of three cursive fonts. Calls cb(pngDataUrl). */
   function signaturePad(kind, name, cb) {
     var isSig = kind === 'signature', mode = 'type', W = isSig ? 600 : 300, H = isSig ? 180 : 150;
     var txt = h('input', { type: 'text', maxlength: 60, value: isSig ? name : initials(name), 'aria-label': isSig ? 'Your name' : 'Your initials' });
     var chosen = SIG_FONTS[0];
-    var fontCss = '"' + chosen.family + '"';
     var fontReady = false;
-    var fontHint = h('p', { class: 'hint', style: { display: 'none', margin: '0 0 8px' } });
+    var fontHint = h('p', { class: 'hint', style: { display: 'none', margin: '0 0 8px' } }, h('span'));
     var prev = h('div', { class: 'typed', style: { fontFamily: 'sans-serif' } });
     function showTyped() { prev.textContent = txt.value || ' '; }
     txt.addEventListener('input', function () { if (prev.dataset.ready === '1') showTyped(); syncAdopt(); });
@@ -1178,7 +1204,16 @@
     function syncAdopt() {
       if (!ok) return;
       if (mode === 'draw') ok.disabled = !hasStroke();
-      else ok.disabled = !(fontReady && String(txt.value || '').trim());
+      else {
+        var tv = String(txt.value || '').trim();
+        var renders = fontReady && tv && sigFontRenders(chosen.family, tv);
+        ok.disabled = !renders;
+        if (fontReady && tv && !renders) {
+          fontHint.style.display = '';
+          fontHint.firstChild.textContent = 'Some Characters Are Not In This Signature Style. Remove Them Or Choose Draw To Sign.';
+          retryBtn.style.display = 'none';
+        } else if (fontReady) fontHint.style.display = 'none';
+      }
     }
     function strokeStart(e) {
       if (drawing) return;
@@ -1221,44 +1256,42 @@
         fontSeg.appendChild(h('button', { type: 'button', class: font.id === chosen.id ? 'on' : '', onclick: function () { chooseFont(font); } }, font.label));
       });
     }
-    function useFallback(reason) {
-      fontCss = SYSTEM_CURSIVE;
-      fontReady = true;
-      prev.style.fontFamily = SYSTEM_CURSIVE;
-      prev.dataset.ready = '1';
-      showTyped();
+    var retryBtn = h('button', { class: 'btn sm plain', type: 'button', style: { display: 'none', marginLeft: '8px' }, onclick: function () { chooseFont(chosen); } }, 'Try Again');
+    function fontFailed() {
+      fontReady = false;
+      prev.dataset.ready = '';
+      prev.style.fontFamily = 'sans-serif';
+      prev.textContent = '';
+      prev.appendChild(h('span', { style: { fontSize: '16px', color: 'var(--soft)' } }, 'Signature Style Unavailable'));
       fontHint.style.display = '';
-      fontHint.textContent = (chosen.label || 'That font') + ' did not load. You can still adopt a typed signature in a system cursive font, or switch to Draw.';
+      fontHint.firstChild.textContent = 'This Signature Style Could Not Load. Try Again, Pick Another Style, Or Choose Draw To Sign.';
+      retryBtn.style.display = '';
       syncAdopt();
     }
     function chooseFont(font) {
       chosen = font;
       fontReady = false;
-      fontCss = '"' + font.family + '"';
       prev.dataset.ready = '';
       prev.style.fontFamily = 'sans-serif';
-      prev.textContent = 'Loading signature font…';
+      prev.textContent = '';
+      prev.appendChild(h('span', { style: { fontSize: '16px', color: 'var(--soft)' } }, 'Loading Signature Styles…'));
       fontHint.style.display = 'none';
-      fontHint.textContent = '';
+      retryBtn.style.display = 'none';
       paintFontButtons();
-      if (mode !== 'draw') { if (ok) ok.disabled = true; }
-      var wait = setTimeout(function () { if (chosen.id === font.id && !fontReady) useFallback('timeout'); }, SIG_FONT_TIMEOUT_MS);
+      syncAdopt();
       loadSigFont(font).then(function () {
-        clearTimeout(wait);
         if (chosen.id !== font.id) return;
-        fontCss = '"' + font.family + '"';
         fontReady = true;
-        prev.style.fontFamily = fontCss;
+        prev.style.fontFamily = '"' + font.family + '"';
         prev.dataset.ready = '1';
-        fontHint.style.display = 'none';
         showTyped();
         syncAdopt();
       }, function () {
-        clearTimeout(wait);
         if (chosen.id !== font.id) return;
-        useFallback('error');
+        fontFailed();
       });
     }
+    fontHint.appendChild(retryBtn);
     var typeBox = h('div', null, h('div', { class: 'f' }, h('label', null, isSig ? 'Type your name' : 'Type your initials'), txt), fontSeg, fontHint, prev), drawBox = h('div', { class: 'hidden' }, h('p', { class: 'hint', style: { marginTop: 0 } }, 'Draw with your finger, mouse or stylus.'), pad);
     var seg = h('div', { class: 'seg', style: { marginBottom: '14px' } }, [['type', 'Type'], ['draw', 'Draw']].map(function (m) { return h('button', { type: 'button', class: m[0] === mode ? 'on' : '', onclick: function (e) { mode = m[0]; Array.prototype.forEach.call(seg.children, function (b) { b.className = ''; }); e.currentTarget.className = 'on'; typeBox.classList.toggle('hidden', mode !== 'type'); drawBox.classList.toggle('hidden', mode !== 'draw'); if (mode === 'draw') setTimeout(function () { fit(); syncAdopt(); }, 20); else syncAdopt(); } }, m[1]); }));
     var msg = h('div');
@@ -1277,25 +1310,21 @@
       }
       var t = txt.value.trim(); if (!t) return msg.appendChild(errBox('Type your ' + (isSig ? 'name' : 'initials') + '.'));
       ok.disabled = true;
-      function paintTyped(css) {
+      var family = chosen.family, css = '"' + family + '"';
+      function paintTyped() {
         var out = document.createElement('canvas'), o = out.getContext('2d'); out.width = W; out.height = H;
         var fs = H * 0.62; o.font = fs + 'px ' + css;
         while (o.measureText(t).width > W - 30 && fs > 20) { fs -= 2; o.font = fs + 'px ' + css; }
         o.fillStyle = '#000007'; o.textBaseline = 'middle'; o.fillText(t, 15, H * 0.55);
         finishPng(out);
       }
-      var preferred = '"' + chosen.family + '"';
-      loadSigFont(chosen).then(function (font) {
-        var css = '"' + font.family + '"';
-        if (fontsCheck_(font.family) && fontIsCursive(font.family, t)) return paintTyped(css);
-        // Loaded file but a flaky check: still try the family, then system cursive if the canvas didn't pick it up.
-        if (fontsCheck_(font.family)) return paintTyped(css);
-        paintTyped(SYSTEM_CURSIVE);
-      }, function () {
-        paintTyped(SYSTEM_CURSIVE);
+      // Never draw a typed mark in a plain font: paint only when the bundled script face is drawing every glyph.
+      loadSigFont(chosen).then(function () {
+        if (!sigFontRenders(family, t)) throw new Error('This Signature Style Cannot Draw Every Character. Choose Draw To Sign.');
+        paintTyped();
       }).catch(function (err) {
-        ok.disabled = false;
-        msg.appendChild(errBox(err.message || 'The signature font did not load.'));
+        syncAdopt();
+        msg.appendChild(errBox((err && /Signature Style|Draw/.test(err.message)) ? err.message : 'The Signature Style Did Not Load. Try Again Or Choose Draw To Sign.'));
       });
     } }, isSig ? 'Adopt and sign' : 'Adopt initials');
     paintFontButtons(); chooseFont(chosen);
@@ -1328,5 +1357,6 @@
     }).catch(function () { next(); });
   }
   /* ---------- boot ---------- */
+  setTimeout(preloadSigFonts, 0);
   if (!handleOAuthReturn()) { if (!location.hash) history.replaceState(null, '', '#/'); tryHubSso(render); }
 })();
