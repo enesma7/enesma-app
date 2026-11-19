@@ -1008,13 +1008,26 @@
       hero(justSigned ? 'Thank you, ' + X.signer.name.split(' ')[0] + '!' : 'You already signed', all ? 'Everyone has signed. You’ll get an email with the signed PDF and Certificate of Completion in a minute or two.' : 'Your signature is saved. When everyone has signed, you’ll get an email with the final signed PDF.');
     }
     function consentView() {
-      clear($app); var cb = h('input', { type: 'checkbox', id: 'cons' }), go2 = h('button', { class: 'btn red wide', type: 'button', disabled: true, onclick: docView }, 'Review & Sign');
-      cb.addEventListener('change', function () { go2.disabled = !cb.checked; });
+      clear($app);
+      var role = X.signer.roleLabel ? ' · ' + X.signer.roleLabel : '';
+      var disc = (X.disclosure && X.disclosure.text) || '';
+      var cb = h('input', { type: 'checkbox', id: 'cons' }), go2 = h('button', { class: 'btn red wide', type: 'button', disabled: true, onclick: docView }, 'Review & Sign');
+      var pending = false;
+      cb.addEventListener('change', function () {
+        go2.disabled = !cb.checked || pending || !disc;
+        if (!cb.checked) return;
+        pending = true; go2.disabled = true;
+        api('signConsent', { token: token, consent: true, ip: ip, userAgent: navigator.userAgent.slice(0, 250) })
+          .then(function () { pending = false; go2.disabled = !cb.checked; })
+          .catch(function (err) { pending = false; cb.checked = false; go2.disabled = true; toast(err.message); });
+      });
       $app.appendChild(h('div', { class: 'consent card' }, h('img', { src: 'assets/esign-logo-light.svg', alt: 'ENESMA E-Sign', style: { width: '180px', display: 'block', marginBottom: '16px' } }),
         h('h1', { class: 'dochead', style: { fontSize: '22px' } }, X.envelope.name), h('p', { class: 'sub' }, X.envelope.sender + ' (' + X.envelope.senderEmail + ') sent you documents to review and sign.'),
         X.envelope.message ? h('div', { class: 'ok', style: { whiteSpace: 'pre-wrap' } }, X.envelope.message) : null,
-        h('p', { class: 'hint' }, 'Signing as ', h('b', null, X.signer.name + ' · ' + X.signer.email), '. ' + X.fields.filter(isReq).length + ' required field' + (X.fields.filter(isReq).length === 1 ? '' : 's') + ' to complete.'),
-        h('label', { class: 'check', for: 'cons', style: { margin: '16px 0' } }, cb, h('span', null, 'I agree to use electronic records and signatures for these documents, and that my electronic signature is the legal equivalent of my handwritten signature (ESIGN Act / UETA). I can download a copy, and I may ask the sender for a paper copy.')),
+        h('p', { class: 'hint' }, 'Signing as ', h('b', null, X.signer.name + ' · ' + X.signer.email + role), '. ' + X.fields.filter(isReq).length + ' required field' + (X.fields.filter(isReq).length === 1 ? '' : 's') + ' to complete.'),
+        h('h2', { class: 'ersd-title' }, 'Electronic Record and Signature Disclosure'),
+        disc ? h('div', { class: 'disclosure', tabindex: '0' }, disc) : h('p', { class: 'hint' }, 'The disclosure could not be loaded. Refresh this page and try again.'),
+        h('label', { class: 'check', for: 'cons', style: { margin: '16px 0' } }, cb, h('span', null, 'I Agree to the Electronic Record and Signature Disclosure above. I agree to use electronic records and signatures for these documents, and that my electronic signature is the legal equivalent of my handwritten signature (ESIGN Act / UETA). I can download a copy, and I may ask the sender for a paper copy at no fee.')),
         go2, h('p', { style: { textAlign: 'center', marginTop: '14px' } }, h('button', { class: 'link', type: 'button', onclick: decline }, 'Decline to Sign'))));
     }
     function decline() {
@@ -1026,7 +1039,7 @@
     function docView() {
       clear($app); $app.className = 'wide';
       var pagesEl = h('div', { class: 'pages' }), prog = h('span', { class: 'p' }), nextB = h('button', { class: 'btn', type: 'button', onclick: nextField }, 'Next Field'), fin = h('button', { class: 'btn red', type: 'button', onclick: finish }, 'Finish');
-      add($app, [h('div', { class: 'sbar' }, h('div', { class: 't' }, h('b', { class: 'dochead' }, X.envelope.name), h('span', null, 'From ' + X.envelope.sender)), h('button', { class: 'link', type: 'button', onclick: decline }, 'Decline')),
+      add($app, [h('div', { class: 'sbar' }, h('div', { class: 't' }, h('b', { class: 'dochead' }, X.envelope.name), h('span', null, 'From ' + X.envelope.sender + (X.signer.roleLabel ? ' · Signing as ' + X.signer.roleLabel : ''))), h('button', { class: 'link', type: 'button', onclick: decline }, 'Decline')),
         h('div', { class: 'sdoc' }, pagesEl), h('div', { class: 'sfoot' }, prog, nextB, fin)]);
       var els = [];
       renderPdf(bytesFromB64(X.pdf), pagesEl).then(function (pages) {
