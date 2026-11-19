@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<title>Verify Completion Seal · ENESMA E-Sign</title>
+<meta name="description" content="Public certificate and SHA-256 fingerprint for the ENESMA Realty E-Sign completion seal.">
+<meta name="theme-color" content="#000007">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/favicon-32.png">
+<link rel="stylesheet" href="/shared/enesma-layout.css?v=1">
+<style>
+  body { background:#000007; color:#FBFBFB; font-family: Inter, "Helvetica Neue", Helvetica, Arial, sans-serif; margin:0; line-height:1.6; }
+  main { max-width: 760px; margin: 40px auto 80px; padding: 0 24px; }
+  h1 { color:#EAD59E; text-transform:uppercase; letter-spacing:.12em; font-size:1.35rem; margin: 0 0 8px; }
+  h2 { color:#EAD59E; font-size:1.05rem; margin: 28px 0 8px; }
+  a { color:#D5BE87; }
+  .lede { color:#c8c8c8; margin-bottom: 24px; }
+  .card { background:#0b0b12; border:1px solid #2a2a33; border-radius:10px; padding:16px 18px; margin: 12px 0; }
+  .label { color:#9a9aa3; font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; margin:0 0 6px; }
+  .value, .pem { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.85rem; word-break:break-all; white-space:pre-wrap; margin:0; }
+  .pem { max-height: 280px; overflow:auto; }
+  .status { margin: 12px 0 20px; }
+  .ok { color:#8fce8f; }
+  .err { color:#e09090; }
+  .muted { color:#9a9aa3; }
+  ol { padding-left: 1.2em; }
+  footer { margin-top: 36px; color:#9a9aa3; font-size:.9rem; }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="../">Back to ENESMA E-Sign</a></p>
+  <h1>Verify Completion Seal</h1>
+  <p class="lede">This page shows the public certificate used by ENESMA Realty E-Sign to apply an invisible self-signed PKCS#7 completion seal to finished documents. Compare the SHA-256 fingerprint below with the one printed in the Certificate of Completion footer, or with the signature certificate in Adobe Acrobat or pdfsig.</p>
+  <p id="status" class="status muted">Loading the public seal certificate…</p>
+  <div id="info" hidden>
+    <div class="card">
+      <p class="label">Subject</p>
+      <p id="subject" class="value"></p>
+    </div>
+    <div class="card">
+      <p class="label">Issuer</p>
+      <p id="issuer" class="value"></p>
+    </div>
+    <div class="card">
+      <p class="label">SHA-256 Fingerprint</p>
+      <p id="fingerprint" class="value"></p>
+    </div>
+    <div class="card">
+      <p class="label">Valid From / Valid To</p>
+      <p id="validity" class="value"></p>
+    </div>
+    <div class="card">
+      <p class="label">Signature SubFilter</p>
+      <p id="subfilter" class="value"></p>
+    </div>
+    <h2>Certificate PEM</h2>
+    <div class="card">
+      <pre id="pem" class="pem"></pre>
+    </div>
+  </div>
+  <h2>How To Check</h2>
+  <ol>
+    <li>Open the signed PDF in Adobe Acrobat or another PDF reader that shows digital signatures.</li>
+    <li>Confirm the signature field is named ENESMAEsignSeal and uses an invisible PKCS#7 detached signature. The document pages should look unchanged.</li>
+    <li>The signature should validate as intact. Because this certificate is self-signed (not issued by a public CA or AATL), the reader will report that the issuer is unknown or that the certificate is untrusted. That warning is expected.</li>
+    <li>Compare the certificate’s SHA-256 fingerprint with the fingerprint on this page and on the Certificate of Completion footer.</li>
+    <li>If even one byte of the signed file is changed, the signature check must fail (digest mismatch).</li>
+  </ol>
+  <footer>
+    <p>ENESMA Realty · <a href="mailto:enrique@enesmabroker.com">enrique@enesmabroker.com</a> · (909) 566-0505</p>
+  </footer>
+</main>
+<script src="../config.js?v=3"></script>
+<script src="verify.js?v=1"></script>
+</body>
+</html>
